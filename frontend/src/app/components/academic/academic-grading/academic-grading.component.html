@@ -1,0 +1,123 @@
+<div class="ag-page">
+  <div class="ag-banner">
+    <span class="ag-banner-ico" aria-hidden="true">🏆</span>
+    <div>
+      <span class="ag-banner-title">Grading System</span>
+      <p class="ag-banner-sub">
+        Define pass bands from highest to lowest minimum %. You can add extra bands beyond the traditional five. The fail label applies to 0% and missing marks.
+      </p>
+    </div>
+  </div>
+
+  <div class="ag-alerts">
+    <div class="ag-alert ag-alert-success" *ngIf="success">{{ success }}</div>
+    <div class="ag-alert ag-alert-error" *ngIf="error">{{ error }}</div>
+  </div>
+
+  <div class="ag-demo" *ngIf="isDemoUser()">
+    <strong>Demo mode</strong>
+    <p>Grading settings are read-only for the demo account.</p>
+  </div>
+
+  <div class="ag-loading" *ngIf="loading">
+    <span class="ag-spinner"></span>
+    <span>Loading grading settings…</span>
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <div class="ag-info">
+      <p>
+        Percentages are <strong>minimum marks</strong> for each band. The system checks from the <strong>highest</strong> band downward. Percentages must <strong>strictly decrease</strong> down the list (no two bands may share the same minimum). A mark of <strong>0%</strong> uses the fail label below.
+      </p>
+      <p *ngIf="!canEditGrading()" class="ag-readonly-note">
+        You can view boundaries here. Only <strong>Admin</strong> or <strong>SuperAdmin</strong> can save changes.
+      </p>
+    </div>
+
+    <div class="ag-bands">
+      <div
+        class="ag-band"
+        *ngFor="let b of gradeBands; let i = index"
+        [style.borderLeftColor]="accentAt(i)"
+      >
+        <div class="ag-band-head">
+          <h3>{{ bandTitle(i) }}</h3>
+          <span class="ag-band-range" *ngIf="rangeHint(i)">Range: {{ rangeHint(i) }}</span>
+        </div>
+        <div class="ag-band-fields">
+          <label class="ag-field">
+            <span>Minimum %</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              [(ngModel)]="b.minPercent"
+              [name]="'th_' + i"
+              (ngModelChange)="onBandFieldChange()"
+              [disabled]="!canEditGrading() || isDemoUser()"
+            />
+          </label>
+          <label class="ag-field ag-field-grow">
+            <span>Remark on reports</span>
+            <input
+              type="text"
+              maxlength="80"
+              [(ngModel)]="b.label"
+              [name]="'lb_' + i"
+              (ngModelChange)="onBandFieldChange()"
+              [disabled]="!canEditGrading() || isDemoUser()"
+            />
+          </label>
+          <div class="ag-band-row-actions" *ngIf="canEditGrading() && !isDemoUser()">
+            <button
+              type="button"
+              class="ag-btn-ghost ag-btn-danger-text"
+              (click)="removeBand(b)"
+              [disabled]="gradeBands.length <= 1"
+              title="Remove this band"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ag-add-row" *ngIf="canEditGrading() && !isDemoUser()">
+        <button type="button" class="ag-btn-secondary" (click)="addBand()">
+          + Add grade band
+        </button>
+      </div>
+
+      <div class="ag-band ag-band-fail" style="border-left-color: #dc2626;">
+        <div class="ag-band-head">
+          <h3>Fail / unclassified</h3>
+          <span class="ag-band-range">0% only (and missing marks)</span>
+        </div>
+        <div class="ag-band-fields">
+          <label class="ag-field ag-field-grow">
+            <span>Remark for 0% / N/A</span>
+            <input
+              type="text"
+              maxlength="80"
+              [(ngModel)]="failLabel"
+              name="lb_fail"
+              [disabled]="!canEditGrading() || isDemoUser()"
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ag-actions" *ngIf="canEditGrading()">
+      <button
+        type="button"
+        class="ag-btn-primary"
+        (click)="save()"
+        [disabled]="saving || isDemoUser()"
+      >
+        {{ saving ? 'Saving…' : 'Save grading settings' }}
+      </button>
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,30 @@
+<div class="subm-wrap">
+  <header class="subm-header">
+    <h1 class="subm-title">Subject Manager</h1>
+    <p class="subm-sub">Manage subjects, assignments, and teaching periods</p>
+  </header>
+
+  <nav class="subm-tabs" aria-label="Subject manager sections">
+    <a routerLink="/subjects/manage/manage-subject" routerLinkActive="active" class="subm-tab">
+      <span class="subm-tab-ico" aria-hidden="true">⚙️</span>
+      Manage Subject
+    </a>
+    <a routerLink="/subjects/manage/assign-subject" routerLinkActive="active" class="subm-tab">
+      <span class="subm-tab-ico" aria-hidden="true">🔗</span>
+      Assign Subject
+    </a>
+    <a
+      routerLink="/subjects/manage/subject-periods"
+      fragment="teaching_load"
+      routerLinkActive="active"
+      class="subm-tab"
+    >
+      <span class="subm-tab-ico" aria-hidden="true">⏰</span>
+      Subject Periods
+    </a>
+  </nav>
+
+  <div class="subm-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>

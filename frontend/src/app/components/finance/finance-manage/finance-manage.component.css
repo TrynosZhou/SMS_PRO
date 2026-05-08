@@ -1,0 +1,139 @@
+.fm-wrap {
+  min-height: calc(100vh - 48px);
+  padding: 1rem 1.25rem 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.fm-header {
+  margin-bottom: 1rem;
+}
+
+.fm-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0d47a1;
+}
+
+.fm-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #1976d2;
+}
+
+.fm-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  margin-bottom: 1rem;
+  background: #e3f2fd;
+  border-radius: 10px;
+  border: 1px solid #90caf9;
+}
+
+.fm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1565c0;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.fm-tab:hover {
+  background: rgba(255, 255, 255, 0.75);
+  color: #0d47a1;
+}
+
+.fm-tab.active {
+  background: #fff;
+  color: #0d47a1;
+  border-color: #64b5f6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.fm-tab-ico {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.fm-outlet {
+  background: #fafafa;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  padding: 0.75rem;
+  min-height: 280px;
+}
+
+/* Tab button variant (matches <a> tab styling exactly) */
+.fm-tab-btn {
+  cursor: pointer;
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+/* Balance Enquiry modal */
+.fm-be-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fm-fade-in 0.18s ease;
+}
+
+@keyframes fm-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.fm-be-panel {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.22);
+  width: 100%;
+  max-width: 640px;
+  max-height: 88vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: fm-slide-up 0.2s ease;
+}
+
+@keyframes fm-slide-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Prevent body scroll when modal is open */
+:global(body.fm-modal-open) {
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .fm-tabs {
+    flex-direction: column;
+  }
+
+  .fm-tab {
+    justify-content: flex-start;
+  }
+
+  .fm-be-panel {
+    max-height: 95vh;
+    border-radius: 14px 14px 0 0;
+    align-self: flex-end;
+  }
+}

@@ -1,0 +1,183 @@
+/* ── Page header ── */
+.ss-header {
+  padding: 1.4rem 1.6rem 0.2rem;
+}
+.ss-header-left {
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.ss-header-ico { font-size: 1.5rem; color: #2563eb; }
+.ss-title {
+  font-size: 1.6rem; font-weight: 800; color: #111827; margin: 0;
+  display: inline;
+}
+.ss-subtitle {
+  font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 2.1rem;
+}
+.ss-divider {
+  border: none; border-top: 1px solid #e5e7eb; margin: 0.75rem 0 0;
+}
+
+/* ── Sub-tabs ── */
+.ss-tabs {
+  display: flex; gap: 0;
+  padding: 0 1.6rem;
+  border-bottom: 2px solid #e5e7eb;
+  overflow-x: auto; flex-wrap: nowrap;
+}
+.ss-tab {
+  background: none; border: none; cursor: pointer;
+  padding: 0.75rem 1.2rem;
+  font-size: 0.88rem; font-weight: 500; color: #6b7280;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px; white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.ss-tab:hover { color: #374151; }
+.ss-tab-active { color: #2563eb !important; border-bottom-color: #2563eb !important; font-weight: 700; }
+
+/* ── Feedback ── */
+.ss-ok, .ss-err {
+  margin: 0.6rem 1.6rem; padding: 0.6rem 1rem;
+  border-radius: 8px; font-size: 0.875rem; font-weight: 500;
+}
+.ss-ok  { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.ss-err { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+/* ── Loading ── */
+.ss-loading {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 3rem 1.6rem; color: #64748b; font-size: 0.9rem;
+}
+.ss-spinner {
+  width: 20px; height: 20px; border: 3px solid #e2e8f0;
+  border-top-color: #2563eb; border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Body ── */
+.ss-body {
+  padding: 1.4rem 1.6rem 2rem;
+  display: flex; flex-direction: column; gap: 1.25rem;
+}
+
+/* ── Section header ── */
+.ss-section-header {
+  display: flex; align-items: flex-start; gap: 0.65rem;
+}
+.ss-section-ico { font-size: 1.3rem; margin-top: 0.1rem; }
+.ss-section-title { font-size: 1.15rem; font-weight: 700; color: #111827; margin: 0 0 0.2rem; }
+.ss-section-sub   { font-size: 0.83rem; color: #6b7280; margin: 0; }
+
+/* ── Card ── */
+.ss-card {
+  background: #fff; border-radius: 12px;
+  padding: 1.25rem 1.35rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  border: 1px solid #e5e7eb;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.ss-card-title { font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0; }
+.ss-card-hint  { font-size: 0.82rem; color: #94a3b8; margin: -0.5rem 0 0; }
+.ss-card-test  { background: #f8fafc; }
+
+/* ── Fields ── */
+.ss-row2 {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+}
+@media (max-width: 640px) { .ss-row2 { grid-template-columns: 1fr; } }
+
+.ss-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.ss-lbl { font-size: 0.8rem; font-weight: 600; color: #475569; }
+.ss-hint { font-size: 0.75rem; color: #94a3b8; }
+
+/* Floating label */
+.ss-field-float { position: relative; }
+.ss-float-lbl {
+  position: absolute; left: 0.85rem; top: 0.7rem;
+  font-size: 0.85rem; color: #94a3b8;
+  pointer-events: none; transition: 0.2s ease all;
+  background: #fff; padding: 0 0.25rem;
+}
+.ss-input:focus ~ .ss-float-lbl,
+.ss-input:not(:placeholder-shown) ~ .ss-float-lbl,
+textarea:focus ~ .ss-float-lbl,
+textarea:not(:placeholder-shown) ~ .ss-float-lbl {
+  top: -0.55rem; font-size: 0.72rem; color: #2563eb;
+}
+
+.ss-input {
+  padding: 0.65rem 0.85rem;
+  border: 1.5px solid #d1d5db; border-radius: 8px;
+  font-size: 0.88rem; color: #1e293b; background: #fff;
+  outline: none; transition: border-color 0.2s;
+  width: 100%; box-sizing: border-box;
+}
+.ss-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.ss-textarea { resize: vertical; min-height: 80px; }
+
+/* ── Logo preview ── */
+.ss-logo-preview { padding: 0.5rem 0; }
+.ss-logo-img {
+  max-height: 80px; max-width: 200px;
+  border-radius: 6px; border: 1px solid #e5e7eb;
+  object-fit: contain;
+}
+
+/* ── Toggle switch ── */
+.ss-toggle-list { display: flex; flex-direction: column; gap: 0; }
+.ss-toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.85rem 0; border-bottom: 1px solid #f1f5f9;
+}
+.ss-toggle-row:last-child { border-bottom: none; }
+.ss-toggle-info { display: flex; flex-direction: column; gap: 0.15rem; }
+.ss-toggle-label { font-size: 0.88rem; font-weight: 600; color: #1e293b; }
+.ss-toggle-hint  { font-size: 0.78rem; color: #94a3b8; }
+
+.ss-switch {
+  position: relative; display: inline-block;
+  width: 44px; height: 24px; flex-shrink: 0; cursor: pointer;
+}
+.ss-switch input { opacity: 0; width: 0; height: 0; }
+.ss-slider {
+  position: absolute; inset: 0;
+  background: #d1d5db; border-radius: 24px;
+  transition: background 0.2s;
+}
+.ss-slider::before {
+  content: ''; position: absolute;
+  width: 18px; height: 18px; left: 3px; bottom: 3px;
+  background: #fff; border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.ss-switch input:checked + .ss-slider { background: #2563eb; }
+.ss-switch input:checked + .ss-slider::before { transform: translateX(20px); }
+
+/* ── Test email row ── */
+.ss-test-row {
+  display: flex; gap: 0.75rem; align-items: center;
+}
+.ss-test-btn {
+  padding: 0.6rem 1.1rem; border-radius: 8px;
+  background: #2563eb; color: #fff; border: none;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background 0.2s;
+}
+.ss-test-btn:hover { background: #1d4ed8; }
+.ss-test-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ss-test-result { font-size: 0.83rem; color: #059669; margin: 0; }
+
+/* ── Save button ── */
+.ss-actions { display: flex; justify-content: flex-start; }
+.ss-save-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.65rem 1.5rem; border-radius: 8px;
+  background: #2563eb; color: #fff; border: none;
+  font-size: 0.9rem; font-weight: 700; cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+}
+.ss-save-btn:hover { background: #1d4ed8; }
+.ss-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }

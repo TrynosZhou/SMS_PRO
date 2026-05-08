@@ -1,0 +1,166 @@
+<!-- Purple gradient banner -->
+<div class="acl-banner">
+  <div class="acl-banner-left">
+    <span class="acl-banner-ico" aria-hidden="true">🎓</span>
+    <span class="acl-banner-title">Academic Settings</span>
+  </div>
+  <button class="acl-add-btn" (click)="openAddModal()">
+    <span>+</span> Add Class
+  </button>
+</div>
+
+<!-- Toolbar -->
+<div class="acl-toolbar">
+  <div class="acl-search-wrap">
+    <input
+      class="acl-search"
+      type="text"
+      placeholder="Search classes..."
+      [(ngModel)]="searchQuery"
+      (input)="applyFilters()"
+    />
+    <span class="acl-search-ico" aria-hidden="true">🔍</span>
+  </div>
+
+  <div class="acl-filter-wrap">
+    <label class="acl-filter-label">Filter by Form</label>
+    <select class="acl-filter-select" [(ngModel)]="selectedForm" (change)="applyFilters()">
+      <option value="all">All Forms</option>
+      <option *ngFor="let f of availableForms" [value]="f">{{ f }}</option>
+    </select>
+    <span class="acl-filter-arrow">▼</span>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="acl-loading" *ngIf="loading">
+  <div class="acl-spinner"></div>
+  <span>Loading classes…</span>
+</div>
+
+<!-- Table -->
+<div class="acl-table-wrap" *ngIf="!loading">
+  <table class="acl-table">
+    <thead>
+      <tr>
+        <th class="acl-th acl-th-icon">
+          <span class="acl-th-menu">☰</span><br/>#
+        </th>
+        <th class="acl-th">
+          <span class="acl-th-ico">🏫</span> Class Name
+        </th>
+        <th class="acl-th">
+          <span class="acl-th-ico">⭐</span> Form
+        </th>
+        <th class="acl-th">
+          <span class="acl-th-ico">👥</span> Students
+        </th>
+        <th class="acl-th">
+          <span class="acl-th-ico">⚙️</span> Actions
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let cls of pagedClasses; let i = index">
+        <td class="acl-td acl-td-num">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+        <td class="acl-td acl-td-name">{{ cls.name }}</td>
+        <td class="acl-td">
+          <span class="acl-form-badge">{{ cls.form }}</span>
+        </td>
+        <td class="acl-td acl-td-students">
+          <span class="acl-student-count">{{ studentCount(cls) }}</span>
+        </td>
+        <td class="acl-td acl-td-actions">
+          <button class="acl-action-btn acl-action-delete" (click)="deleteClass(cls.id, cls.name)" title="Delete">🗑️</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Empty state -->
+  <div class="acl-empty" *ngIf="filteredClasses.length === 0">
+    <div class="acl-empty-ico" aria-hidden="true">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b0bec5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5L15 3z"/>
+        <polyline points="15 3 15 8 20 8"/>
+        <line x1="9" y1="13" x2="15" y2="13"/>
+        <line x1="9" y1="17" x2="11" y2="17"/>
+      </svg>
+    </div>
+    <h3 class="acl-empty-title">No Classes Found</h3>
+    <p class="acl-empty-desc">No classes match your current search criteria.</p>
+    <button class="acl-empty-add-btn" (click)="openAddModal()">
+      + Add First Class
+    </button>
+  </div>
+
+  <!-- Pagination -->
+  <div class="acl-pagination" *ngIf="filteredClasses.length > 0">
+    <span class="acl-page-label">Items per page:</span>
+    <select class="acl-page-size" [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+      <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+    </select>
+    <span class="acl-page-info">{{ pageLabel }}</span>
+    <div class="acl-page-nav">
+      <button class="acl-nav-btn" (click)="goFirst()"  [disabled]="currentPage === 1"        title="First">|◀</button>
+      <button class="acl-nav-btn" (click)="goPrev()"   [disabled]="currentPage === 1"        title="Previous">◀</button>
+      <button class="acl-nav-btn" (click)="goNext()"   [disabled]="currentPage === totalPages" title="Next">▶</button>
+      <button class="acl-nav-btn" (click)="goLast()"   [disabled]="currentPage === totalPages" title="Last">▶|</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Class Modal -->
+<div class="acl-modal-backdrop" *ngIf="showAddModal" (click)="closeModal()"></div>
+<div class="acl-modal" *ngIf="showAddModal" role="dialog" aria-modal="true" aria-labelledby="cls-modal-title">
+
+  <div class="acl-modal-header">
+    <span class="acl-modal-header-ico">+</span>
+    <div>
+      <h2 id="cls-modal-title" class="acl-modal-title">Add New Class</h2>
+      <p class="acl-modal-subtitle">Enter class details to create a new class</p>
+    </div>
+  </div>
+
+  <div class="acl-modal-body">
+    <div class="acl-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+    <div class="acl-form-section">
+      <div class="acl-section-header">
+        <span class="acl-section-ico">🏫</span>
+        <h3 class="acl-section-title">Class Information</h3>
+      </div>
+      <hr class="acl-section-divider" />
+
+      <div class="acl-field-wrap" [class.acl-field-error]="submitted && !newClass.name">
+        <label class="acl-label">Class Name *</label>
+        <input class="acl-input" type="text" placeholder="e.g. Form 1A" [(ngModel)]="newClass.name" />
+        <span class="acl-hint acl-hint-error" *ngIf="submitted && !newClass.name">Class name is required</span>
+      </div>
+
+      <div class="acl-field-wrap" [class.acl-field-error]="submitted && !newClass.form">
+        <label class="acl-label">Form *</label>
+        <input class="acl-input" type="text" placeholder="e.g. Form 1" [(ngModel)]="newClass.form" />
+        <span class="acl-hint acl-hint-error" *ngIf="submitted && !newClass.form">Form is required</span>
+        <span class="acl-hint" *ngIf="!(submitted && !newClass.form)">The form/grade level this class belongs to</span>
+      </div>
+
+      <div class="acl-field-wrap">
+        <label class="acl-label">Description</label>
+        <input class="acl-input" type="text" placeholder="Optional description" [(ngModel)]="newClass.description" />
+      </div>
+    </div>
+  </div>
+
+  <div class="acl-modal-footer">
+    <button class="acl-btn-cancel" (click)="closeModal()">
+      <span>✕</span> Cancel
+    </button>
+    <button class="acl-btn-save" (click)="saveClass()" [disabled]="submitting">
+      <span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      </span>
+      {{ submitting ? 'Saving…' : 'Add Class' }}
+    </button>
+  </div>
+</div>

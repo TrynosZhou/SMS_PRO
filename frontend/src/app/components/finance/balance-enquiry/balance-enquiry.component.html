@@ -1,0 +1,230 @@
+<div class="be-page" [class.be-page--modal]="modalMode">
+
+  <!-- Modal title bar (only shown when embedded in a modal) -->
+  <div class="be-modal-bar" *ngIf="modalMode">
+    <span class="be-modal-title">
+      <span aria-hidden="true">🔎</span> Balance Enquiry
+    </span>
+    <button class="be-modal-close" type="button" (click)="closeModal.emit()" title="Close (Esc)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <header class="be-hero">
+    <div class="be-hero-copy">
+      <h1 class="be-title">Balance enquiry</h1>
+      <p class="be-lead">
+        Look up a student’s latest fee balance from billing. Search by
+        <strong>student number</strong> or <strong>ID</strong><ng-container *ngIf="canSearchByName()"
+          >, or by <strong>name</strong> (staff)</ng-container
+        >.
+      </p>
+    </div>
+    <div class="be-hero-badge" *ngIf="currencySymbol">
+      <span class="be-badge-label">Currency</span>
+      <span class="be-badge-value">{{ currencySymbol }}</span>
+    </div>
+  </header>
+
+  <section class="be-card be-search-card" aria-label="Search">
+    <div class="be-search-wrap">
+      <label class="be-label" for="balanceSearch">Search</label>
+      <div class="be-input-row">
+        <span class="be-input-icon" aria-hidden="true">🔍</span>
+        <input
+          type="search"
+          id="balanceSearch"
+          class="be-input"
+          placeholder="Student number, ID, or name…"
+          [(ngModel)]="searchValue"
+          (keyup.enter)="getBalance()"
+          [disabled]="loading"
+          autocomplete="off"
+        />
+        <button type="button" class="be-icon-btn" *ngIf="searchValue && !loading" (click)="clear()" title="Clear">
+          ✕
+        </button>
+      </div>
+      <p class="be-hint" *ngIf="canSearchByName()">
+        Multiple name matches open a picker below — use <kbd>Esc</kbd> to cancel.
+      </p>
+    </div>
+
+    <div class="be-actions">
+      <button type="button" class="be-btn be-btn-primary" (click)="getBalance()" [disabled]="loading">
+        <span class="be-spinner" *ngIf="loading" aria-hidden="true"></span>
+        {{ loading ? 'Looking up…' : 'Get balance' }}
+      </button>
+      <button
+        type="button"
+        class="be-btn be-btn-ghost"
+        (click)="clear()"
+        [disabled]="!searchValue && !studentData && !error && !showStudentPicker && !nameSearchLoading"
+      >
+        Reset
+      </button>
+    </div>
+
+    <div class="be-alert be-alert-error" *ngIf="error" role="alert">
+      <span class="be-alert-ico">!</span>
+      {{ error }}
+    </div>
+
+    <div class="be-alert be-alert-ok" *ngIf="copyFeedback" role="status">
+      {{ copyFeedback }}
+    </div>
+
+    <!-- Name disambiguation -->
+    <div
+      class="be-picker"
+      *ngIf="canSearchByName() && showStudentPicker && nameSearchResults.length > 1"
+      role="region"
+      aria-label="Choose student"
+    >
+      <div class="be-picker-head">
+        <span class="be-picker-title">Multiple students found</span>
+        <span class="be-picker-sub">Select the correct record, then continue.</span>
+      </div>
+      <ul class="be-picker-list">
+        <li *ngFor="let s of nameSearchResults" class="be-picker-item">
+          <label
+            class="be-radio-card"
+            [class.be-radio-selected]="nameSearchSelectedStudentKey === studentOptionKey(s)"
+          >
+            <input
+              type="radio"
+              name="be-student-pick"
+              [value]="studentOptionKey(s)"
+              [(ngModel)]="nameSearchSelectedStudentKey"
+            />
+            <span class="be-radio-body">
+              <span class="be-radio-name">{{ s.firstName }} {{ s.lastName }}</span>
+              <span class="be-radio-meta">#{{ s.studentNumber }}</span>
+            </span>
+          </label>
+        </li>
+      </ul>
+      <button
+        type="button"
+        class="be-btn be-btn-primary be-btn-block"
+        (click)="confirmSelectedStudent()"
+        [disabled]="!nameSearchSelectedStudentKey || nameSearchLoading || loading"
+      >
+        Show balance for selection
+      </button>
+    </div>
+
+    <div class="be-name-loading" *ngIf="nameSearchLoading">
+      <span class="be-spinner be-spinner-inline" aria-hidden="true"></span>
+      Searching directory…
+    </div>
+  </section>
+
+  <!-- Loading skeleton -->
+  <div class="be-card be-skeleton-card" *ngIf="loading && !studentData" aria-busy="true">
+    <div class="be-shimmer be-sh-line wide"></div>
+    <div class="be-shimmer be-sh-line"></div>
+    <div class="be-shimmer be-sh-line short"></div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="be-empty" *ngIf="!loading && !studentData && !error && !showStudentPicker">
+    <span class="be-empty-icon" aria-hidden="true">📋</span>
+    <p class="be-empty-title">No lookup yet</p>
+    <p class="be-empty-text">Enter a student number or ID above to load the current balance from the latest invoice.</p>
+  </div>
+
+  <!-- Results -->
+  <section class="be-result" *ngIf="studentData && !loading">
+    <div class="be-balance-hero" [class.be-tone-clear]="balanceTone() === 'clear'" [class.be-tone-due]="balanceTone() === 'due'">
+      <div class="be-balance-label">Current balance</div>
+      <div class="be-balance-value">
+        {{ currencySymbol }} {{ formatCurrency(num(studentData.balance)) }}
+      </div>
+      <p class="be-balance-tag" *ngIf="balanceTone() === 'clear'">No outstanding balance on the latest invoice.</p>
+      <p class="be-balance-tag be-balance-tag-warn" *ngIf="balanceTone() === 'due'">Amount still due on the latest invoice.</p>
+    </div>
+
+    <div class="be-card be-detail-card">
+      <h2 class="be-section-title">Student</h2>
+      <div class="be-kv-grid">
+        <div class="be-kv">
+          <span class="be-k">Full name</span>
+          <span class="be-v">{{ studentData.fullName || '—' }}</span>
+        </div>
+        <div class="be-kv">
+          <span class="be-k">Student number</span>
+          <span class="be-v be-v-row">
+            {{ studentData.studentNumber || '—' }}
+            <button
+              type="button"
+              class="be-chip-btn"
+              *ngIf="studentData.studentNumber"
+              (click)="copyText('Student number', studentData.studentNumber)"
+            >
+              Copy
+            </button>
+          </span>
+        </div>
+        <div class="be-kv" *ngIf="studentData.studentId">
+          <span class="be-k">Internal ID</span>
+          <span class="be-v be-v-row be-v-mono">
+            <span class="be-truncate">{{ studentData.studentId }}</span>
+            <button type="button" class="be-chip-btn" (click)="copyText('Student ID', studentData.studentId)">Copy</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="be-pill-row" *ngIf="num(studentData.prepaidAmount) > 0.01 || num(studentData.uniformTotal) > 0.01">
+        <span class="be-pill" *ngIf="num(studentData.prepaidAmount) > 0.01">
+          Prepaid / credit: {{ currencySymbol }} {{ formatCurrency(num(studentData.prepaidAmount)) }}
+        </span>
+        <span class="be-pill be-pill-muted" *ngIf="num(studentData.uniformTotal) > 0.01">
+          Uniform (latest): {{ currencySymbol }} {{ formatCurrency(num(studentData.uniformTotal)) }}
+        </span>
+      </div>
+    </div>
+
+    <div class="be-card be-detail-card" *ngIf="studentData.lastInvoiceNumber">
+      <div class="be-section-head">
+        <h2 class="be-section-title">Latest invoice</h2>
+        <button type="button" class="be-link-btn" (click)="showInvoiceBreakdown = !showInvoiceBreakdown">
+          {{ showInvoiceBreakdown ? 'Hide detail' : 'Show detail' }}
+        </button>
+      </div>
+      <div class="be-kv-grid">
+        <div class="be-kv">
+          <span class="be-k">Invoice #</span>
+          <span class="be-v">{{ studentData.lastInvoiceNumber }}</span>
+        </div>
+        <div class="be-kv">
+          <span class="be-k">Term</span>
+          <span class="be-v">{{ studentData.lastInvoiceTerm || '—' }}</span>
+        </div>
+        <div class="be-kv">
+          <span class="be-k">Issued</span>
+          <span class="be-v">{{ formatDate(studentData.lastInvoiceDate) }}</span>
+        </div>
+      </div>
+
+      <div class="be-breakdown" *ngIf="showInvoiceBreakdown">
+        <div class="be-kv-grid be-kv-tight">
+          <div class="be-kv">
+            <span class="be-k">Brought forward</span>
+            <span class="be-v">{{ currencySymbol }} {{ formatCurrency(num(studentData.lastInvoicePreviousBalance)) }}</span>
+          </div>
+          <div class="be-kv">
+            <span class="be-k">Invoice amount</span>
+            <span class="be-v">{{ currencySymbol }} {{ formatCurrency(num(studentData.lastInvoiceAmount)) }}</span>
+          </div>
+          <div class="be-kv">
+            <span class="be-k">Paid</span>
+            <span class="be-v">{{ currencySymbol }} {{ formatCurrency(num(studentData.lastInvoicePaidAmount)) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

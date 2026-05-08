@@ -1,0 +1,266 @@
+<div class="parent-dashboard-page">
+  <div
+    class="pd-mobile-overlay"
+    *ngIf="mobileMenuOpen && isMobile"
+    (click)="closeMobileMenu()"
+    aria-hidden="true"
+  ></div>
+
+  <div class="pd-layout">
+    <aside class="pd-sidebar" [class.pd-sidebar--open]="mobileMenuOpen">
+      <div class="pd-sidebar-brand">
+        <span class="pd-logo" aria-hidden="true">📚</span>
+        <div class="pd-sidebar-brand-text">
+          <h2>Parent Portal</h2>
+          <p class="pd-sidebar-user">{{ getParentDisplayName() }}</p>
+        </div>
+      </div>
+      <nav id="pd-sidebar-nav" class="pd-sidebar-nav" aria-label="Parent navigation">
+        <a routerLink="/parent/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">
+          <span class="pd-nav-ico" aria-hidden="true">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a routerLink="/parent/all_in_one" routerLinkActive="active" (click)="closeMobileMenu()">
+          <span class="pd-nav-ico" aria-hidden="true">📚</span>
+          <span>Family hub</span>
+        </a>
+        <a
+          [routerLink]="['/parent/communications/view']"
+          [class.active]="isCommunicationsActive()"
+          (click)="closeMobileMenu()"
+        >
+          <span class="pd-nav-ico" aria-hidden="true">💬</span>
+          <span class="pd-nav-text">Communications</span>
+          <span class="pd-nav-badge" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+        </a>
+        <a (click)="viewCurrentInvoice(); closeMobileMenu()">
+          <span class="pd-nav-ico" aria-hidden="true">🧾</span>
+          <span>My Invoice Statement</span>
+        </a>
+        <a (click)="openStudentPortal()">
+          <span class="pd-nav-ico" aria-hidden="true">🎓</span>
+          <span>Student Portal</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="pd-main">
+      <header class="pd-mobile-topbar">
+        <button
+          type="button"
+          class="pd-icon-btn"
+          (click)="toggleMobileMenu()"
+          [attr.aria-expanded]="mobileMenuOpen"
+          aria-controls="pd-sidebar-nav"
+          aria-label="Open menu"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <span class="pd-mobile-title">Dashboard</span>
+        <span class="pd-mobile-topbar-spacer"></span>
+      </header>
+
+      <header class="pd-hero">
+        <div class="pd-hero-copy">
+          <p class="pd-kicker">Parent Dashboard</p>
+          <h1>{{ getParentTitleGreeting() }}</h1>
+          <p class="pd-date">{{ getTodayDisplayDate() }}</p>
+        </div>
+        <div class="pd-hero-actions">
+          <button type="button" class="btn btn-primary btn-link-students" (click)="linkMoreStudents()">+ Link Students</button>
+          <button type="button" class="btn btn-light" (click)="manageAccount()">My Account</button>
+        </div>
+      </header>
+
+      <section class="pd-meta-row" *ngIf="!loading">
+        <span class="pd-meta-pill">
+          <span class="pd-meta-dot" [class.pd-meta-dot--live]="lastUpdated"></span>
+          Data updated {{ getLastUpdatedText() }}
+        </span>
+        <button type="button" class="pd-meta-refresh" (click)="refreshDashboard()" [disabled]="loading">Refresh all</button>
+      </section>
+
+      <!-- Skeleton loading -->
+      <section class="pd-summary pd-summary--skeleton" *ngIf="loading" aria-hidden="true">
+        <div class="pd-stat pd-stat--sk" *ngFor="let _ of [1, 2, 3, 4]">
+          <div class="pd-sk-line pd-sk-line--sm"></div>
+          <div class="pd-sk-line pd-sk-line--lg"></div>
+        </div>
+      </section>
+      <section class="pd-actions pd-actions--skeleton" *ngIf="loading && students.length > 0" aria-hidden="true">
+        <div class="pd-action-sk" *ngFor="let _ of [1, 2, 3, 4]"></div>
+      </section>
+      <div class="pd-table-skeleton" *ngIf="loading && students.length > 0" aria-hidden="true">
+        <div class="pd-sk-line pd-sk-line--bar"></div>
+        <div class="pd-sk-line pd-sk-line--bar"></div>
+        <div class="pd-sk-line pd-sk-line--bar"></div>
+      </div>
+
+      <section class="pd-summary" *ngIf="!loading">
+        <article class="pd-stat pd-stat--accent">
+          <div class="pd-stat-icon" aria-hidden="true">👨‍👩‍👧</div>
+          <div class="pd-stat-body">
+            <p>Linked Children</p>
+            <h3>{{ getTotalStudents() }}</h3>
+          </div>
+        </article>
+        <article class="pd-stat">
+          <div class="pd-stat-icon pd-stat-icon--warn" aria-hidden="true">💳</div>
+          <div class="pd-stat-body">
+            <p>Outstanding Total</p>
+            <h3>{{ formatCurrency(getOutstandingBalance()) }}</h3>
+          </div>
+        </article>
+        <article class="pd-stat">
+          <div class="pd-stat-icon pd-stat-icon--ok" aria-hidden="true">📋</div>
+          <div class="pd-stat-body">
+            <p>Ready Report Cards</p>
+            <h3>{{ getStudentsWithClearTermBalance() }}</h3>
+          </div>
+        </article>
+        <article class="pd-stat">
+          <div class="pd-stat-icon pd-stat-icon--muted" aria-hidden="true">⏳</div>
+          <div class="pd-stat-body">
+            <p>Pending Balances</p>
+            <h3>{{ getPendingFeesCount() }}</h3>
+          </div>
+        </article>
+      </section>
+
+      <section class="pd-actions" *ngIf="!loading && students.length > 0">
+        <button type="button" class="action-tile" (click)="viewReportCardForFirstStudent()">
+          <span class="action-tile-ico" aria-hidden="true">📊</span>
+          <span class="action-tile-text">
+            <span>Report Cards</span>
+            <small>View latest results</small>
+          </span>
+        </button>
+        <button type="button" class="action-tile" (click)="viewCurrentInvoice()">
+          <span class="action-tile-ico" aria-hidden="true">🧾</span>
+          <span class="action-tile-text">
+            <span>Invoice Statement</span>
+            <small>Preview latest invoice for a linked student</small>
+          </span>
+        </button>
+        <button type="button" class="action-tile" (click)="openCommunications('view')">
+          <span class="action-tile-ico" aria-hidden="true">💬</span>
+          <span class="action-tile-text">
+            <span>Communications</span>
+            <small>View school messages, send to the school, sent folder</small>
+          </span>
+          <span class="action-tile-badge" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }} new</span>
+        </button>
+      </section>
+
+      <div class="alert alert-error" *ngIf="error" role="alert">{{ error }}</div>
+      <div class="loading-message" *ngIf="loading && students.length === 0">Loading dashboard…</div>
+
+      <section class="pd-children" *ngIf="!loading && students.length > 0">
+        <div class="pd-children-head">
+          <h2>Your Children</h2>
+          <div class="pd-tools">
+            <input
+              type="search"
+              class="search-input"
+              [ngModel]="searchTerm"
+              (ngModelChange)="onSearchTermChange($event)"
+              placeholder="Search by name, Student ID or class"
+              autocomplete="off"
+            />
+            <select class="sort-select" [ngModel]="sortBy" (ngModelChange)="onSortByChange($event)">
+              <option value="name">Sort: Name</option>
+              <option value="balance-high">Sort: Highest Balance</option>
+              <option value="balance-low">Sort: Lowest Balance</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pd-table-wrap">
+          <table class="pd-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Student ID</th>
+                <th>Class</th>
+                <th>Current Balance</th>
+                <th>Report Card</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let student of filteredStudents">
+                <td>
+                  <div class="student-name">
+                    <span class="avatar">{{ (student.firstName || '?').charAt(0) }}{{ (student.lastName || '').charAt(0) }}</span>
+                    <span>{{ student.firstName }} {{ student.lastName }}</span>
+                  </div>
+                </td>
+                <td>{{ student.studentNumber }}</td>
+                <td>{{ student.class?.name || 'Not Assigned' }}</td>
+                <td
+                  [class.balance-due]="(student.currentInvoiceBalance || 0) > 0"
+                  [class.balance-clear]="(student.currentInvoiceBalance || 0) <= 0"
+                >
+                  {{ formatCurrency(student.currentInvoiceBalance || 0) }}
+                </td>
+                <td>
+                  <span class="pill ready" *ngIf="(student.termBalance || 0) === 0">Ready</span>
+                  <span class="pill locked" *ngIf="(student.termBalance || 0) > 0">Locked</span>
+                </td>
+                <td>
+                  <div class="table-actions">
+                    <button type="button" class="btn btn-primary" (click)="viewReportCard(student)" [disabled]="(student.termBalance || 0) > 0">
+                      Report Card
+                    </button>
+                    <button type="button" class="btn btn-danger-soft" (click)="requestUnlink(student)">Unlink</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="empty-state" *ngIf="!loading && students.length === 0">
+        <div class="empty-state-ico" aria-hidden="true">🔗</div>
+        <h2>No linked children yet</h2>
+        <p>Use Student ID to link your child and start tracking reports and billing.</p>
+        <button type="button" class="btn btn-primary" (click)="linkMoreStudents()">Link Child by Student ID</button>
+      </section>
+
+      <footer class="pd-footer">
+        <button type="button" class="ghost-link" (click)="logout()">Logout</button>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<!-- Unlink confirmation -->
+<div
+  class="pd-modal"
+  *ngIf="pendingUnlinkId"
+  (click)="cancelUnlink()"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="pd-unlink-title"
+>
+  <div class="pd-modal-card" (click)="$event.stopPropagation()">
+    <h3 id="pd-unlink-title">Unlink student?</h3>
+    <p>
+      Remove <strong>{{ pendingUnlinkName }}</strong> from your account? You can link them again later with their Student ID.
+    </p>
+    <div class="pd-modal-actions">
+      <button type="button" class="btn btn-outline pd-modal-btn" (click)="cancelUnlink()">Cancel</button>
+      <button type="button" class="btn btn-danger-solid pd-modal-btn" (click)="confirmUnlink()">Unlink</button>
+    </div>
+  </div>
+</div>
+
+<app-invoice-pdf-preview
+  [open]="invoicePreviewOpen"
+  [blob]="invoicePreviewBlob"
+  [filename]="invoicePreviewFilename"
+  (closed)="closeInvoicePreview()"
+></app-invoice-pdf-preview>

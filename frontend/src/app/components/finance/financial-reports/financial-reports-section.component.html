@@ -1,0 +1,440 @@
+<div class="fr-page" *ngIf="bundle">
+  <!-- Student Ledgers -->
+  <ng-container *ngIf="report === 'student-ledgers'">
+    <h3 class="fr-h3">Student Ledgers</h3>
+    <p class="fr-lead">
+      All students with invoice counts, total billed (sum of invoice amounts), recorded payments, and latest resolved balance.
+    </p>
+    <div class="fr-table-wrap">
+      <table class="fr-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Class</th>
+            <th>Active</th>
+            <th class="fr-num">Invoices</th>
+            <th class="fr-num">Total billed</th>
+            <th class="fr-num">Total paid (recorded)</th>
+            <th class="fr-num">Latest balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of bundle.studentLedgers">
+            <td>{{ r.studentNumber }}</td>
+            <td>{{ r.firstName }} {{ r.lastName }}</td>
+            <td>{{ r.className }}</td>
+            <td>{{ r.isActive ? 'Yes' : 'No' }}</td>
+            <td class="fr-num">{{ r.invoiceCount }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(r.totalBilled) }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(r.totalPaidRecorded) }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(r.latestBalance) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <!-- Fees Collection -->
+  <ng-container *ngIf="report === 'fees-collection'">
+    <h3 class="fr-h3">Fees Collection</h3>
+    <p class="fr-lead">
+      Total payments recorded on all invoices (cumulative), plus collection by invoice issue month.
+    </p>
+    <p class="fr-kpi">
+      <strong>All-time recorded on invoices:</strong>
+      {{ currencySymbol }}{{ money(bundle.feesCollection?.totalCollectedAllTime) }}
+    </p>
+    <div class="fr-table-wrap">
+      <table class="fr-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th class="fr-num">Recorded payments</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let k of objectKeys(bundle.feesCollection?.collectionByMonth)">
+            <td>{{ k }}</td>
+            <td class="fr-num">
+              {{ currencySymbol }}{{ money(bundle.feesCollection.collectionByMonth[k]) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <!-- Outstanding Fees -->
+  <ng-container *ngIf="report === 'outstanding-fees'">
+    <!-- Header row -->
+    <div class="of-header">
+      <h3 class="of-title">
+        <span class="of-title-icon">&#xe850;</span>
+        Outstanding Fees Report
+      </h3>
+      <div class="of-toolbar">
+        <button class="of-tool-btn" title="Download CSV" (click)="downloadOfCsv()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button class="of-tool-btn" title="Print" (click)="printPage()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="of-filters">
+      <div class="of-filter-field">
+        <svg class="of-filter-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9e9e9e" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="of-input" type="text" placeholder="Search Student" [(ngModel)]="ofSearch" />
+        <span class="of-filter-hint">Search by student name or number</span>
+      </div>
+      <div class="of-filter-field">
+        <svg class="of-filter-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9e9e9e" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <select class="of-select" [(ngModel)]="ofTerm">
+          <option value="">Select Term</option>
+          <option *ngFor="let t of ofUniqueTerms()" [value]="t">{{ t }}</option>
+        </select>
+        <span class="of-filter-hint">Filter by academic term</span>
+      </div>
+      <div class="of-filter-field">
+        <svg class="of-filter-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9e9e9e" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <select class="of-select" [(ngModel)]="ofClass">
+          <option value="">Select Class</option>
+          <option *ngFor="let c of ofUniqueClasses()" [value]="c">{{ c }}</option>
+        </select>
+        <span class="of-filter-hint">Filter by class</span>
+      </div>
+      <div class="of-filter-field">
+        <svg class="of-filter-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9e9e9e" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <select class="of-select" [(ngModel)]="ofResidence">
+          <option value="">Select Residence</option>
+          <option *ngFor="let r of ofUniqueResidences()" [value]="r">{{ r }}</option>
+        </select>
+        <span class="of-filter-hint">Filter by residence type</span>
+      </div>
+      <button class="of-clear-btn" (click)="clearOfFilters()">&#x2715; Clear</button>
+    </div>
+
+    <!-- KPI summary cards -->
+    <div class="of-kpi-row">
+      <div class="of-kpi-card">
+        <span class="of-kpi-icon of-kpi-icon--amber">&#xe850;</span>
+        <div>
+          <div class="of-kpi-label">TOTAL OUTSTANDING</div>
+          <div class="of-kpi-val of-kpi-val--amber">{{ currencySymbol }}{{ money(ofTotalOutstanding) }}</div>
+        </div>
+      </div>
+      <div class="of-kpi-card">
+        <span class="of-kpi-icon of-kpi-icon--blue">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+        <div>
+          <div class="of-kpi-label">TOTAL STUDENTS</div>
+          <div class="of-kpi-val of-kpi-val--blue">{{ ofRows.length }}</div>
+        </div>
+      </div>
+      <div class="of-kpi-card">
+        <span class="of-kpi-icon of-kpi-icon--blue">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </span>
+        <div>
+          <div class="of-kpi-label">CLASSES AFFECTED</div>
+          <div class="of-kpi-val of-kpi-val--blue">{{ ofClassesAffected }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total outstanding banner -->
+    <div class="of-total-banner">
+      <span class="of-banner-icon">&#xe850;</span>
+      Overall Outstanding Fees: {{ currencySymbol }}{{ money(ofTotalOutstanding) }}
+    </div>
+
+    <!-- Summary by Class -->
+    <div class="of-section-header">
+      <span class="of-section-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </span>
+      <strong>Summary by Class</strong>
+      <span class="of-section-count">{{ ofSummaryByClass.length }} class(es)</span>
+    </div>
+
+    <ng-container *ngIf="ofSummaryByClass.length; else noClassSummary">
+      <div class="fr-table-wrap">
+        <table class="fr-table">
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th class="fr-num">Students</th>
+              <th class="fr-num">Total Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of ofSummaryByClass">
+              <td>{{ c.className }}</td>
+              <td class="fr-num">{{ c.count }}</td>
+              <td class="fr-num of-balance">{{ currencySymbol }}{{ money(c.total) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+    <ng-template #noClassSummary>
+      <div class="of-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#bdbdbd" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <p>No class summary data available for the selected filters.</p>
+      </div>
+    </ng-template>
+
+    <!-- Detailed table -->
+    <ng-container *ngIf="ofRows.length">
+      <div class="of-section-header" style="margin-top:1.5rem">
+        <strong>Student Detail</strong>
+        <span class="of-section-count">{{ ofRows.length }} record(s)</span>
+      </div>
+      <div class="fr-table-wrap">
+        <table class="fr-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Student No.</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th>Residence</th>
+              <th>Term</th>
+              <th>Invoice</th>
+              <th>Due</th>
+              <th class="fr-num">Balance ▼</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of ofRows; let i = index">
+              <td class="fr-num">{{ i + 1 }}</td>
+              <td>{{ r.studentNumber }}</td>
+              <td>{{ r.firstName }} {{ r.lastName }}</td>
+              <td>{{ r.className }}</td>
+              <td>{{ r.residence }}</td>
+              <td>{{ r.term }}</td>
+              <td>{{ r.invoiceNumber }}</td>
+              <td>{{ r.dueDate }}</td>
+              <td class="fr-num of-balance">{{ currencySymbol }}{{ money(r.balance) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+  </ng-container>
+
+  <!-- Exemptions -->
+  <ng-container *ngIf="report === 'exemptions'">
+    <h3 class="fr-h3">Exemptions</h3>
+    <p class="fr-lead">
+      Active finance exemptions. Use <a routerLink="/finance/manage/exemptions">Exemptions</a> to manage.
+    </p>
+    <div class="fr-table-wrap">
+      <table class="fr-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student</th>
+            <th>Type</th>
+            <th class="fr-num">Value</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of bundle.exemptions">
+            <td>{{ r.studentNumber }}</td>
+            <td>{{ r.firstName }} {{ r.lastName }}</td>
+            <td>{{ r.exemptionType }}</td>
+            <td class="fr-num">{{ r.exemptionType === 'percentage' ? r.value + '%' : money(r.value) }}</td>
+            <td>{{ r.description || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fr-hint" *ngIf="!bundle.exemptions?.length">No active exemptions.</p>
+  </ng-container>
+
+  <!-- Aged Debtors -->
+  <ng-container *ngIf="report === 'aged-debtors'">
+    <h3 class="fr-h3">Aged Debtors</h3>
+    <p class="fr-lead">Outstanding balances on latest invoice, bucketed by days past due date.</p>
+    <div class="fr-grid-kpi">
+      <div class="fr-kpi-card" *ngFor="let key of ['current0to30', 'days31to60', 'days61to90', 'days90Plus']">
+        <span class="fr-kpi-label">{{ bucketLabel(key) }}</span>
+        <span class="fr-kpi-val"
+          >{{ currencySymbol }}{{ money(bundle.agedDebtors?.bucketTotals?.[key]) }}</span
+        >
+        <span class="fr-kpi-sub">{{ bundle.agedDebtors?.buckets?.[key]?.length || 0 }} accounts</span>
+      </div>
+    </div>
+    <ng-container *ngFor="let key of ['current0to30', 'days31to60', 'days61to90', 'days90Plus']">
+      <h4 class="fr-h4">{{ bucketLabel(key) }}</h4>
+      <div class="fr-table-wrap">
+        <table class="fr-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th class="fr-num">Balance</th>
+              <th>Due</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of bundle.agedDebtors?.buckets?.[key]">
+              <td>{{ r.studentNumber }}</td>
+              <td>{{ r.firstName }} {{ r.lastName }}</td>
+              <td class="fr-num">{{ currencySymbol }}{{ money(r.balance) }}</td>
+              <td>{{ r.dueDate }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+  </ng-container>
+
+  <!-- Enrolment vs Billing -->
+  <ng-container *ngIf="report === 'enrolment-vs-billing'">
+    <h3 class="fr-h3">Enrolment Vs Billing</h3>
+    <p class="fr-lead">
+      Active students compared to those with at least one invoice for the school’s current term (Settings).
+    </p>
+    <ul class="fr-list">
+      <li><strong>Current term (Settings):</strong> {{ bundle.enrolmentVsBilling?.currentTerm || '—' }}</li>
+      <li><strong>Active students:</strong> {{ bundle.enrolmentVsBilling?.activeEnrolled }}</li>
+      <li>
+        <strong>With invoice for current term:</strong>
+        {{ bundle.enrolmentVsBilling?.withInvoiceForCurrentTerm }}
+      </li>
+      <li>
+        <strong>Active without current-term invoice:</strong>
+        {{ bundle.enrolmentVsBilling?.activeWithoutCurrentTermInvoice ?? 'N/A' }}
+      </li>
+    </ul>
+  </ng-container>
+
+  <!-- Revenue Recognition -->
+  <ng-container *ngIf="report === 'revenue-recognition'">
+    <h3 class="fr-h3">Revenue Recognition</h3>
+    <p class="fr-lead">Sum of invoice amounts (`amount` field) grouped by academic term label on the invoice.</p>
+    <div class="fr-table-wrap">
+      <table class="fr-table">
+        <thead>
+          <tr>
+            <th>Term</th>
+            <th class="fr-num">Invoiced amount (sum)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let k of objectKeys(bundle.revenueRecognition?.revenueByTerm)">
+            <td>{{ k }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(bundle.revenueRecognition.revenueByTerm[k]) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <!-- Student Reconciliation -->
+  <ng-container *ngIf="report === 'student-reconciliation'">
+    <h3 class="fr-h3">Student Reconciliation</h3>
+    <p class="fr-lead">
+      Last invoice: resolved gross vs recorded payments, stored balance vs resolved balance. Rows flagged when stored
+      and resolved differ.
+    </p>
+    <div class="fr-table-wrap">
+      <table class="fr-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th class="fr-num">Last gross</th>
+            <th class="fr-num">Paid</th>
+            <th class="fr-num">Stored bal.</th>
+            <th class="fr-num">Resolved bal.</th>
+            <th>Review</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of bundle.studentReconciliation" [class.fr-row-warn]="r.needsReview">
+            <td>{{ r.studentNumber }}</td>
+            <td>{{ r.firstName }} {{ r.lastName }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(r.lastInvoiceGross) }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(r.lastInvoicePaid) }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(r.storedBalance) }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(r.resolvedBalance) }}</td>
+            <td>{{ r.needsReview ? 'Yes' : '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <!-- Analytics & Forecasts -->
+  <ng-container *ngIf="report === 'analytics-forecasts'">
+    <h3 class="fr-h3">Analytics &amp; Forecasts</h3>
+    <p class="fr-lead">
+      Collections by month (from invoice issue date) and a simple average of the last three months as a naive
+      “next month” hint — not a formal forecast.
+    </p>
+    <p class="fr-kpi">
+      <strong>Average (last 3 months with data):</strong>
+      {{ currencySymbol }}{{ money(bundle.analytics?.averageCollectionLastThreeMonths) }}
+      · <strong>Naive next-month hint:</strong> {{ currencySymbol
+      }}{{ money(bundle.analytics?.forecastNextMonthSimple) }}
+    </p>
+    <div class="fr-table-wrap">
+      <table class="fr-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th class="fr-num">Recorded on invoices</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let k of bundle.analytics?.monthLabelsSorted">
+            <td>{{ k }}</td>
+            <td class="fr-num">
+              {{ currencySymbol }}{{ money(bundle.analytics.collectionByMonth[k]) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <!-- Class Reconciliation -->
+  <ng-container *ngIf="report === 'class-reconciliation'">
+    <h3 class="fr-h3">Class Reconciliation</h3>
+    <p class="fr-lead">Per class: student counts, total outstanding (latest invoice per student), cumulative billed.</p>
+    <div class="fr-table-wrap">
+      <table class="fr-table">
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th class="fr-num">Students</th>
+            <th class="fr-num">Active</th>
+            <th class="fr-num">Outstanding</th>
+            <th class="fr-num">Total billed (all terms)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let k of objectKeys(bundle.classReconciliation)">
+            <td>{{ className(k) }}</td>
+            <td class="fr-num">{{ bundle.classReconciliation[k].studentCount }}</td>
+            <td class="fr-num">{{ bundle.classReconciliation[k].activeCount }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(bundle.classReconciliation[k].totalOutstanding) }}</td>
+            <td class="fr-num">{{ currencySymbol }}{{ money(bundle.classReconciliation[k].totalBilledAllTerms) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</div>
+
+<div class="fr-page fr-muted" *ngIf="!bundle">
+  <p>Loading report data…</p>
+</div>

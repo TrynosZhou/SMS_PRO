@@ -1,0 +1,311 @@
+<div class="tta-wrap">
+  <header class="tta-head">
+    <h2 class="tta-title">Manual adjustments</h2>
+    <p class="tta-desc">
+      <strong>Wall-chart grid</strong> (days as bands, periods 1–12+ under each day, {{ viewKind === 'teacher' ? 'TCHR rows' : 'class rows' }}):
+      each <strong>teacher</strong> may only have one lesson per period, and each <strong>class</strong> only one subject per period — unless an administrator explicitly chooses
+      <strong>Ignore collisions and save</strong> (e.g. joint teaching for two classes in the same slot). Two lessons in one cell are shown as a <strong>diagonal split</strong>.
+      <strong>Class time off</strong> from Class Manager appears as <strong>×</strong> (blocked) or <strong>?</strong> (conditional) in <strong>By class</strong> rows, and on lesson cards in <strong>By teacher</strong> when that class is unavailable.
+      Click a lesson to select it, then drag or click a cell on the <strong>same row</strong>. Red outline = invalid target (wrong row or locked). Right-click a card to lock or unlock.
+    </p>
+  </header>
+
+  <div class="tta-toolbar">
+    <label class="tta-field">
+      <span class="tta-label">Version</span>
+      <select
+        class="tta-select"
+        [(ngModel)]="selectedVersionId"
+        (ngModelChange)="onVersionChange()"
+        [disabled]="loading || saving"
+      >
+        <option *ngFor="let v of versions" [ngValue]="v.id">
+          {{ v.name }}{{ v.isActive ? ' (active)' : '' }}
+        </option>
+      </select>
+    </label>
+
+    <fieldset class="tta-fieldset" [disabled]="loading || saving">
+      <legend class="tta-legend">Grid</legend>
+      <label class="tta-radio">
+        <input
+          type="radio"
+          name="ttaViewKind"
+          value="teacher"
+          [(ngModel)]="viewKind"
+          (ngModelChange)="onViewKindChange()"
+        />
+        By teacher
+      </label>
+      <label class="tta-radio">
+        <input
+          type="radio"
+          name="ttaViewKind"
+          value="class"
+          [(ngModel)]="viewKind"
+          (ngModelChange)="onViewKindChange()"
+        />
+        By class
+      </label>
+    </fieldset>
+
+    <label class="tta-field" *ngIf="viewKind === 'teacher'">
+      <span class="tta-label">Teacher filter</span>
+      <select
+        class="tta-select"
+        [(ngModel)]="filterEntityId"
+        (ngModelChange)="onFilterEntityChange()"
+        [disabled]="loading || saving"
+      >
+        <option value="">All teachers in timetable</option>
+        <option *ngFor="let o of teacherFilterOptions()" [ngValue]="o.id">{{ o.name }}</option>
+      </select>
+    </label>
+
+    <label class="tta-field" *ngIf="viewKind === 'class'">
+      <span class="tta-label">Class filter</span>
+      <select
+        class="tta-select"
+        [(ngModel)]="filterEntityId"
+        (ngModelChange)="onFilterEntityChange()"
+        [disabled]="loading || saving"
+      >
+        <option value="">All classes in timetable</option>
+        <option *ngFor="let o of classFilterOptions()" [ngValue]="o.id">{{ o.name }}</option>
+      </select>
+    </label>
+
+    <span class="tta-saving" *ngIf="saving">Saving…</span>
+  </div>
+
+  <div class="tta-alert tta-alert--err" *ngIf="error">{{ error }}</div>
+  <div class="tta-alert tta-alert--ok" *ngIf="success">{{ success }}</div>
+  <div class="tta-alert tta-alert--warn" *ngIf="conflictMessage">{{ conflictMessage }}</div>
+
+  <div class="tta-collision" *ngIf="collisionPrompt as cp" role="dialog" aria-modal="true" aria-labelledby="tta-coll-title">
+    <h3 id="tta-coll-title" class="tta-collision-title">Scheduling collision</h3>
+    <ul class="tta-collision-list">
+      <li *ngFor="let line of cp.lines">{{ line }}</li>
+    </ul>
+    <p class="tta-collision-hint">Only use this when you deliberately want overlapping lessons in the same period.</p>
+    <div class="tta-collision-actions">
+      <button type="button" class="tta-btn-ghost" (click)="cancelCollisionPrompt()">Cancel</button>
+      <button type="button" class="tta-btn-danger" (click)="confirmIgnoreCollisions()" [disabled]="saving">
+        Ignore collisions and save
+      </button>
+    </div>
+  </div>
+
+  <div class="tta-picked" *ngIf="liftedSlotId && !loading">
+    <span class="tta-picked-label">Lesson selected:</span>
+    <strong>{{ pickedSlotLabel() }}</strong>
+    <span class="tta-picked-hint">— click an empty cell on this row, or drag the card.</span>
+    <button type="button" class="tta-picked-cancel" (click)="clearPickedLesson()">Cancel</button>
+  </div>
+
+  <div class="tta-loading" *ngIf="loading">Loading timetable…</div>
+
+  <div class="tta-table-wrap" *ngIf="!loading && selectedVersionId">
+    <table class="tta-grid tta-grid--dense tta-grid--wallchart" *ngIf="gridRows.length; else ttaEmpty">
+      <thead>
+        <tr>
+          <th class="tta-corner" scope="col" rowspan="2" title="">
+            <span class="tta-corner-label">{{ viewKind === 'teacher' ? 'TCHR' : 'CLS' }}</span>
+          </th>
+          <th
+            class="tta-day"
+            *ngFor="let day of gridDays"
+            [attr.colspan]="periods.length"
+            scope="colgroup"
+            [attr.title]="day"
+          >
+            {{ dayHeadingShort(day) }}
+          </th>
+        </tr>
+        <tr>
+          <ng-container *ngFor="let day of gridDays; let dayIdx = index">
+            <th
+              class="tta-period"
+              *ngFor="let p of periods; let isFirstP = first"
+              [class.tta-period--day-start]="isFirstP && dayIdx > 0"
+              scope="col"
+              [attr.title]="day + ' period ' + p"
+            >
+              {{ p }}
+            </th>
+          </ng-container>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of gridRows; trackBy: trackRowById">
+          <th
+            class="tta-row-head"
+            scope="row"
+            [attr.title]="row.name"
+            [style.borderLeft]="'4px solid ' + rowRibbonColor(row)"
+          >
+            {{ row.rowLabel }}
+          </th>
+          <ng-container *ngFor="let day of gridDays; let dayIdx = index">
+            <td
+              *ngFor="let p of periods; let isFirstP = first"
+              class="tta-cell"
+              [class.tta-cell--day-start]="isFirstP && dayIdx > 0"
+              [class.tta-cell--over]="dragOverKey === cellKey(row.id, day, p)"
+              [class.tta-cell--blocked]="activeMoveSlot() && isInvalidDropTarget(row.id, day, p)"
+              [class.tta-cell--stack]="cellSlots(row.id, day, p).length > 2"
+              [class.tta-cell--split-diag]="useDiagonalSplit(cellSlots(row.id, day, p))"
+              [class.tta-cell--overlap]="cellSlots(row.id, day, p).length > 1"
+              [class.tta-cell--timeoff-strong]="
+                viewKind === 'class' &&
+                classTimeOffAt(row.id, day, p) === 2 &&
+                cellSlots(row.id, day, p).length > 0
+              "
+              [class.tta-cell--timeoff-maybe]="
+                viewKind === 'class' &&
+                classTimeOffAt(row.id, day, p) === 1 &&
+                cellSlots(row.id, day, p).length > 0
+              "
+              (click)="onGridCellClick(row.id, day, p, $event)"
+              (mouseenter)="onCellHoverEnter(row.id, day, p)"
+              (mouseleave)="onCellHoverLeave($event)"
+              (dragover)="onDragOver($event, row.id, day, p)"
+              (dragleave)="onDragLeaveCell($event)"
+              (drop)="onDrop(row.id, day, p, $event)"
+            >
+              <!-- No `*ngIf`/inner `else` pair: the else template does not reliably inherit `cellList`, which left cards blank. -->
+              <ng-container *ngIf="cellSlots(row.id, day, p) as cellList">
+                <div class="tta-diag-wrap" *ngIf="cellList.length === 2">
+                  <div
+                    *ngFor="let slot of cellList; let si = index; trackBy: trackSlotById"
+                    class="tta-card"
+                    role="button"
+                    tabindex="0"
+                    [class.tta-card--diag]="true"
+                    [class.tta-card--diag-a]="si === 0"
+                    [class.tta-card--diag-b]="si === 1"
+                    [attr.aria-pressed]="isSlotLifted(slot)"
+                    [class.tta-card--locked]="slotIsLocked(slot)"
+                    [class.tta-card--lifted]="isSlotLifted(slot)"
+                    [attr.draggable]="!slotIsLocked(slot) ? 'true' : 'false'"
+                    [style.background]="cardColor(slot)"
+                    [style.borderColor]="cardColor(slot)"
+                    (mousedown)="onCardMouseDown(slot, $event)"
+                    (click)="onCardClick(slot, $event)"
+                    (keydown)="onCardKeyActivate(slot, $event)"
+                    (contextmenu)="onCardContextMenu(slot, $event)"
+                    (dragstart)="onDragStart(slot, $event)"
+                    (dragend)="onDragEnd()"
+                    (dragover)="onDragOver($event, row.id, day, p)"
+                    (drop)="onDrop(row.id, day, p, $event)"
+                  >
+                    <span class="tta-card-lock" *ngIf="slotIsLocked(slot)" aria-hidden="true">🔒</span>
+                    <span class="tta-card-timeoff" *ngIf="slotClassTimeOff(slot, day, p) === 2" title="Class time off">×</span>
+                    <span class="tta-card-timeoff tta-card-timeoff--maybe" *ngIf="slotClassTimeOff(slot, day, p) === 1" title="Class conditional availability">?</span>
+                    <span class="tta-card-primary">{{ cardPrimaryLabel(slot) }}</span>
+                    <span class="tta-card-secondary">{{ cardSecondaryLabel(slot) }}</span>
+                  </div>
+                </div>
+                <ng-container *ngIf="cellList.length > 0 && cellList.length !== 2">
+                  <div
+                    *ngFor="let slot of cellList; trackBy: trackSlotById"
+                    class="tta-card"
+                    role="button"
+                    tabindex="0"
+                    [attr.aria-pressed]="isSlotLifted(slot)"
+                    [class.tta-card--locked]="slotIsLocked(slot)"
+                    [class.tta-card--lifted]="isSlotLifted(slot)"
+                    [attr.draggable]="!slotIsLocked(slot) ? 'true' : 'false'"
+                    [style.background]="cardColor(slot)"
+                    [style.borderColor]="cardColor(slot)"
+                    (mousedown)="onCardMouseDown(slot, $event)"
+                    (click)="onCardClick(slot, $event)"
+                    (keydown)="onCardKeyActivate(slot, $event)"
+                    (contextmenu)="onCardContextMenu(slot, $event)"
+                    (dragstart)="onDragStart(slot, $event)"
+                    (dragend)="onDragEnd()"
+                    (dragover)="onDragOver($event, row.id, day, p)"
+                    (drop)="onDrop(row.id, day, p, $event)"
+                  >
+                    <span class="tta-card-lock" *ngIf="slotIsLocked(slot)" aria-hidden="true">🔒</span>
+                    <span class="tta-card-timeoff" *ngIf="slotClassTimeOff(slot, day, p) === 2" title="Class time off">×</span>
+                    <span class="tta-card-timeoff tta-card-timeoff--maybe" *ngIf="slotClassTimeOff(slot, day, p) === 1" title="Class conditional availability">?</span>
+                    <span class="tta-card-primary">{{ cardPrimaryLabel(slot) }}</span>
+                    <span class="tta-card-secondary">{{ cardSecondaryLabel(slot) }}</span>
+                  </div>
+                </ng-container>
+                <div
+                  *ngIf="cellList.length === 0"
+                  class="tta-slot-empty"
+                  [class.tta-slot-empty--phantom]="activeMoveSlot()"
+                  [class.tta-slot-empty--timeoff]="viewKind === 'class' && classTimeOffAt(row.id, day, p) === 2"
+                  [class.tta-slot-empty--timeoff-maybe]="viewKind === 'class' && classTimeOffAt(row.id, day, p) === 1"
+                  (dragover)="onDragOver($event, row.id, day, p)"
+                  (dragleave)="onDragLeaveCell($event)"
+                  (drop)="onDrop(row.id, day, p, $event)"
+                >
+                  <span class="tta-timeoff-emptymark" *ngIf="viewKind === 'class' && classTimeOffAt(row.id, day, p) === 2">×</span>
+                  <span class="tta-timeoff-emptymark tta-timeoff-emptymark--maybe" *ngIf="viewKind === 'class' && classTimeOffAt(row.id, day, p) === 1">?</span>
+                </div>
+              </ng-container>
+            </td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+    <ng-template #ttaEmpty>
+      <p class="tta-empty-msg">No rows to show. Generate a timetable or widen the filter.</p>
+    </ng-template>
+  </div>
+
+  <!-- ── Unplaced lessons tray ────────────────────────────────────────── -->
+  <div class="tta-unplaced" *ngIf="!loading && unplacedSlots().length > 0">
+    <div class="tta-unplaced-header">
+      <span class="tta-unplaced-title">Unplaced lessons</span>
+      <span class="tta-unplaced-count">{{ unplacedSlots().length }}</span>
+      <span class="tta-unplaced-hint">
+        — drag a card onto the grid, or click a card then click an empty cell to place it
+      </span>
+    </div>
+    <div class="tta-unplaced-tray">
+      <div
+        *ngFor="let slot of unplacedSlots(); trackBy: trackSlotById"
+        class="tta-card tta-card--tray"
+        role="button"
+        tabindex="0"
+        [attr.aria-pressed]="isSlotLifted(slot)"
+        [class.tta-card--locked]="slotIsLocked(slot)"
+        [class.tta-card--lifted]="isSlotLifted(slot)"
+        [attr.draggable]="!slotIsLocked(slot) ? 'true' : 'false'"
+        [style.background]="cardColor(slot)"
+        [style.borderColor]="cardColor(slot)"
+        [attr.title]="cardPrimaryLabel(slot) + ' · ' + cardSecondaryLabel(slot)"
+        (mousedown)="onCardMouseDown(slot, $event)"
+        (click)="onCardClick(slot, $event)"
+        (keydown)="onCardKeyActivate(slot, $event)"
+        (contextmenu)="onCardContextMenu(slot, $event)"
+        (dragstart)="onDragStart(slot, $event)"
+        (dragend)="onDragEnd()"
+      >
+        <span class="tta-card-lock" *ngIf="slotIsLocked(slot)" aria-hidden="true">🔒</span>
+        <span class="tta-card-primary">{{ cardPrimaryLabel(slot) }}</span>
+        <span class="tta-card-secondary">{{ cardSecondaryLabel(slot) }}</span>
+        <span class="tta-card-tray-row">{{ trayRowLabel(slot) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div
+    *ngIf="contextMenu"
+    class="tta-ctx"
+    [style.left.px]="contextMenu.x"
+    [style.top.px]="contextMenu.y"
+    role="menu"
+    (click)="$event.stopPropagation()"
+  >
+    <button type="button" class="tta-ctx-item" role="menuitem" (click)="applyContextLockToggle()">
+      {{ contextMenu.slot.isLocked ? 'Unlock' : 'Lock' }}
+    </button>
+  </div>
+
+</div>

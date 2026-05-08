@@ -1,0 +1,22 @@
+<div
+  class="inv-preview-backdrop"
+  *ngIf="open"
+  (click)="requestClose()"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="inv-preview-title"
+>
+  <div class="inv-preview-dialog" (click)="$event.stopPropagation()">
+    <header class="inv-preview-header">
+      <h2 id="inv-preview-title">Invoice statement</h2>
+      <p class="inv-preview-hint">Preview only. Use Download if you want a copy on your device.</p>
+      <div class="inv-preview-actions">
+        <button type="button" class="btn btn-secondary inv-preview-btn" (click)="download()">Download PDF</button>
+        <button type="button" class="btn btn-outline inv-preview-btn" (click)="requestClose()">Close</button>
+      </div>
+    </header>
+    <div class="inv-preview-frame-wrap">
+      <iframe *ngIf="safeUrl" class="inv-preview-frame" [src]="safeUrl" title="Invoice PDF preview"></iframe>
+    </div>
+  </div>
+</div>

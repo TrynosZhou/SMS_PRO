@@ -1,0 +1,185 @@
+<div class="ex-wrap">
+  <header class="ex-hero">
+    <span class="ex-hero-ico" aria-hidden="true">&#8635;&#36;</span>
+    <div class="ex-hero-text">
+      <h1 class="ex-hero-title">Exemption Management</h1>
+      <p class="ex-hero-sub">View, create, edit, and manage student exemptions</p>
+    </div>
+  </header>
+
+  <section class="ex-card ex-form-card">
+    <div class="ex-form-head">
+      <span class="ex-form-ico" aria-hidden="true">+</span>
+      <div>
+        <h2 class="ex-form-title">{{ editingId ? 'Edit exemption' : 'Create New Exemption' }}</h2>
+        <p class="ex-form-sub">{{ editingId ? 'Update the fields below' : 'Add a new student exemption' }}</p>
+      </div>
+    </div>
+
+    <p class="ex-msg ex-err" *ngIf="error">{{ error }}</p>
+    <p class="ex-msg ex-ok" *ngIf="success">{{ success }}</p>
+
+    <div class="ex-field">
+      <label class="ex-label" for="ex-stu-search">Search for Student</label>
+      <div class="ex-input-wrap">
+        <span class="ex-input-ico" aria-hidden="true">&#128100;</span>
+        <input
+          id="ex-stu-search"
+          type="text"
+          class="ex-input"
+          [(ngModel)]="studentSearchQuery"
+          (ngModelChange)="onSearchInput($event)"
+          [disabled]="!!editingId"
+          placeholder="Name or student number…"
+          autocomplete="off"
+        />
+      </div>
+      <ul class="ex-ac" *ngIf="filteredStudents.length && !editingId">
+        <li
+          *ngFor="let s of filteredStudents"
+          (click)="selectStudent(s)"
+          class="ex-ac-item"
+        >
+          {{ s.firstName }} {{ s.lastName }}
+          <span class="ex-ac-num">{{ s.studentNumber }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="ex-selected" *ngIf="selectedStudent">
+      <span class="ex-input-ico" aria-hidden="true">&#128100;</span>
+      <div class="ex-selected-body">
+        <span class="ex-selected-title">Selected Student</span>
+        <span class="ex-selected-name">
+          {{ selectedStudent.firstName }} {{ selectedStudent.lastName }}
+          ({{ selectedStudent.studentNumber }})
+        </span>
+      </div>
+      <button type="button" class="ex-link" *ngIf="!editingId" (click)="clearStudent()">Change</button>
+    </div>
+    <p class="ex-hint" *ngIf="!selectedStudent && !editingId">Search and select a student above.</p>
+
+    <div class="ex-field">
+      <span class="ex-label">Exemption Type</span>
+      <div class="ex-type-row">
+        <button
+          type="button"
+          class="ex-type-card"
+          [class.ex-type-on]="exemptionType === 'fixed'"
+          (click)="setExemptionType('fixed')"
+        >
+          <span class="ex-radio" [class.ex-radio-on]="exemptionType === 'fixed'"></span>
+          Fixed amount
+        </button>
+        <button
+          type="button"
+          class="ex-type-card"
+          [class.ex-type-on]="exemptionType === 'percentage'"
+          (click)="setExemptionType('percentage')"
+        >
+          <span class="ex-radio" [class.ex-radio-on]="exemptionType === 'percentage'"></span>
+          Percentage
+        </button>
+        <button
+          type="button"
+          class="ex-type-card"
+          [class.ex-type-on]="exemptionType === 'staff_sibling'"
+          (click)="setExemptionType('staff_sibling')"
+        >
+          <span class="ex-radio" [class.ex-radio-on]="exemptionType === 'staff_sibling'"></span>
+          Staff sibling
+        </button>
+      </div>
+    </div>
+
+    <div class="ex-field" *ngIf="exemptionType !== 'staff_sibling'">
+      <label class="ex-label" for="ex-value">
+        {{ exemptionType === 'fixed' ? 'Fixed Amount*' : 'Percentage*' }}
+      </label>
+      <div class="ex-input-wrap">
+        <span class="ex-input-ico" aria-hidden="true">{{ exemptionType === 'fixed' ? currencySymbol : '%' }}</span>
+        <input
+          id="ex-value"
+          type="number"
+          class="ex-input"
+          [(ngModel)]="valueNum"
+          min="0"
+          [max]="exemptionType === 'percentage' ? 100 : null"
+          step="0.01"
+        />
+      </div>
+    </div>
+    <p class="ex-hint" *ngIf="exemptionType === 'staff_sibling'">
+      Waives <strong>tuition, desk, registration, and enrolment</strong> lines from Manage Fees or Settings fees. Other charges (e.g. transport, dining) stay on the invoice unless they match the waived categories.
+    </p>
+
+    <div class="ex-field">
+      <label class="ex-label" for="ex-desc">Description (Optional)</label>
+      <div class="ex-input-wrap">
+        <span class="ex-input-ico" aria-hidden="true">&#128196;</span>
+        <input
+          id="ex-desc"
+          type="text"
+          class="ex-input"
+          [(ngModel)]="description"
+          placeholder="Reason or note…"
+        />
+      </div>
+    </div>
+
+    <div class="ex-actions">
+      <button type="button" class="ex-btn ex-btn-primary" (click)="submit()" [disabled]="saving">
+        {{ saving ? 'Saving…' : editingId ? 'Update exemption' : 'Save exemption' }}
+      </button>
+      <button
+        type="button"
+        class="ex-btn ex-btn-ghost"
+        (click)="recalculateInvoicesForSelectedStudent()"
+        [disabled]="recalculating || !selectedStudent"
+        title="Re-run fees and exemptions on open invoices for the selected student"
+      >
+        {{ recalculating ? 'Syncing invoices…' : 'Sync open invoices' }}
+      </button>
+      <button type="button" class="ex-btn ex-btn-ghost" (click)="resetForm()" [disabled]="saving">
+        Cancel
+      </button>
+    </div>
+  </section>
+
+  <section class="ex-card ex-table-card">
+    <h3 class="ex-table-title">Active &amp; recent exemptions</h3>
+    <p class="ex-hint">Only one exemption per student applies at a time to managed-fee invoices. Saving or updating an exemption automatically recalculates open invoices; use <strong>Sync open invoices</strong> if the balance still looks wrong.</p>
+    <div class="ex-loading" *ngIf="loadingList">Loading…</div>
+    <div class="ex-table-wrap" *ngIf="!loadingList && exemptionsList.length">
+      <table class="ex-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Type</th>
+            <th>Value</th>
+            <th>Active</th>
+            <th>Note</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of exemptionsList">
+            <td>
+              <strong>{{ row.student?.firstName }} {{ row.student?.lastName }}</strong>
+              <div class="ex-muted">{{ row.student?.studentNumber }}</div>
+            </td>
+            <td>{{ typeLabel(row.exemptionType) }}</td>
+            <td>{{ formatValue(row) }}</td>
+            <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+            <td class="ex-desc-cell">{{ row.description || '—' }}</td>
+            <td class="ex-row-actions">
+              <button type="button" class="ex-link" (click)="startEdit(row)">Edit</button>
+              <button type="button" class="ex-link ex-link-danger" (click)="deactivate(row)">Remove</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="ex-hint" *ngIf="!loadingList && !exemptionsList.length">No exemptions yet.</p>
+  </section>
+</div>

@@ -1,0 +1,98 @@
+<section class="sel-elearn" aria-labelledby="submit-task-title">
+  <h3 id="submit-task-title" class="sel-h2">Submit task</h3>
+  <p class="sel-lead">
+    Upload your completed <strong>assignments</strong> and <strong>tests</strong> for your teachers. Notes are view-only — open them under <strong>View Tasks</strong>.
+  </p>
+
+  <div class="alert alert-error" *ngIf="error" role="alert">{{ error }}</div>
+
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading tasks…</p>
+  </div>
+
+  <div class="sel-toolbar" *ngIf="!loading && tasks.length">
+    <div class="sel-filters" role="group" aria-label="Filter by type">
+      <button type="button" class="sel-chip" [class.active]="filterKind === 'all'" (click)="setFilter('all')">All</button>
+      <button type="button" class="sel-chip" [class.active]="filterKind === 'assignment'" (click)="setFilter('assignment')">Assignments</button>
+      <button type="button" class="sel-chip" [class.active]="filterKind === 'test'" (click)="setFilter('test')">Tests</button>
+    </div>
+    <label class="sel-search-wrap">
+      <span class="sel-sr-only">Search</span>
+      <input
+        type="search"
+        class="sel-search"
+        [(ngModel)]="searchQuery"
+        placeholder="Search title, class, or teacher…"
+        autocomplete="off"
+      />
+    </label>
+  </div>
+
+  <div class="tasks-grid" *ngIf="!loading && filteredTasks.length">
+    <article class="task-card" *ngFor="let t of filteredTasks">
+      <div class="task-card-top">
+        <h4 class="task-card-title">{{ t.title }}</h4>
+        <span class="type-pill" [class.test]="t.taskType === 'test'">
+          {{ typeLabel(t) }}
+        </span>
+      </div>
+
+      <dl class="sel-meta">
+        <div class="sel-meta-row">
+          <dt>Teacher</dt>
+          <dd>{{ teacherDisplay(t) }}</dd>
+        </div>
+        <div class="sel-meta-row">
+          <dt>Date sent</dt>
+          <dd>{{ t.sentAt | date:'medium' }}</dd>
+        </div>
+        <div class="sel-meta-row">
+          <dt>Class</dt>
+          <dd>{{ classLabel(t) }}</dd>
+        </div>
+      </dl>
+
+      <p class="desc" *ngIf="t.description">{{ t.description }}</p>
+      <p class="due" *ngIf="t.dueDate">
+        <strong>Due:</strong> {{ t.dueDate | date:'mediumDate' }}
+      </p>
+
+      <div class="links">
+        <a *ngIf="linkFor(t) as href" [href]="href" target="_blank" rel="noopener" class="btn-link primary">
+          📎 Teacher’s attachment
+        </a>
+        <span *ngIf="!linkFor(t)" class="no-file">No teacher attachment.</span>
+      </div>
+
+      <div class="submit-section">
+        <h4 class="submit-heading">Your submission</h4>
+        <p class="submit-hint" *ngIf="submissionByTaskId[t.id]">
+          Submitted {{ submissionByTaskId[t.id].submittedAt | date:'medium' }}
+          <a *ngIf="linkForMySubmission(t.id) as myHref" [href]="myHref" target="_blank" rel="noopener" class="inline-link">Open your file</a>
+        </p>
+        <p class="submit-hint" *ngIf="!submissionByTaskId[t.id]">Upload your completed work (PDF, Word, image, etc.).</p>
+        <p class="upload-err" *ngIf="uploadError[t.id]">{{ uploadError[t.id] }}</p>
+        <label class="file-upload-label" [class.disabled]="uploadingTaskId === t.id">
+          <input
+            type="file"
+            class="file-input"
+            [disabled]="uploadingTaskId === t.id"
+            (change)="onFileSelected(t.id, $event)"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,image/*"
+          />
+          <span *ngIf="uploadingTaskId !== t.id">{{ submissionByTaskId[t.id] ? 'Replace file' : 'Choose file to upload' }}</span>
+          <span *ngIf="uploadingTaskId === t.id">Uploading…</span>
+        </label>
+      </div>
+    </article>
+  </div>
+
+  <div class="empty-box" *ngIf="!loading && tasks.length && !filteredTasks.length && !error">
+    <p>No tasks match this filter or search.</p>
+  </div>
+
+  <div class="empty-box" *ngIf="!loading && !tasks.length && !error">
+    <p>No assignments or tests to submit yet. When your teacher posts one, it will appear here.</p>
+  </div>
+</section>

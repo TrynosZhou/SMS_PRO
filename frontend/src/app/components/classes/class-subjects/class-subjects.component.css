@@ -1,0 +1,324 @@
+.cs-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 360px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.cs-head {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.cs-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.cs-ico {
+  font-size: 1.75rem;
+}
+
+.cs-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #424242;
+}
+
+.cs-class-name {
+  margin: 0.15rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1565c0;
+}
+
+.cs-msg {
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
+}
+
+.cs-err {
+  color: #c62828;
+  background: #ffebee;
+}
+
+.cs-table-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 0.25rem;
+}
+
+.cs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.cs-table th,
+.cs-table td {
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.cs-table tbody tr:nth-child(even) {
+  background: #f5f5f5;
+}
+
+.cs-table tbody tr {
+  cursor: pointer;
+}
+
+.cs-table tbody tr:hover {
+  background: #e8f4fd;
+}
+
+.cs-table tbody tr.is-selected {
+  background: #bbdefb;
+}
+
+.th-c,
+.td-c {
+  text-align: center;
+  width: 3rem;
+}
+
+.subj-ico {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+.si-e {
+  background: #5c6bc0;
+}
+.si-g {
+  background: #26a69a;
+}
+.si-m {
+  background: #ef5350;
+}
+.si-h {
+  background: #ffa726;
+}
+.si-p {
+  background: #ab47bc;
+}
+.si-o {
+  background: #78909c;
+}
+
+.cs-room-ico {
+  opacity: 0.7;
+}
+
+.cs-empty {
+  padding: 1rem;
+  color: #757575;
+  font-size: 0.9rem;
+}
+
+.cs-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-top: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.cs-foot-left,
+.cs-foot-mid,
+.cs-foot-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.cs-btn {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #bdbdbd;
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cs-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cs-btn-primary {
+  background: #e3f2fd;
+  border-color: #64b5f6;
+}
+
+.cs-btn-danger {
+  border-color: #ef9a9a;
+}
+
+/* Lesson dialog */
+.ls-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.ls-dialog {
+  background: #eceff1;
+  border-radius: 10px;
+  border: 1px solid #b0bec5;
+  max-width: 560px;
+  width: 100%;
+  max-height: 92vh;
+  overflow: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.ls-dlg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #cfd8dc;
+}
+
+.ls-dlg-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ls-close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #546e7a;
+}
+
+.ls-section {
+  display: flex;
+  gap: 0.65rem;
+  margin: 0.5rem;
+  padding: 0.65rem;
+  background: #fff;
+  border: 1px solid #cfd8dc;
+  border-radius: 8px;
+  align-items: flex-start;
+}
+
+.ls-sec-ico {
+  font-size: 1.35rem;
+  line-height: 1;
+  margin-top: 0.15rem;
+}
+
+.ls-sec-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ls-lbl {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #455a64;
+  margin-bottom: 0.25rem;
+}
+
+.ls-input {
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid #b0bec5;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  box-sizing: border-box;
+}
+
+.ls-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.ls-check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.ls-check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ls-mt {
+  margin-top: 0.5rem;
+}
+
+.ls-dlg-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #cfd8dc;
+}
+
+.ls-btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid #90a4ae;
+  background: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ls-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ls-btn-ok {
+  margin-left: auto;
+  min-width: 88px;
+  background: #42a5f5;
+  color: #fff;
+  border-color: #1e88e5;
+}
+
+/* Scope badge shown in the Class column when the lesson is not for the entire class */
+.cs-scope-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #e3f2fd;
+  color: #1565c0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  white-space: nowrap;
+}

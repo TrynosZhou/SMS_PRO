@@ -1,0 +1,456 @@
+<!-- ── Page header ───────────────────────────────────── -->
+<div class="ss-header">
+  <div class="ss-header-left">
+    <span class="ss-header-ico" aria-hidden="true">⚙</span>
+    <div>
+      <h1 class="ss-title">System Settings</h1>
+    </div>
+  </div>
+  <p class="ss-subtitle">Configure system-wide settings, preferences, and integrations</p>
+</div>
+<hr class="ss-divider" />
+
+<!-- ── Sub-tabs ──────────────────────────────────────── -->
+<nav class="ss-tabs" aria-label="System settings sections">
+  <button
+    *ngFor="let t of tabs"
+    class="ss-tab"
+    [class.ss-tab-active]="activeTab === t.id"
+    (click)="setTab(t.id)"
+  >{{ t.label }}</button>
+</nav>
+
+<!-- Loading -->
+<div class="ss-loading" *ngIf="loading">
+  <div class="ss-spinner"></div> Loading settings…
+</div>
+
+<!-- Feedback -->
+<div class="ss-ok"  *ngIf="successMsg">{{ successMsg }}</div>
+<div class="ss-err" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+<!-- ════════════════════════════════════════════════
+     SCHOOL INFORMATION TAB
+════════════════════════════════════════════════ -->
+<div class="ss-body" *ngIf="!loading && activeTab === 'school-info'">
+  <div class="ss-section-header">
+    <span class="ss-section-ico" aria-hidden="true">🔲</span>
+    <div>
+      <h2 class="ss-section-title">School Details</h2>
+      <p class="ss-section-sub">Configure your school's basic information</p>
+    </div>
+  </div>
+
+  <div class="ss-card">
+    <!-- School Name (floating label) -->
+    <div class="ss-field ss-field-float">
+      <input class="ss-input" id="sn" type="text" placeholder=" " [(ngModel)]="schoolInfo.schoolName" />
+      <label class="ss-float-lbl" for="sn">School Name</label>
+    </div>
+
+    <!-- School Address -->
+    <div class="ss-field ss-field-float">
+      <textarea class="ss-input ss-textarea" id="sa" placeholder=" " [(ngModel)]="schoolInfo.schoolAddress" rows="3"></textarea>
+      <label class="ss-float-lbl" for="sa">School Address</label>
+    </div>
+
+    <!-- Phone + Email -->
+    <div class="ss-row2">
+      <div class="ss-field ss-field-float">
+        <input class="ss-input" id="sp" type="tel" placeholder=" " [(ngModel)]="schoolInfo.schoolPhone" />
+        <label class="ss-float-lbl" for="sp">Phone Number</label>
+      </div>
+      <div class="ss-field ss-field-float">
+        <input class="ss-input" id="se" type="email" placeholder=" " [(ngModel)]="schoolInfo.schoolEmail" />
+        <label class="ss-float-lbl" for="se">Email Address</label>
+      </div>
+    </div>
+
+    <!-- Website + Logo URL -->
+    <div class="ss-row2">
+      <div class="ss-field ss-field-float">
+        <input class="ss-input" id="sw" type="url" placeholder=" " [(ngModel)]="schoolInfo.schoolWebsite" />
+        <label class="ss-float-lbl" for="sw">Website</label>
+      </div>
+      <div class="ss-field ss-field-float">
+        <input class="ss-input" id="sl" type="text" placeholder=" " [(ngModel)]="schoolInfo.schoolLogo" />
+        <label class="ss-float-lbl" for="sl">Logo URL</label>
+      </div>
+    </div>
+
+    <!-- Logo preview -->
+    <div class="ss-logo-preview" *ngIf="schoolInfo.schoolLogo">
+      <img [src]="schoolInfo.schoolLogo" alt="School logo preview" class="ss-logo-img"
+           onerror="this.style.display='none'" />
+    </div>
+  </div>
+
+  <div class="ss-actions">
+    <button class="ss-save-btn" (click)="save()" [disabled]="saving">
+      <span *ngIf="!saving">💾 Save School Information</span>
+      <span *ngIf="saving">Saving…</span>
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     EMAIL SETTINGS TAB
+════════════════════════════════════════════════ -->
+<div class="ss-body" *ngIf="!loading && activeTab === 'email'">
+  <div class="ss-section-header">
+    <span class="ss-section-ico" aria-hidden="true">✉️</span>
+    <div>
+      <h2 class="ss-section-title">Email Configuration</h2>
+      <p class="ss-section-sub">Configure SMTP settings for outgoing emails</p>
+    </div>
+  </div>
+
+  <div class="ss-card">
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label class="ss-lbl">SMTP Host</label>
+        <input class="ss-input" type="text" placeholder="smtp.example.com" [(ngModel)]="emailSettings.smtpHost" />
+      </div>
+      <div class="ss-field">
+        <label class="ss-lbl">SMTP Port</label>
+        <input class="ss-input" type="number" placeholder="587" [(ngModel)]="emailSettings.smtpPort" />
+      </div>
+    </div>
+
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label class="ss-lbl">SMTP Username</label>
+        <input class="ss-input" type="text" placeholder="user@example.com" [(ngModel)]="emailSettings.smtpUser" />
+      </div>
+      <div class="ss-field">
+        <label class="ss-lbl">SMTP Password</label>
+        <input class="ss-input" type="password" placeholder="••••••••" [(ngModel)]="emailSettings.smtpPassword" />
+      </div>
+    </div>
+
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label class="ss-lbl">From Name</label>
+        <input class="ss-input" type="text" placeholder="School Name" [(ngModel)]="emailSettings.fromName" />
+      </div>
+      <div class="ss-field">
+        <label class="ss-lbl">From Address</label>
+        <input class="ss-input" type="email" placeholder="noreply@school.com" [(ngModel)]="emailSettings.fromAddress" />
+      </div>
+    </div>
+
+    <div class="ss-field" style="max-width:220px">
+      <label class="ss-lbl">Encryption</label>
+      <select class="ss-input" [(ngModel)]="emailSettings.encryption">
+        <option value="tls">TLS (Recommended)</option>
+        <option value="ssl">SSL</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Test email -->
+  <div class="ss-card ss-card-test">
+    <h3 class="ss-card-title">🧪 Test Connection</h3>
+    <p class="ss-card-hint">Send a test email to verify your SMTP settings</p>
+    <div class="ss-test-row">
+      <input class="ss-input" type="email" placeholder="test@example.com" [(ngModel)]="emailSettings.testEmail" style="flex:1" />
+      <button class="ss-test-btn" (click)="sendTestEmail()" [disabled]="sendingTest">
+        {{ sendingTest ? 'Sending…' : 'Send Test' }}
+      </button>
+    </div>
+    <p class="ss-test-result" *ngIf="testResult">{{ testResult }}</p>
+  </div>
+
+  <div class="ss-actions">
+    <button class="ss-save-btn" (click)="save()" [disabled]="saving">
+      <span *ngIf="!saving">💾 Save Email Settings</span>
+      <span *ngIf="saving">Saving…</span>
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     NOTIFICATIONS TAB
+════════════════════════════════════════════════ -->
+<div class="ss-body" *ngIf="!loading && activeTab === 'notifications'">
+  <div class="ss-section-header">
+    <span class="ss-section-ico" aria-hidden="true">🔔</span>
+    <div>
+      <h2 class="ss-section-title">Notification Preferences</h2>
+      <p class="ss-section-sub">Choose which events trigger email, SMS, or push notifications</p>
+    </div>
+  </div>
+
+  <!-- Email notifications -->
+  <div class="ss-card">
+    <h3 class="ss-card-title">✉️ Email Notifications</h3>
+    <div class="ss-toggle-list">
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">New Student Enrolled</span>
+          <span class="ss-toggle-hint">Notify admin when a new student is registered</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="notifications.emailOnNewStudent" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Fee Payment Received</span>
+          <span class="ss-toggle-hint">Email receipt to parent on payment</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="notifications.emailOnFeePayment" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Report Card Ready</span>
+          <span class="ss-toggle-hint">Notify parents when reports are published</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="notifications.emailOnReportReady" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Student Absence</span>
+          <span class="ss-toggle-hint">Email parents when student is marked absent</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="notifications.emailOnAbsence" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMS notifications -->
+  <div class="ss-card">
+    <h3 class="ss-card-title">📱 SMS Notifications</h3>
+    <div class="ss-toggle-list">
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Fee Payment Received</span>
+          <span class="ss-toggle-hint">Send SMS receipt to parent on payment</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="notifications.smsOnFeePayment" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Student Absence</span>
+          <span class="ss-toggle-hint">SMS parent on same-day absence</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="notifications.smsOnAbsence" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Report Card Ready</span>
+          <span class="ss-toggle-hint">SMS parent when reports are published</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="notifications.smsOnReportReady" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Push notifications -->
+  <div class="ss-card">
+    <h3 class="ss-card-title">🔔 Push Notifications</h3>
+    <div class="ss-toggle-list">
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Enable Push Notifications</span>
+          <span class="ss-toggle-hint">Allow in-app browser push notifications</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="notifications.pushEnabled" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="ss-actions">
+    <button class="ss-save-btn" (click)="save()" [disabled]="saving">
+      <span *ngIf="!saving">💾 Save Notification Settings</span>
+      <span *ngIf="saving">Saving…</span>
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     SECURITY TAB
+════════════════════════════════════════════════ -->
+<div class="ss-body" *ngIf="!loading && activeTab === 'security'">
+  <div class="ss-section-header">
+    <span class="ss-section-ico" aria-hidden="true">🔒</span>
+    <div>
+      <h2 class="ss-section-title">Security Settings</h2>
+      <p class="ss-section-sub">Manage login policies, password requirements, and session controls</p>
+    </div>
+  </div>
+
+  <!-- Password Policy -->
+  <div class="ss-card">
+    <h3 class="ss-card-title">🔑 Password Policy</h3>
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label class="ss-lbl">Minimum Password Length</label>
+        <input class="ss-input" type="number" min="6" max="32" [(ngModel)]="security.minPasswordLength" />
+        <span class="ss-hint">Recommended: 8 or more characters</span>
+      </div>
+      <div class="ss-field">
+        <label class="ss-lbl">Max Login Attempts</label>
+        <input class="ss-input" type="number" min="3" max="20" [(ngModel)]="security.maxLoginAttempts" />
+        <span class="ss-hint">Account locks after this many failed attempts</span>
+      </div>
+    </div>
+
+    <div class="ss-toggle-list">
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Require Uppercase Letter</span>
+          <span class="ss-toggle-hint">Password must contain at least one uppercase letter (A–Z)</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="security.requireUppercase" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Require Number</span>
+          <span class="ss-toggle-hint">Password must contain at least one digit (0–9)</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="security.requireNumber" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Require Special Character</span>
+          <span class="ss-toggle-hint">Password must include !@#$%^&* etc.</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="security.requireSpecialChar" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session -->
+  <div class="ss-card">
+    <h3 class="ss-card-title">⏱ Session Settings</h3>
+    <div class="ss-field" style="max-width:280px">
+      <label class="ss-lbl">Session Timeout (minutes)</label>
+      <input class="ss-input" type="number" min="5" max="1440" [(ngModel)]="security.sessionTimeoutMins" />
+      <span class="ss-hint">Users are logged out after this period of inactivity</span>
+    </div>
+  </div>
+
+  <!-- Two-Factor Auth -->
+  <div class="ss-card">
+    <h3 class="ss-card-title">📲 Two-Factor Authentication</h3>
+    <div class="ss-toggle-list">
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Enable Two-Factor Authentication</span>
+          <span class="ss-toggle-hint">Require 2FA for admin and superadmin accounts</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="security.twoFactorEnabled" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="ss-actions">
+    <button class="ss-save-btn" (click)="save()" [disabled]="saving">
+      <span *ngIf="!saving">💾 Save Security Settings</span>
+      <span *ngIf="saving">Saving…</span>
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     GENERAL TAB
+════════════════════════════════════════════════ -->
+<div class="ss-body" *ngIf="!loading && activeTab === 'general'">
+  <div class="ss-section-header">
+    <span class="ss-section-ico" aria-hidden="true">⚙️</span>
+    <div>
+      <h2 class="ss-section-title">General Preferences</h2>
+      <p class="ss-section-sub">Locale, display, and system-wide defaults</p>
+    </div>
+  </div>
+
+  <div class="ss-card">
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label class="ss-lbl">Timezone</label>
+        <select class="ss-input" [(ngModel)]="general.timezone">
+          <option *ngFor="let tz of timezones" [value]="tz">{{ tz }}</option>
+        </select>
+      </div>
+      <div class="ss-field">
+        <label class="ss-lbl">Date Format</label>
+        <select class="ss-input" [(ngModel)]="general.dateFormat">
+          <option *ngFor="let df of dateFormats" [value]="df">{{ df }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label class="ss-lbl">Language</label>
+        <select class="ss-input" [(ngModel)]="general.language">
+          <option *ngFor="let lang of languages" [value]="lang.code">{{ lang.label }}</option>
+        </select>
+      </div>
+      <div class="ss-field">
+        <label class="ss-lbl">Week Starts On</label>
+        <select class="ss-input" [(ngModel)]="general.weekStartsOn">
+          <option value="monday">Monday</option>
+          <option value="sunday">Sunday</option>
+          <option value="saturday">Saturday</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label class="ss-lbl">Currency</label>
+        <select class="ss-input" [(ngModel)]="general.currency" (change)="onCurrencyChange()">
+          <option *ngFor="let c of currencies" [value]="c.code">{{ c.code }} ({{ c.symbol }})</option>
+        </select>
+      </div>
+      <div class="ss-field">
+        <label class="ss-lbl">Academic Year</label>
+        <input class="ss-input" type="number" [(ngModel)]="general.academicYear" placeholder="2026" />
+      </div>
+    </div>
+  </div>
+
+  <div class="ss-actions">
+    <button class="ss-save-btn" (click)="save()" [disabled]="saving">
+      <span *ngIf="!saving">💾 Save General Settings</span>
+      <span *ngIf="saving">Saving…</span>
+    </button>
+  </div>
+</div>

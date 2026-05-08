@@ -1,0 +1,164 @@
+<div class="cn-page">
+  <header class="cn-hero">
+    <div class="cn-hero-inner">
+      <div class="cn-hero-copy">
+        <p class="cn-eyebrow">Finance · Adjustments</p>
+        <h1 class="cn-title">Credit note</h1>
+        <p class="cn-lead">
+          Correct an <strong>overcharge</strong> by reducing the latest invoice balance. Any credit beyond what’s owed can be carried forward as <strong>prepaid</strong> for the next term.
+        </p>
+      </div>
+      <button type="button" class="btn btn-ghost" (click)="backToInvoices()">← Back to invoices</button>
+    </div>
+
+    <nav class="cn-workflow" aria-label="Steps">
+      <div class="cn-track">
+        <div class="cn-step" [class.is-active]="workflowStep === 1" [class.is-done]="workflowStep > 1">
+          <span class="cn-dot">1</span>
+          <span class="cn-step-label">Find student</span>
+        </div>
+        <div class="cn-line" [class.is-done]="workflowStep > 1"></div>
+        <div class="cn-step" [class.is-active]="workflowStep === 2" [class.is-done]="workflowStep > 2">
+          <span class="cn-dot">2</span>
+          <span class="cn-step-label">Credit amount</span>
+        </div>
+        <div class="cn-line" [class.is-done]="workflowStep > 2"></div>
+        <div class="cn-step" [class.is-active]="workflowStep === 3">
+          <span class="cn-dot">3</span>
+          <span class="cn-step-label">Apply</span>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <section class="cn-card" aria-labelledby="cn-search-title">
+    <div class="cn-card-head">
+      <span class="cn-card-icon" aria-hidden="true">🔍</span>
+      <div>
+        <h2 id="cn-search-title" class="cn-card-title">Search student</h2>
+        <p class="cn-card-sub">Student ID, first name, or last name</p>
+      </div>
+    </div>
+    <label class="sr-only" for="creditSearch">Search</label>
+    <div class="cn-searchbar">
+      <input
+        type="search"
+        id="creditSearch"
+        class="cn-input cn-input-lg"
+        placeholder="e.g. student number or name…"
+        [(ngModel)]="searchValue"
+        (keyup.enter)="searchStudent()"
+        autocomplete="off"
+      />
+      <button type="button" class="btn btn-primary" (click)="searchStudent()" [disabled]="loading">
+        {{ loading ? 'Searching…' : 'Search' }}
+      </button>
+      <button type="button" class="btn btn-muted" (click)="clear()">Clear</button>
+    </div>
+
+    <div class="cn-toast cn-toast-error" *ngIf="error" role="alert">{{ error }}</div>
+    <div class="cn-toast cn-toast-success" *ngIf="success" role="status" aria-live="polite">{{ success }}</div>
+
+    <div class="cn-picker" *ngIf="canSearchByName() && showStudentPicker && nameSearchResults.length > 1">
+      <label class="cn-label" for="creditStudentPicker">Multiple matches — pick one</label>
+      <select id="creditStudentPicker" class="cn-input" [(ngModel)]="nameSearchSelectedStudentKey">
+        <option value="">— Select —</option>
+        <option *ngFor="let s of nameSearchResults" [value]="s.id || s.studentNumber">
+          {{ s.firstName }} {{ s.lastName }} ({{ s.studentNumber }})
+        </option>
+      </select>
+      <button
+        type="button"
+        class="btn btn-primary btn-block"
+        (click)="confirmSelectedStudent()"
+        [disabled]="!nameSearchSelectedStudentKey || nameSearchLoading || loading"
+      >
+        Load balance
+      </button>
+    </div>
+  </section>
+
+  <div class="cn-card cn-card-warn" *ngIf="studentData && !studentData.lastInvoiceId">
+    <p><strong>No invoice on file.</strong> Create an invoice before applying a credit note.</p>
+  </div>
+
+  <section class="cn-panel" *ngIf="studentData && studentData.lastInvoiceId">
+    <div class="cn-panel-head">
+      <h2 class="cn-panel-title">Student &amp; latest invoice</h2>
+      <span class="cn-badge">Ready</span>
+    </div>
+
+    <div class="cn-metrics">
+      <article class="cn-metric">
+        <span class="cn-metric-ic" aria-hidden="true">👤</span>
+        <span class="cn-metric-lbl">Name</span>
+        <span class="cn-metric-val">{{ studentData.fullName }}</span>
+      </article>
+      <article class="cn-metric">
+        <span class="cn-metric-ic" aria-hidden="true">#</span>
+        <span class="cn-metric-lbl">Student #</span>
+        <span class="cn-metric-val cn-mono">{{ studentData.studentNumber }}</span>
+      </article>
+      <article class="cn-metric" *ngIf="studentData.lastInvoiceNumber">
+        <span class="cn-metric-ic" aria-hidden="true">📄</span>
+        <span class="cn-metric-lbl">Invoice</span>
+        <span class="cn-metric-val cn-mono">{{ studentData.lastInvoiceNumber }}</span>
+      </article>
+      <article class="cn-metric" *ngIf="studentData.lastInvoiceTerm">
+        <span class="cn-metric-ic" aria-hidden="true">📅</span>
+        <span class="cn-metric-lbl">Term</span>
+        <span class="cn-metric-val">{{ studentData.lastInvoiceTerm }}</span>
+      </article>
+      <article class="cn-metric cn-metric-accent">
+        <span class="cn-metric-ic" aria-hidden="true">💳</span>
+        <span class="cn-metric-lbl">Current balance</span>
+        <span class="cn-metric-val cn-money">{{ currencySymbol }} {{ formatCurrency(studentData.balance) }}</span>
+      </article>
+      <article class="cn-metric" *ngIf="studentData.prepaidAmount != null">
+        <span class="cn-metric-ic" aria-hidden="true">⏭</span>
+        <span class="cn-metric-lbl">Prepaid (file)</span>
+        <span class="cn-metric-val cn-money">{{ currencySymbol }} {{ formatCurrency(studentData.prepaidAmount || 0) }}</span>
+      </article>
+    </div>
+
+    <div class="cn-credit-block">
+      <fieldset class="cn-fieldset">
+        <legend class="cn-legend">Amount to credit (reduce tuition)</legend>
+        <p class="cn-hint">Defaults to full balance; adjust if you only need a partial credit.</p>
+        <div class="cn-amount-row">
+          <span class="cn-currency-prefix" aria-hidden="true">{{ currencySymbol }}</span>
+          <input
+            type="number"
+            id="creditAmount"
+            class="cn-input cn-amount-input"
+            [(ngModel)]="creditAmount"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+          />
+        </div>
+      </fieldset>
+
+      <div class="cn-preview" *ngIf="parsedCreditAmount() > 0">
+        <div class="cn-preview-row">
+          <span class="cn-preview-lbl">Estimated balance after</span>
+          <span class="cn-preview-val">{{ currencySymbol }} {{ formatCurrency(projectedBalanceAfterCredit() ?? 0) }}</span>
+        </div>
+        <div class="cn-preview-note" *ngIf="excessCarryToPrepaid() as excess">
+          <span class="cn-preview-warn">Excess {{ currencySymbol }} {{ formatCurrency(excess) }} → prepaid (next term)</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="btn btn-primary btn-xl btn-block"
+        (click)="applyCreditNote()"
+        [disabled]="applying || parsedCreditAmount() <= 0 || !canManageFinance()"
+      >
+        <span *ngIf="!applying">Apply credit note</span>
+        <span *ngIf="applying">Applying…</span>
+      </button>
+      <p class="cn-perm" *ngIf="!canManageFinance()">You don’t have permission to apply credit notes.</p>
+    </div>
+  </section>
+</div>

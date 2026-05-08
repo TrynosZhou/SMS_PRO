@@ -1,0 +1,374 @@
+<div class="login-container" [class.signup-landscape]="activeTab === 'signup'">
+  <div class="login-card" [class.signup-landscape-card]="activeTab === 'signup'">
+    <div class="login-header">
+      <h2>School Management System</h2>
+      <p class="subtitle">Welcome! Please sign in to continue</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'signin'"
+        (click)="setTab('signin')">
+        🔐 Sign In
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'student'"
+        (click)="setTab('student')">
+        🎓 Student Login
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'signup'"
+        (click)="setTab('signup')">
+        ➕ Sign Up
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'reset'"
+        (click)="setTab('reset')">
+        🔑 Reset Password
+      </button>
+    </div>
+
+    <!-- Messages -->
+    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+    <!-- Sign In Form -->
+    <div *ngIf="activeTab === 'signin'" class="tab-content">
+      <div class="info-box" style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 8px 10px; margin-bottom: 11px; border-radius: 4px;">
+        <p style="margin: 0; font-size: 10px; color: #1565c0; line-height: 1.35;">
+          <strong>Students:</strong> You can login using your Student ID as Username and Date of Birth (YYYY-MM-DD) as Password.
+        </p>
+      </div>
+      <form (ngSubmit)="onSignIn()">
+        <div class="form-group">
+          <label>Username</label>
+          <input 
+            type="text" 
+            [(ngModel)]="email" 
+            name="email" 
+            placeholder="Enter username or Student ID" 
+            required
+            autocomplete="username">
+          <small class="form-text">For students: Use your Student ID (e.g., JPS123456)</small>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="password-input-wrapper">
+            <input 
+              [type]="showPassword ? 'text' : 'password'" 
+              [(ngModel)]="password" 
+              name="password" 
+              placeholder="Enter password or Date of Birth (YYYY-MM-DD)" 
+              required
+              autocomplete="current-password">
+            <span class="password-toggle" (click)="togglePasswordVisibility()">
+              {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+            </span>
+          </div>
+          <small class="form-text">For students: Use your Date of Birth in YYYY-MM-DD format</small>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
+          {{ loading ? 'Signing in...' : '🔐 Sign In' }}
+        </button>
+        <div class="form-footer">
+          <a href="#" (click)="setTab('reset'); $event.preventDefault()" class="link">Forgot password?</a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div *ngIf="activeTab === 'signup'" class="tab-content">
+      <div class="signup-landscape-layout">
+        <aside class="signup-side-panel">
+          <h3>Create your account</h3>
+          <p><strong>Students</strong> and <strong>parents</strong> can register here.</p>
+          <ul>
+            <li>Students: choose a username and password, then use <strong>Sign In</strong> (or Student Login with your Student ID once issued)</li>
+            <li>Parents: register with your email, then sign in with that email</li>
+            <li>Administrators, accountants &amp; teachers: an administrator creates accounts under <strong>Admin → Manage Accounts</strong></li>
+          </ul>
+        </aside>
+
+        <div class="signup-form-panel">
+          <div class="info-box" style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 8px 10px; margin-bottom: 11px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 10px; color: #1565c0; line-height: 1.35;">
+              <strong>Staff accounts:</strong> Administrator, accountant, and teacher logins are created by an administrator under <strong>Manage Accounts</strong> — not on this page.
+            </p>
+          </div>
+          <form (ngSubmit)="onSignUp()">
+            <div class="form-group">
+              <label>Role *</label>
+              <select 
+                [(ngModel)]="signupRole" 
+                name="signupRole" 
+                class="form-control"
+                required>
+                <option value="">Select a role...</option>
+                <option value="STUDENT">Student</option>
+                <option value="PARENT">Parent</option>
+              </select>
+              <small class="form-text">Only students and parents can self-register here.</small>
+            </div>
+            <div class="form-group" *ngIf="signupRole === 'STUDENT'">
+              <label>Date of birth *</label>
+              <input
+                type="date"
+                [(ngModel)]="signupDateOfBirth"
+                name="signupDateOfBirth"
+                required
+                autocomplete="bday"
+              />
+              <small class="form-text">Must be between 11 and 20 years old. Used with your profile and Student Login.</small>
+            </div>
+            <div class="form-group" *ngIf="signupRole === 'STUDENT'">
+              <label>Gender *</label>
+              <select [(ngModel)]="signupGender" name="signupGender" class="form-control" required>
+                <option value="">Select…</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="form-group" *ngIf="signupRole === 'PARENT'">
+              <label>Email *</label>
+              <input 
+                type="email" 
+                [(ngModel)]="signupEmail" 
+                name="signupEmail" 
+                placeholder="Enter a valid email address" 
+                required
+                autocomplete="email">
+              <small class="form-text">Used for account identity and sign in.</small>
+            </div>
+            <div class="form-group" *ngIf="signupRole === 'PARENT'">
+              <label>Gender *</label>
+              <select [(ngModel)]="signupParentGender" name="signupParentGender" class="form-control" required>
+                <option value="">Select…</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Username *</label>
+              <input 
+                type="text" 
+                [(ngModel)]="signupUsername" 
+                name="signupUsername" 
+                placeholder="Choose a username" 
+                required
+                autocomplete="username">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>First Name *</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="signupFirstName" 
+                  name="signupFirstName" 
+                  placeholder="First Name" 
+                  required>
+              </div>
+              <div class="form-group">
+                <label>Last Name *</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="signupLastName" 
+                  name="signupLastName" 
+                  placeholder="Last Name" 
+                  required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Contact Number *</label>
+              <input 
+                type="tel" 
+                [(ngModel)]="signupContactNumber" 
+                name="signupContactNumber" 
+                placeholder="Phone number" 
+                required>
+            </div>
+            <div class="form-group">
+              <label>Password *</label>
+              <div class="password-input-wrapper">
+                <input 
+                  [type]="showSignupPassword ? 'text' : 'password'" 
+                  [(ngModel)]="signupPassword" 
+                  name="signupPassword" 
+                  placeholder="At least 8 characters" 
+                  required
+                  minlength="8"
+                  autocomplete="new-password">
+                <span class="password-toggle" (click)="toggleSignupPasswordVisibility()">
+                  {{ showSignupPassword ? '👁️' : '👁️‍🗨️' }}
+                </span>
+              </div>
+              <small class="form-text">Password must be at least 8 characters long</small>
+            </div>
+            <div class="form-group">
+              <label>Confirm Password *</label>
+              <div class="password-input-wrapper">
+                <input 
+                  [type]="showSignupConfirmPassword ? 'text' : 'password'" 
+                  [(ngModel)]="signupConfirmPassword" 
+                  name="signupConfirmPassword" 
+                  placeholder="Confirm password" 
+                  required
+                  autocomplete="new-password">
+                <span class="password-toggle" (click)="toggleSignupConfirmPasswordVisibility()">
+                  {{ showSignupConfirmPassword ? '👁️' : '👁️‍🗨️' }}
+                </span>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
+              {{ loading ? 'Creating account...' : '➕ Create Account' }}
+            </button>
+            <div class="form-footer">
+              <span>Already have an account? <a href="#" (click)="setTab('signin'); $event.preventDefault()" class="link">Sign In</a></span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Student Login Form -->
+    <div *ngIf="activeTab === 'student'" class="tab-content">
+      <div class="info-box" style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 8px 10px; margin-bottom: 11px; border-radius: 4px;">
+        <p style="margin: 0; font-size: 10px; color: #e65100; line-height: 1.35;">
+          <strong>Student Login:</strong> Use your Student ID and Date of Birth to access your dashboard.
+        </p>
+      </div>
+      <form (ngSubmit)="onStudentLogin($event)" (submit)="$event.preventDefault()">
+        <div class="form-group">
+          <label>Student ID</label>
+          <input 
+            type="text" 
+            [(ngModel)]="studentId" 
+            name="studentId" 
+            placeholder="Enter your Student ID (e.g., JPS123456)" 
+            required
+            autocomplete="username">
+          <small class="form-text">Enter your Student ID as shown on your ID card</small>
+        </div>
+        <div class="form-group">
+          <label>Date of Birth</label>
+          <input 
+            type="date" 
+            [(ngModel)]="dateOfBirth" 
+            name="dateOfBirth" 
+            placeholder="Enter your Date of Birth" 
+            required>
+          <small class="form-text">Enter your Date of Birth (YYYY-MM-DD)</small>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
+          {{ loading ? 'Signing in...' : '🎓 Student Login' }}
+        </button>
+        <div class="form-footer">
+          <a href="#" (click)="setTab('signin'); $event.preventDefault()" class="link">Back to Sign In</a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Password Reset Form -->
+    <div *ngIf="activeTab === 'reset'" class="tab-content">
+      <div class="reset-type-tabs" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 13px;">
+        <button type="button" class="tab-btn" [class.active]="resetType === 'student'" (click)="setResetType('student')" style="flex: 1; min-width: 90px;">Student</button>
+        <button type="button" class="tab-btn" [class.active]="resetType === 'teacher'" (click)="setResetType('teacher')" style="flex: 1; min-width: 90px;">Teacher</button>
+        <button type="button" class="tab-btn" [class.active]="resetType === 'email'" (click)="setResetType('email')" style="flex: 1; min-width: 90px;">Email</button>
+      </div>
+
+      <!-- Student: verify ID + DOB, then new password -->
+      <ng-container *ngIf="resetType === 'student'">
+        <form *ngIf="resetPasswordStep === 1" (ngSubmit)="verifyStudentForReset()">
+          <div class="form-group">
+            <label>Student ID</label>
+            <input type="text" [(ngModel)]="resetStudentId" name="resetStudentId" placeholder="Your Student ID" required autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" [(ngModel)]="resetStudentDob" name="resetStudentDob" required>
+            <small class="form-text">Must match the date on record</small>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
+            {{ loading ? 'Checking...' : 'Continue' }}
+          </button>
+        </form>
+        <form *ngIf="resetPasswordStep === 2" (ngSubmit)="onResetPasswordSave()">
+          <p class="subtitle" style="margin-bottom: 10px;">Set your new password</p>
+          <div class="form-group">
+            <label>New password</label>
+            <div class="password-input-wrapper">
+              <input [type]="showResetNewPassword ? 'text' : 'password'" [(ngModel)]="resetNewPassword" name="resetNewPassword" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password">
+              <span class="password-toggle" (click)="toggleResetNewPasswordVisibility()">{{ showResetNewPassword ? '👁️' : '👁️‍🗨️' }}</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Confirm new password</label>
+            <div class="password-input-wrapper">
+              <input [type]="showResetConfirmPassword ? 'text' : 'password'" [(ngModel)]="resetConfirmPassword" name="resetConfirmPassword" placeholder="Re-enter password" required autocomplete="new-password">
+              <span class="password-toggle" (click)="toggleResetConfirmPasswordVisibility()">{{ showResetConfirmPassword ? '👁️' : '👁️‍🗨️' }}</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
+            {{ loading ? 'Saving...' : 'Save' }}
+          </button>
+          <button type="button" class="btn btn-block" style="margin-top: 6px; background: #f5f5f5;" (click)="backToResetVerifyStep()" [disabled]="loading">Back</button>
+        </form>
+      </ng-container>
+
+      <!-- Teacher: Employee ID, then new password -->
+      <ng-container *ngIf="resetType === 'teacher'">
+        <form *ngIf="resetPasswordStep === 1" (ngSubmit)="verifyTeacherForReset()">
+          <div class="form-group">
+            <label>Employee ID</label>
+            <input type="text" [(ngModel)]="resetTeacherEmployeeId" name="resetTeacherEmployeeId" placeholder="School Employee / Teacher ID" required autocomplete="username">
+            <small class="form-text">Same ID you use to sign in</small>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
+            {{ loading ? 'Checking...' : 'Continue' }}
+          </button>
+        </form>
+        <form *ngIf="resetPasswordStep === 2" (ngSubmit)="onResetPasswordSave()">
+          <p class="subtitle" style="margin-bottom: 10px;">Set your new password</p>
+          <div class="form-group">
+            <label>New password</label>
+            <div class="password-input-wrapper">
+              <input [type]="showResetNewPassword ? 'text' : 'password'" [(ngModel)]="resetNewPassword" name="resetNewPasswordT" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password">
+              <span class="password-toggle" (click)="toggleResetNewPasswordVisibility()">{{ showResetNewPassword ? '👁️' : '👁️‍🗨️' }}</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Confirm new password</label>
+            <div class="password-input-wrapper">
+              <input [type]="showResetConfirmPassword ? 'text' : 'password'" [(ngModel)]="resetConfirmPassword" name="resetConfirmPasswordT" placeholder="Re-enter password" required autocomplete="new-password">
+              <span class="password-toggle" (click)="toggleResetConfirmPasswordVisibility()">{{ showResetConfirmPassword ? '👁️' : '👁️‍🗨️' }}</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
+            {{ loading ? 'Saving...' : 'Save' }}
+          </button>
+          <button type="button" class="btn btn-block" style="margin-top: 6px; background: #f5f5f5;" (click)="backToResetVerifyStep()" [disabled]="loading">Back</button>
+        </form>
+      </ng-container>
+
+      <!-- Email (optional: parents / users with email) -->
+      <form *ngIf="resetType === 'email'" (ngSubmit)="onResetPasswordEmail()">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" [(ngModel)]="resetEmail" name="resetEmail" placeholder="Enter your email address" required autocomplete="email">
+          <small class="form-text">For accounts registered with an email</small>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
+          {{ loading ? 'Sending...' : '🔑 Send Reset Link' }}
+        </button>
+      </form>
+
+      <div class="form-footer" style="margin-top: 11px;">
+        <a href="#" (click)="setTab('signin'); $event.preventDefault()" class="link">Back to Sign In</a>
+      </div>
+    </div>
+  </div>
+</div>

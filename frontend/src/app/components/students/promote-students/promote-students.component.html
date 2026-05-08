@@ -1,0 +1,191 @@
+<div class="ps-page">
+
+  <!-- Page header -->
+  <div class="ps-header">
+    <div>
+      <h2 class="ps-title">Promote Students</h2>
+      <p class="ps-subtitle">
+        Move students to their next class based on the active promotion rules.
+      </p>
+    </div>
+    <button class="ps-refresh-btn" (click)="loadPreview()" title="Refresh preview">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+
+  <!-- Context banner -->
+  <div class="ps-context-bar" *ngIf="academicYear || currentTerm">
+    <span *ngIf="academicYear" class="ps-badge ps-badge--blue">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Academic Year: <strong>{{ academicYear }}</strong>
+    </span>
+    <span *ngIf="currentTerm" class="ps-badge ps-badge--green">
+      Active Term: <strong>{{ currentTerm }}</strong>
+    </span>
+  </div>
+
+  <!-- Info note -->
+  <div class="ps-info-note">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    Promotion rules are configured on the <strong>Settings</strong> page under "Promotion Rules". Only active rules are shown here.
+  </div>
+
+  <!-- Loading / error state -->
+  <div class="ps-loading" *ngIf="loadingPreview">Loading promotion preview…</div>
+  <div class="ps-error" *ngIf="previewError">{{ previewError }}</div>
+
+  <!-- Preview table -->
+  <ng-container *ngIf="!loadingPreview && !previewError">
+
+    <div class="ps-section-header">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <strong>Promotion Rules Preview</strong>
+      <span class="ps-section-count">{{ preview.length }} rule(s)</span>
+    </div>
+
+    <div class="ps-table-wrap" *ngIf="preview.length; else noRules">
+      <table class="ps-table">
+        <thead>
+          <tr>
+            <th>From Class</th>
+            <th class="ps-arrow-col"></th>
+            <th>To Class</th>
+            <th class="ps-num-col">Students in Class</th>
+            <th>Status</th>
+            <th class="ps-action-col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of preview" [class.ps-row-final]="row.isFinalClass" [class.ps-row-empty]="!row.isFinalClass && row.studentCount === 0">
+            <td class="ps-class-name">{{ row.fromClassName }}</td>
+            <td class="ps-arrow">
+              <svg *ngIf="!row.isFinalClass" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+              </svg>
+              <span *ngIf="row.isFinalClass" class="ps-final-mark" title="Final class – no promotion">✓</span>
+            </td>
+            <td class="ps-class-name">{{ row.isFinalClass ? '(Final — graduates)' : (row.toClassName || '—') }}</td>
+            <td class="ps-num-col">
+              <span class="ps-count-badge" [class.ps-count-badge--zero]="row.studentCount === 0">
+                {{ row.studentCount }}
+              </span>
+            </td>
+            <td>
+              <span class="ps-status" [class.ps-status--final]="row.isFinalClass" [class.ps-status--ready]="!row.isFinalClass && row.studentCount > 0" [class.ps-status--empty]="!row.isFinalClass && row.studentCount === 0">
+                {{ row.isFinalClass ? 'Final Class' : (row.studentCount > 0 ? 'Ready' : 'No Students') }}
+              </span>
+            </td>
+            <td class="ps-action-col">
+              <button
+                class="ps-btn ps-btn--sm"
+                [disabled]="row.isFinalClass || !row.toClassId || row.studentCount === 0 || promoting"
+                (click)="requestPromoteSingle(row)"
+              >
+                Promote
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noRules>
+      <div class="ps-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#bdbdbd" stroke-width="1.5">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        </svg>
+        <p>No active promotion rules found. Configure them on the <strong>Settings</strong> page.</p>
+      </div>
+    </ng-template>
+
+    <!-- Promote All button -->
+    <div class="ps-promote-all-row" *ngIf="actionableRules.length">
+      <div class="ps-promote-all-info">
+        <strong>{{ actionableRules.length }}</strong> class(es) ready &nbsp;·&nbsp;
+        <strong>{{ totalStudentsToMove }}</strong> student(s) will be promoted
+      </div>
+      <button class="ps-btn ps-btn--primary" [disabled]="promoting" (click)="requestPromoteAll()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+        Promote All Classes
+      </button>
+    </div>
+
+  </ng-container>
+
+  <!-- Confirmation dialog -->
+  <div class="ps-modal-backdrop" *ngIf="confirmVisible" (click)="cancelConfirm()">
+    <div class="ps-modal" (click)="$event.stopPropagation()">
+      <div class="ps-modal-icon">⚠️</div>
+      <h3 class="ps-modal-title">Confirm Promotion</h3>
+      <p class="ps-modal-body" *ngIf="!promoteSingle">
+        This will promote <strong>{{ totalStudentsToMove }} student(s)</strong> across
+        <strong>{{ actionableRules.length }} class(es)</strong>. This action cannot be undone automatically.
+      </p>
+      <p class="ps-modal-body" *ngIf="promoteSingle">
+        This will promote <strong>{{ promoteSingle.studentCount }} student(s)</strong> from
+        <strong>{{ promoteSingle.fromClassName }}</strong> to
+        <strong>{{ promoteSingle.toClassName }}</strong>. This action cannot be undone automatically.
+      </p>
+      <div class="ps-modal-actions">
+        <button class="ps-btn ps-btn--ghost" (click)="cancelConfirm()">Cancel</button>
+        <button class="ps-btn ps-btn--danger" (click)="confirmPromote()">Yes, Promote</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spinner overlay -->
+  <div class="ps-spinner-overlay" *ngIf="promoting">
+    <div class="ps-spinner"></div>
+    <p>Promoting students…</p>
+  </div>
+
+  <!-- Results panel -->
+  <div class="ps-results" *ngIf="results">
+    <div class="ps-results-header">
+      <span class="ps-results-title">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        {{ resultMessage }}
+      </span>
+      <button class="ps-close-results" (click)="dismissResult()" title="Dismiss">✕</button>
+    </div>
+    <div class="ps-table-wrap">
+      <table class="ps-table">
+        <thead>
+          <tr>
+            <th>From Class</th>
+            <th>To Class</th>
+            <th class="ps-num-col">Promoted</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of results" [class.ps-row-skipped]="r.skipped">
+            <td>{{ r.fromClass }}</td>
+            <td>{{ r.toClass || '—' }}</td>
+            <td class="ps-num-col">{{ r.skipped ? '—' : r.promoted }}</td>
+            <td>{{ r.skipped ? 'Skipped (final class)' : 'Promoted ✓' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="ps-error ps-results-err" *ngIf="resultError">
+    <strong>Error:</strong> {{ resultError }}
+    <button class="ps-close-results" (click)="dismissResult()">✕</button>
+  </div>
+
+</div>

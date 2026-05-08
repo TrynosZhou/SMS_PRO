@@ -1,0 +1,46 @@
+<section id="class_teacher" class="ct-wrap class-teacher" aria-labelledby="class-teacher-title">
+  <header class="ct-header">
+    <h2 id="class-teacher-title">Class teachers</h2>
+    <p class="ct-lead">
+      Every class below lists teachers currently assigned to that class (from class–teacher assignments).
+    </p>
+  </header>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <div class="ct-loading" *ngIf="loading">
+    <span class="ct-spinner"></span>
+    Loading classes…
+  </div>
+
+  <div class="ct-table-scroll" *ngIf="!loading && !error">
+    <table class="ct-table">
+      <thead>
+        <tr>
+          <th scope="col" class="ct-th-num">#</th>
+          <th scope="col">Class</th>
+          <th scope="col">Form</th>
+          <th scope="col">Class teacher(s)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of classes; let i = index">
+          <td class="ct-td-num">{{ i + 1 }}</td>
+          <td class="ct-td-class"><strong>{{ c.name }}</strong></td>
+          <td class="ct-td-form">{{ c.form || '—' }}</td>
+          <td class="ct-td-teachers">
+            <ng-container *ngIf="teachersForClass(c).length; else noTeachers">
+              <ul class="ct-teacher-list">
+                <li *ngFor="let t of teachersForClass(c)">{{ teacherLabel(t) }}</li>
+              </ul>
+            </ng-container>
+            <ng-template #noTeachers>
+              <span class="ct-none">No teachers assigned</span>
+            </ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="ct-empty" *ngIf="classes.length === 0">No classes found.</p>
+  </div>
+</section>

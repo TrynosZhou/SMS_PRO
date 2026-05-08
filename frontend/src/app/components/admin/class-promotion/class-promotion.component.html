@@ -1,0 +1,393 @@
+<div class="container">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <span class="icon">⬆️</span>
+        Class Promotion
+      </h1>
+      <p class="subtitle">Promote students to the next higher grade/class level across all classes</p>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div class="alert alert-success" *ngIf="success" [@fadeInOut]>
+    <span class="alert-icon">✓</span>
+    <span [innerHTML]="success"></span>
+  </div>
+  <div class="alert alert-error" *ngIf="error" [@fadeInOut]>
+    <span class="alert-icon">✕</span>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-container" *ngIf="!loading && promotionData.length > 0">
+    <div class="stat-card">
+      <div class="stat-icon total">👥</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getTotalStudents() }}</div>
+        <div class="stat-label">Total Students</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon eligible">✅</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getEligibleStudents() }}</div>
+        <div class="stat-label">Eligible for Promotion</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon classes">📚</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getClassesWithStudents() }}</div>
+        <div class="stat-label">Classes with Students</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon selected" *ngIf="promotionMode === 'individual'">
+        <div class="stat-content">
+          <div class="stat-value">{{ getSelectedCount() }}</div>
+          <div class="stat-label">Selected Students</div>
+        </div>
+      </div>
+      <div class="stat-icon ready" *ngIf="promotionMode === 'all'">
+        <div class="stat-content">
+          <div class="stat-value">{{ getEligibleStudents() }}</div>
+          <div class="stat-label">Ready to Promote</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Promotion Mode Selection -->
+  <div class="promotion-mode-section" *ngIf="!loading && promotionData.length > 0">
+    <div class="mode-selector">
+      <button 
+        class="mode-btn" 
+        [class.active]="promotionMode === 'all'"
+        (click)="setPromotionMode('all')">
+        <span class="mode-icon">📋</span>
+        <div class="mode-content">
+          <strong>Promote All Students</strong>
+          <small>Promote all eligible students across all classes</small>
+        </div>
+      </button>
+      <button 
+        class="mode-btn" 
+        [class.active]="promotionMode === 'individual'"
+        (click)="setPromotionMode('individual')">
+        <span class="mode-icon">👤</span>
+        <div class="mode-content">
+          <strong>Select Individual Students</strong>
+          <small>Choose specific students to promote</small>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="search-filter-section" *ngIf="!loading && promotionData.length > 0">
+    <div class="search-wrapper">
+      <span class="search-icon">🔍</span>
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Search students by name, number, or class..."
+        [(ngModel)]="searchQuery"
+        (input)="filterStudents()">
+      <button class="clear-search" *ngIf="searchQuery" (click)="clearSearch()" title="Clear search">
+        ✕
+      </button>
+    </div>
+    <div class="filter-options">
+      <button 
+        class="filter-btn" 
+        [class.active]="filterClass === 'all'"
+        (click)="setClassFilter('all')">
+        All Classes ({{ getTotalStudents() }})
+      </button>
+      <button 
+        *ngFor="let classData of promotionData" 
+        class="filter-btn" 
+        [class.active]="filterClass === classData.class.id"
+        (click)="setClassFilter(classData.class.id)">
+        {{ classData.class.name }} ({{ classData.students.length }})
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && promotionData.length === 0" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading classes and students...</p>
+  </div>
+
+  <!-- Promotion Data Display -->
+  <div *ngIf="!loading && promotionData.length > 0" class="promotion-data-container">
+    <!-- Quick Actions -->
+    <div class="quick-actions" *ngIf="promotionMode === 'individual'">
+      <button class="action-btn" (click)="selectAll()">
+        ✓ Select All
+      </button>
+      <button class="action-btn" (click)="deselectAll()">
+        ✕ Deselect All
+      </button>
+      <button class="action-btn" (click)="selectByClass()">
+        📚 Select by Class
+      </button>
+    </div>
+
+    <!-- Classes List -->
+    <div class="classes-list">
+      <div *ngFor="let classData of filteredPromotionData" class="class-promotion-card" [@fadeInUp]>
+        <div class="class-header">
+          <div class="class-info">
+            <h3>
+              <span class="class-icon">📚</span>
+              {{ classData.class.name }}
+            </h3>
+            <p class="class-form">{{ classData.class.form }}</p>
+          </div>
+          <div class="class-stats">
+            <div class="stat-badge">
+              <span class="stat-icon">👥</span>
+              {{ classData.students.length }} student{{ classData.students.length !== 1 ? 's' : '' }}
+            </div>
+            <div class="stat-badge eligible" *ngIf="classData.nextClass">
+              <span class="stat-icon">→</span>
+              To {{ classData.nextClass.name }}
+            </div>
+            <div class="stat-badge warning" *ngIf="!classData.nextClass">
+              <span class="stat-icon">⚠️</span>
+              No next class
+            </div>
+          </div>
+        </div>
+
+        <!-- Promotion Path -->
+        <div class="promotion-path-mini" *ngIf="classData.nextClass">
+          <div class="path-from">
+            <span class="path-label">From</span>
+            <span class="path-value">{{ classData.class.name }}</span>
+          </div>
+          <div class="path-arrow">→</div>
+          <div class="path-to">
+            <span class="path-label">To</span>
+            <span class="path-value">{{ classData.nextClass.name }}</span>
+          </div>
+        </div>
+
+        <!-- Students List -->
+        <div class="students-section" *ngIf="classData.filteredStudents.length > 0">
+          <div class="students-header">
+            <div class="select-all-wrapper" *ngIf="promotionMode === 'individual'">
+              <input 
+                type="checkbox" 
+                [checked]="areAllStudentsSelected(classData)"
+                (change)="toggleClassSelection(classData)"
+                class="select-all-checkbox">
+              <label>Select all in this class</label>
+            </div>
+            <div class="selected-count" *ngIf="promotionMode === 'individual'">
+              {{ getSelectedCountForClass(classData) }} selected
+            </div>
+          </div>
+          <div class="students-grid">
+            <div 
+              *ngFor="let student of classData.filteredStudents" 
+              class="student-card"
+              [class.selected]="isStudentSelected(student)"
+              [class.disabled]="!classData.nextClass"
+              (click)="toggleStudentSelection(student, classData)"
+              [@fadeInUp]>
+              <div class="student-checkbox" *ngIf="promotionMode === 'individual'">
+                <input 
+                  type="checkbox" 
+                  [checked]="isStudentSelected(student)"
+                  (click)="$event.stopPropagation()"
+                  (change)="toggleStudentSelection(student, classData)"
+                  [disabled]="!classData.nextClass">
+              </div>
+              <div class="student-avatar">
+                {{ getStudentInitials(student) }}
+              </div>
+              <div class="student-info">
+                <div class="student-name">{{ student.firstName }} {{ student.lastName }}</div>
+                <div class="student-number">
+                  <span class="number-icon">🆔</span>
+                  {{ student.studentNumber }}
+                </div>
+              </div>
+              <div class="promotion-indicator" *ngIf="classData.nextClass">
+                <span class="indicator-icon">→</span>
+                <span class="indicator-text">{{ classData.nextClass.name }}</span>
+              </div>
+              <div class="no-promotion" *ngIf="!classData.nextClass">
+                <span class="warning-icon">⚠️</span>
+                <span class="warning-text">No next class</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State for Class -->
+        <div class="empty-class" *ngIf="classData.filteredStudents.length === 0">
+          <span class="empty-icon">👥</span>
+          <p>No students found{{ searchQuery ? ' matching your search' : '' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="filteredPromotionData.length === 0" class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <h3>No classes found</h3>
+      <p>Try adjusting your search or filter criteria.</p>
+      <button class="btn btn-secondary" (click)="clearFilters()">Clear Filters</button>
+    </div>
+  </div>
+
+  <!-- Empty State - No Data -->
+  <div *ngIf="!loading && promotionData.length === 0" class="empty-state">
+    <div class="empty-icon">📚</div>
+    <h3>No Classes Found</h3>
+    <p>There are no classes with students in the system.</p>
+    <a routerLink="/classes/manage/add-new" class="btn btn-primary">➕ Create Class</a>
+  </div>
+
+  <!-- Promotion Actions -->
+  <div *ngIf="!loading && promotionData.length > 0 && getEligibleStudents() > 0" class="promotion-actions" [@fadeInUp]>
+    <div class="actions-summary">
+      <div class="summary-item">
+        <span class="summary-label">Mode:</span>
+        <span class="summary-value">{{ promotionMode === 'all' ? 'Promote All' : 'Selective Promotion' }}</span>
+      </div>
+      <div class="summary-item" *ngIf="promotionMode === 'all'">
+        <span class="summary-label">Students to Promote:</span>
+        <span class="summary-value highlight">{{ getEligibleStudents() }}</span>
+      </div>
+      <div class="summary-item" *ngIf="promotionMode === 'individual'">
+        <span class="summary-label">Selected Students:</span>
+        <span class="summary-value highlight">{{ getSelectedCount() }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Classes Affected:</span>
+        <span class="summary-value">{{ getAffectedClassesCount() }}</span>
+      </div>
+    </div>
+    <div class="actions-buttons">
+      <button 
+        type="button" 
+        class="btn btn-secondary" 
+        (click)="resetSelection()"
+        [disabled]="promoting">
+        🔄 Reset
+      </button>
+      <button 
+        type="button" 
+        class="btn btn-primary btn-promote" 
+        (click)="openConfirmModal()"
+        [disabled]="promoting || !canPromote()">
+        <span *ngIf="!promoting">
+          ⬆️ Promote {{ getPromotionCount() }} Student{{ getPromotionCount() !== 1 ? 's' : '' }}
+        </span>
+        <span *ngIf="promoting" class="btn-loading">
+          <span class="spinner-small"></span>
+          Promoting...
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div *ngIf="showConfirmModal" class="modal-overlay" (click)="closeConfirmModal()" [@fadeInOut]>
+    <div class="modal-content confirm-modal" (click)="$event.stopPropagation()" [@slideInUp]>
+      <div class="modal-header">
+        <div class="modal-header-content">
+          <h2>
+            <span class="modal-icon">⚠️</span>
+            Confirm Promotion
+          </h2>
+          <p class="modal-subtitle">Review the promotion details before proceeding</p>
+        </div>
+        <button class="modal-close-btn" (click)="closeConfirmModal()" title="Close" [disabled]="promoting">
+          <span>&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="confirmation-summary">
+          <div class="summary-item highlight">
+            <span class="summary-label">Promotion Mode:</span>
+            <span class="summary-value">{{ promotionMode === 'all' ? 'Promote All Eligible Students' : 'Selective Promotion' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Total Students:</span>
+            <span class="summary-value">{{ getPromotionCount() }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Classes Affected:</span>
+            <span class="summary-value">{{ getAffectedClassesCount() }}</span>
+          </div>
+        </div>
+
+        <div class="confirmation-warning">
+          <span class="warning-icon">⚠️</span>
+          <p><strong>This action cannot be undone.</strong> All selected students will be moved to their next class level.</p>
+        </div>
+
+        <!-- Promotion Preview by Class -->
+        <div class="promotion-preview">
+          <h4>Promotion Preview by Class:</h4>
+          <div class="preview-classes">
+            <div *ngFor="let classData of getPromotionPreview()" class="preview-class-item">
+              <div class="preview-class-header">
+                <strong>{{ classData.class.name }}</strong>
+                <span class="preview-count">{{ classData.students.length }} student{{ classData.students.length !== 1 ? 's' : '' }}</span>
+              </div>
+              <div class="preview-path">
+                <span class="preview-from">{{ classData.class.name }}</span>
+                <span class="preview-arrow">→</span>
+                <span class="preview-to">{{ classData.nextClass.name }}</span>
+              </div>
+              <div class="preview-students" *ngIf="classData.students.length <= 5">
+                <div *ngFor="let student of classData.students" class="preview-student">
+                  {{ student.studentNumber }} - {{ student.firstName }} {{ student.lastName }}
+                </div>
+              </div>
+              <div class="preview-students" *ngIf="classData.students.length > 5">
+                <div *ngFor="let student of classData.students.slice(0, 5)" class="preview-student">
+                  {{ student.studentNumber }} - {{ student.firstName }} {{ student.lastName }}
+                </div>
+                <div class="preview-more">... and {{ classData.students.length - 5 }} more</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary" 
+          (click)="closeConfirmModal()"
+          [disabled]="promoting">
+          ❌ Cancel
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-primary" 
+          (click)="promoteStudents()"
+          [disabled]="promoting">
+          <span *ngIf="!promoting">
+            ✅ Confirm & Promote
+          </span>
+          <span *ngIf="promoting" class="submit-loading">
+            <span class="spinner-small"></span>
+            Promoting...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

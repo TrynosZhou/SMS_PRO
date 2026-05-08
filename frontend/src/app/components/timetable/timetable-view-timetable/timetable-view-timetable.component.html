@@ -1,0 +1,414 @@
+<div class="vtv-page">
+  <header class="vtv-head">
+    <h2 class="vtv-title">View Timetable</h2>
+    <p class="vtv-desc">
+      Choose a published version, then preview <strong>by teacher</strong>, <strong>by class</strong>, or
+      <strong>teacher summary</strong>. Each sheet download matches the preview (landscape PDF).
+      <strong>Download all</strong> (next to the tabs) matches the open tab: one <strong>ZIP</strong> with every teacher PDF,
+      one ZIP with every class PDF, or a single summary PDF.
+    </p>
+  </header>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <div class="vtv-toolbar" *ngIf="!loadingVersions">
+    <label class="vtv-field">
+      <span class="vtv-label">Timetable version</span>
+      <select class="form-control vtv-select" [(ngModel)]="selectedVersionId" (ngModelChange)="onVersionChange()">
+        <option *ngFor="let v of versions" [ngValue]="v.id">
+          {{ v.name }}{{ v.isActive ? ' (active)' : '' }}
+        </option>
+      </select>
+    </label>
+    <button type="button" class="btn btn-secondary" (click)="reloadPreview()" [disabled]="!selectedVersionId || previewLoading">
+      Refresh preview
+    </button>
+  </div>
+
+  <div class="vtv-loading" *ngIf="loadingVersions || (previewLoading && !previewTeacherSheets.length && !previewError)">
+    <div class="spinner"></div>
+    <p>{{ loadingVersions ? 'Loading versions…' : 'Building preview…' }}</p>
+  </div>
+
+  <div class="tt-preview-dialog vtv-dialog" *ngIf="!loadingVersions && selectedVersionId">
+    <div class="tt-preview-dialog-header vtv-dialog-head">
+      <div>
+        <h3 id="vtv-preview-title">Timetable preview</h3>
+        <p class="tt-preview-subtitle">{{ previewVersionLabel }}</p>
+      </div>
+    </div>
+
+    <nav class="tt-preview-tabs vtv-preview-tabs" aria-label="Preview sections">
+      <button
+        type="button"
+        class="tt-preview-tab"
+        [class.active]="previewTab === 'teachers'"
+        (click)="setPreviewTab('teachers')"
+      >
+        By teacher
+      </button>
+      <button
+        type="button"
+        class="tt-preview-tab"
+        [class.active]="previewTab === 'classes'"
+        (click)="setPreviewTab('classes')"
+      >
+        By class
+      </button>
+      <button
+        type="button"
+        class="tt-preview-tab"
+        [class.active]="previewTab === 'summary'"
+        (click)="setPreviewTab('summary')"
+      >
+        Teacher summary
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary btn-sm vtv-download-all-btn"
+        (click)="downloadAllPreviewPdfs()"
+        [disabled]="downloadAllForActiveTabDisabled()"
+        [attr.title]="downloadAllTooltip()"
+      >
+        {{ downloadAllBusy ? 'Preparing PDFs…' : 'Download all' }}
+      </button>
+    </nav>
+
+    <div class="tt-preview-body">
+      <div class="tt-preview-loading" *ngIf="previewLoading && previewTeacherSheets.length === 0 && previewClassSheets.length === 0 && !previewConsolidatedSheet">
+        <div class="spinner"></div>
+        <p>Building preview…</p>
+      </div>
+
+      <div class="alert alert-danger tt-preview-alert" *ngIf="!previewLoading && previewError">
+        {{ previewError }}
+      </div>
+
+      <ng-container *ngIf="!previewLoading && !previewError">
+        <section
+          class="tt-preview-section tt-preview-teachers"
+          [class.tt-preview-section--offscreen]="previewTab !== 'teachers'"
+          [attr.aria-hidden]="previewTab !== 'teachers'"
+        >
+          <p class="tt-preview-hint" *ngIf="previewTab === 'teachers'">
+            Layout matches printed teacher timetables: days down the left, periods across the top with times, break columns when configured.
+          </p>
+          <div
+            *ngFor="let sheet of previewTeacherSheets"
+            class="tt-teacher-sheet"
+            [attr.data-tt-sheet-root]="'teacher-' + sheet.teacherId"
+          >
+            <header class="tt-sheet-head">
+              <img
+                *ngIf="sheet.schoolLogo"
+                [src]="sheet.schoolLogo"
+                class="tt-sheet-logo"
+                alt=""
+                width="56"
+                height="56"
+              />
+              <div class="tt-sheet-head-main">
+                <h4 class="tt-sheet-title">{{ sheet.versionTitle }}</h4>
+                <p class="tt-sheet-subtitle">Teacher: {{ sheet.teacherName }}</p>
+              </div>
+              <div class="tt-sheet-head-actions">
+                <button
+                  type="button"
+                  class="tt-sheet-dl"
+                  (click)="downloadTeacherPreviewPdf(sheet); $event.stopPropagation()"
+                  title="Download this sheet as PDF (matches preview)"
+                  aria-label="Download teacher timetable PDF from preview"
+                >
+                  <svg class="tt-sheet-dl-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            <div class="tt-teacher-table-scroll">
+              <table class="tt-teacher-table" *ngIf="sheet.columns.length">
+                <thead>
+                  <tr>
+                    <th scope="col" class="tt-teacher-corner">Day</th>
+                    <th
+                      *ngFor="let col of sheet.columns"
+                      scope="col"
+                      [class.tt-teacher-th-period]="previewBuilder.isPeriodColumn(col)"
+                      [class.tt-teacher-th-break]="previewBuilder.isBreakColumn(col)"
+                    >
+                      <ng-container *ngIf="previewBuilder.isPeriodColumn(col)">
+                        <div class="tt-teacher-pnum">{{ col.period }}</div>
+                        <div class="tt-teacher-ptime">
+                          <span class="tt-ptime-line">{{ col.timeStart }}</span>
+                          <span class="tt-ptime-line">{{ col.timeEnd }}</span>
+                        </div>
+                      </ng-container>
+                      <ng-container *ngIf="previewBuilder.isBreakColumn(col)">
+                        <div class="tt-teacher-break-time tt-break-th-times-only">
+                          <span class="tt-ptime-line">{{ col.timeStart }}</span>
+                          <span class="tt-ptime-line">{{ col.timeEnd }}</span>
+                        </div>
+                      </ng-container>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let day of sheet.daysOfWeek; let dayIdx = index">
+                    <th scope="row" class="tt-teacher-day">{{ previewBuilder.dayShortLabel(day) }}</th>
+                    <ng-container *ngFor="let col of sheet.columns">
+                      <td
+                        *ngIf="previewBuilder.isBreakColumn(col) && dayIdx === 0"
+                        [attr.rowspan]="sheet.daysOfWeek.length"
+                        class="tt-teacher-td-break tt-break-td-merged"
+                      >
+                        <div class="tt-break-banner-merged">
+                          {{ previewBuilder.standardBreakBannerLabel(col.label) }}
+                        </div>
+                      </td>
+                      <td *ngIf="previewBuilder.isPeriodColumn(col)" class="tt-teacher-td-period">
+                        <div
+                          *ngFor="let sl of previewBuilder.getTeacherSheetCell(sheet, day, col.period)"
+                          class="tt-teacher-lesson"
+                        >
+                          <span class="tt-teacher-subj">{{ previewBuilder.subjectAbbrev(sl) }}</span>
+                          <span class="tt-teacher-class">{{ sl.class?.name || '—' }}</span>
+                          <span class="tt-teacher-foot" *ngIf="sl.class?.form || sl.room">{{
+                            sl.class?.form || sl.room
+                          }}</span>
+                        </div>
+                      </td>
+                    </ng-container>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <footer class="tt-teacher-sheet-foot">
+              <span>Timetable generated: {{ sheet.generatedAtLabel }}</span>
+              <span class="tt-teacher-sheet-foot-right">Preview</span>
+            </footer>
+          </div>
+        </section>
+
+        <section
+          class="tt-preview-section tt-preview-classes"
+          [class.tt-preview-section--offscreen]="previewTab !== 'classes'"
+          [attr.aria-hidden]="previewTab !== 'classes'"
+        >
+          <p class="tt-preview-hint" *ngIf="previewTab === 'classes'">
+            Same layout as printed class timetables: days on the left, periods and breaks across the top; double periods merge when the lesson is continuous.
+          </p>
+          <div
+            *ngFor="let sheet of previewClassSheets"
+            class="tt-teacher-sheet"
+            [attr.data-tt-sheet-root]="'class-' + sheet.classId"
+          >
+            <header class="tt-sheet-head">
+              <img
+                *ngIf="sheet.schoolLogo"
+                [src]="sheet.schoolLogo"
+                class="tt-sheet-logo"
+                alt=""
+                width="56"
+                height="56"
+              />
+              <div class="tt-sheet-head-main">
+                <h4 class="tt-sheet-title">{{ sheet.versionTitle }}</h4>
+                <p class="tt-sheet-subtitle">Class: {{ sheet.className }}</p>
+              </div>
+              <div class="tt-sheet-head-actions tt-sheet-head-actions-class">
+                <p class="tt-class-teacher-line" *ngIf="sheet.classTeacherLabel">Class teacher: {{ sheet.classTeacherLabel }}</p>
+                <button
+                  type="button"
+                  class="tt-sheet-dl"
+                  (click)="downloadClassPreviewPdf(sheet); $event.stopPropagation()"
+                  title="Download this sheet as PDF (matches preview)"
+                  aria-label="Download class timetable PDF from preview"
+                >
+                  <svg class="tt-sheet-dl-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            <div class="tt-teacher-table-scroll">
+              <table class="tt-teacher-table" *ngIf="sheet.columns.length">
+                <thead>
+                  <tr>
+                    <th scope="col" class="tt-teacher-corner">Day</th>
+                    <th
+                      *ngFor="let col of sheet.columns"
+                      scope="col"
+                      [class.tt-teacher-th-period]="previewBuilder.isPeriodColumn(col)"
+                      [class.tt-teacher-th-break]="previewBuilder.isBreakColumn(col)"
+                    >
+                      <ng-container *ngIf="previewBuilder.isPeriodColumn(col)">
+                        <div class="tt-teacher-pnum">{{ col.period }}</div>
+                        <div class="tt-teacher-ptime">
+                          <span class="tt-ptime-line">{{ col.timeStart }}</span>
+                          <span class="tt-ptime-line">{{ col.timeEnd }}</span>
+                        </div>
+                      </ng-container>
+                      <ng-container *ngIf="previewBuilder.isBreakColumn(col)">
+                        <div class="tt-teacher-break-time tt-break-th-times-only">
+                          <span class="tt-ptime-line">{{ col.timeStart }}</span>
+                          <span class="tt-ptime-line">{{ col.timeEnd }}</span>
+                        </div>
+                      </ng-container>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let day of sheet.daysOfWeek; let dayIdx = index">
+                    <th scope="row" class="tt-teacher-day">{{ previewBuilder.dayShortLabel(day) }}</th>
+                    <ng-container *ngFor="let seg of previewBuilder.getClassDaySegments(sheet, day)">
+                      <td
+                        *ngIf="seg.kind === 'break' && dayIdx === 0"
+                        [attr.rowspan]="sheet.daysOfWeek.length"
+                        class="tt-teacher-td-break tt-break-td-merged"
+                      >
+                        <div class="tt-break-banner-merged">
+                          {{ previewBuilder.standardBreakBannerLabel(seg.label) }}
+                        </div>
+                      </td>
+                      <td
+                        *ngIf="seg.kind === 'empty'"
+                        class="tt-teacher-td-period tt-class-td-empty"
+                        [attr.colspan]="seg.colspan"
+                      ></td>
+                      <td
+                        *ngIf="seg.kind === 'lesson'"
+                        class="tt-teacher-td-period"
+                        [attr.colspan]="seg.colspan"
+                      >
+                        <div class="tt-class-lesson">
+                          <span class="tt-class-form-corner" *ngIf="previewBuilder.classFormCornerLabel(seg.slots[0])">{{
+                            previewBuilder.classFormCornerLabel(seg.slots[0])
+                          }}</span>
+                          <span class="tt-class-subj">{{ previewBuilder.subjectLabelClassTimetable(seg.slots[0]) }}</span>
+                          <span class="tt-class-tchr">{{ previewBuilder.teacherDisplayName(seg.slots[0]) }}</span>
+                          <span class="tt-class-room-corner" *ngIf="seg.slots[0].room">{{ seg.slots[0].room }}</span>
+                        </div>
+                      </td>
+                    </ng-container>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <footer class="tt-teacher-sheet-foot">
+              <span>Timetable generated: {{ sheet.generatedAtLabel }}</span>
+              <span class="tt-teacher-sheet-foot-right">Preview</span>
+            </footer>
+          </div>
+        </section>
+
+        <section
+          class="tt-preview-section tt-preview-summary-section"
+          [class.tt-preview-section--offscreen]="previewTab !== 'summary'"
+          [attr.aria-hidden]="previewTab !== 'summary'"
+        >
+          <p class="tt-preview-hint" *ngIf="previewTab === 'summary'">
+            One row per teacher; each day groups period columns (and breaks). Download matches this preview.
+          </p>
+          <div
+            class="tt-teacher-sheet"
+            *ngIf="previewConsolidatedSheet as sheet"
+            data-tt-sheet-root="summary"
+          >
+            <header class="tt-sheet-head">
+              <img
+                *ngIf="sheet.schoolLogo"
+                [src]="sheet.schoolLogo"
+                class="tt-sheet-logo"
+                alt=""
+                width="56"
+                height="56"
+              />
+              <div class="tt-sheet-head-main">
+                <h4 class="tt-sheet-title">{{ sheet.versionTitle }}</h4>
+                <p class="tt-sheet-subtitle">Summary of teachers</p>
+              </div>
+              <div class="tt-sheet-head-actions">
+                <button
+                  type="button"
+                  class="tt-sheet-dl"
+                  (click)="downloadSummaryPreviewPdf(); $event.stopPropagation()"
+                  title="Download this sheet as PDF (matches preview)"
+                  aria-label="Download teacher summary PDF from preview"
+                >
+                  <svg class="tt-sheet-dl-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            <div class="tt-teacher-table-scroll" *ngIf="sheet.dayStripColumns.length && sheet.teachers.length">
+              <table class="tt-teacher-table tt-consolidated-table">
+                <thead>
+                  <tr>
+                    <th rowspan="2" scope="col" class="tt-teacher-corner tt-consolidated-corner">Teacher</th>
+                    <th
+                      *ngFor="let day of sheet.daysOfWeek"
+                      scope="colgroup"
+                      [attr.colspan]="sheet.dayStripColumns.length"
+                      class="tt-consolidated-day-head"
+                    >
+                      {{ day }}
+                    </th>
+                  </tr>
+                  <tr>
+                    <ng-container *ngFor="let day of sheet.daysOfWeek">
+                      <th
+                        *ngFor="let col of sheet.dayStripColumns"
+                        scope="col"
+                        [class.tt-teacher-th-period]="previewBuilder.isPeriodColumn(col)"
+                        [class.tt-teacher-th-break]="previewBuilder.isBreakColumn(col)"
+                      >
+                        <ng-container *ngIf="previewBuilder.isPeriodColumn(col)">
+                          <div class="tt-teacher-pnum">{{ col.period }}</div>
+                          <div class="tt-teacher-ptime">
+                            <span class="tt-ptime-line">{{ col.timeStart }}</span>
+                            <span class="tt-ptime-line">{{ col.timeEnd }}</span>
+                          </div>
+                        </ng-container>
+                        <ng-container *ngIf="previewBuilder.isBreakColumn(col)"></ng-container>
+                      </th>
+                    </ng-container>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let t of sheet.teachers; let teacherIdx = index">
+                    <th scope="row" class="tt-consolidated-teacher-name">{{ t.teacherName }}</th>
+                    <ng-container *ngFor="let day of sheet.daysOfWeek">
+                      <ng-container *ngFor="let col of sheet.dayStripColumns">
+                        <td
+                          *ngIf="previewBuilder.isBreakColumn(col) && teacherIdx === 0"
+                          [attr.rowspan]="sheet.teachers.length"
+                          class="tt-teacher-td-break tt-break-td-merged tt-consolidated-break-merged tt-consolidated-break-empty"
+                        ></td>
+                        <td *ngIf="previewBuilder.isPeriodColumn(col)" class="tt-consolidated-period-cell">
+                          <span class="tt-consolidated-class-code">{{
+                            previewBuilder.getConsolidatedCellLabel(sheet, t.teacherId, day, col)
+                          }}</span>
+                        </td>
+                      </ng-container>
+                    </ng-container>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <footer class="tt-teacher-sheet-foot">
+              <span>Timetable generated: {{ sheet.generatedAtLabel }}</span>
+              <span class="tt-teacher-sheet-foot-right">Preview</span>
+            </footer>
+          </div>
+        </section>
+      </ng-container>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,31 @@
+<div class="cm-wrap">
+  <header class="cm-header">
+    <h1 class="cm-title">Communications</h1>
+    <p class="cm-sub">Send messages and documents to parents, and read messages parents send to the school.</p>
+  </header>
+
+  <nav class="cm-tabs" aria-label="Communications sections">
+    <a
+      routerLink="/communication_manage/send"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="cm-tab"
+    >
+      <span class="cm-tab-ico" aria-hidden="true">✉️</span>
+      Send Message
+    </a>
+    <a
+      routerLink="/communication_manage/view"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="cm-tab"
+    >
+      <span class="cm-tab-ico" aria-hidden="true">📥</span>
+      View Messages
+    </a>
+  </nav>
+
+  <div class="cm-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>

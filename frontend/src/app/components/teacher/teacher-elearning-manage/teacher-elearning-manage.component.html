@@ -1,0 +1,48 @@
+<div class="em-wrap">
+  <header class="em-header">
+    <h1 class="em-title">E-learning Manager</h1>
+    <p class="em-sub">Create tasks, review submissions, record book, and your classes</p>
+  </header>
+
+  <nav class="em-tabs" aria-label="E-learning sections">
+    <a
+      routerLink="/teacher/elearning-manage"
+      [class.active]="isTasksActive()"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">✏️</span>
+      Create Task
+    </a>
+    <a
+      routerLink="/teacher/elearning-manage/submissions"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">📥</span>
+      Submissions
+    </a>
+    <a
+      routerLink="/teacher/elearning-manage/record-book"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="linkActiveSubset"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">📘</span>
+      Record Book
+    </a>
+    <a
+      routerLink="/teacher/elearning-manage/my-classes"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">👥</span>
+      My Classes
+    </a>
+  </nav>
+
+  <div class="em-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>

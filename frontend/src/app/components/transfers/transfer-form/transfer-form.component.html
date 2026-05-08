@@ -1,0 +1,267 @@
+<div class="container">
+  <div class="transfer-form-wrapper">
+    <!-- Header Section -->
+    <div class="form-header">
+      <div class="header-content">
+        <h1>
+          <span class="icon">🔄</span>
+          Student Transfer
+        </h1>
+        <p class="subtitle">Transfer a student between classes or to another school</p>
+      </div>
+      <button class="btn btn-icon" type="button" (click)="navigateToHistory()" title="Back to Transfer History">
+        ← Back
+      </button>
+    </div>
+
+    <!-- Alert Messages -->
+    <div class="alert alert-success" *ngIf="success">
+      <span class="alert-icon">✓</span>
+      <span>{{ success }}</span>
+    </div>
+    <div class="alert alert-error" *ngIf="error">
+      <span class="alert-icon">✕</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Form Container -->
+    <div class="form-container">
+      <form (ngSubmit)="onSubmit()" #transferForm="ngForm">
+        <!-- Student Selection Section -->
+        <div class="form-section">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">👤</span>
+              Select Student
+            </h2>
+            <p class="section-description">Choose the student to transfer</p>
+          </div>
+
+          <div class="form-group">
+            <label for="studentSearch">Search Student <span class="required">*</span></label>
+            <div class="search-box">
+              <input 
+                type="text" 
+                id="studentSearch"
+                [(ngModel)]="searchQuery" 
+                name="studentSearch"
+                placeholder="Search by name or student number..."
+                class="search-input"
+                (input)="filterStudents()">
+              <span class="search-icon">🔍</span>
+            </div>
+          </div>
+
+          <div class="form-group" *ngIf="filteredStudents.length > 0">
+            <label>Select Student</label>
+            <div class="student-list">
+              <label 
+                *ngFor="let student of filteredStudents" 
+                class="student-item"
+                [class.selected]="transfer.studentId === student.id">
+                <input 
+                  type="radio" 
+                  name="studentSelection"
+                  [value]="student.id"
+                  [(ngModel)]="transfer.studentId"
+                  (change)="onStudentSelect()"
+                  [ngModelOptions]="{ standalone: true }">
+                <div class="student-info">
+                  <strong>{{ student.firstName }} {{ student.lastName }}</strong>
+                  <span class="student-number">{{ student.studentNumber }}</span>
+                  <span class="student-class" *ngIf="student.classEntity">
+                    Current Class: {{ student.classEntity.name }}
+                  </span>
+                </div>
+                <span class="check-icon" *ngIf="transfer.studentId === student.id">✓</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="info-box" *ngIf="selectedStudent">
+            <div class="info-content">
+              <span class="info-icon">ℹ️</span>
+              <div>
+                <strong>Selected Student Information</strong>
+                <p><strong>Name:</strong> {{ selectedStudent.firstName }} {{ selectedStudent.lastName }}</p>
+                <p><strong>Student Number:</strong> {{ selectedStudent.studentNumber }}</p>
+                <p><strong>Current Class:</strong> {{ getCurrentClassName() }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transfer Type Section -->
+        <div class="form-section">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">📋</span>
+              Transfer Type
+            </h2>
+            <p class="section-description">Choose the type of transfer</p>
+          </div>
+
+          <div class="form-group">
+            <div class="radio-group">
+              <label class="radio-label">
+                <input 
+                  type="radio" 
+                  name="transferType" 
+                  value="internal"
+                  [(ngModel)]="transfer.transferType"
+                  (change)="onTransferTypeChange()">
+                <span class="radio-custom"></span>
+                <div class="radio-content">
+                  <strong>Internal Transfer</strong>
+                  <small>Move student to another class within the same school</small>
+                </div>
+              </label>
+              <label class="radio-label">
+                <input 
+                  type="radio" 
+                  name="transferType" 
+                  value="external"
+                  [(ngModel)]="transfer.transferType"
+                  (change)="onTransferTypeChange()">
+                <span class="radio-custom"></span>
+                <div class="radio-content">
+                  <strong>External Transfer</strong>
+                  <small>Student is leaving to another school</small>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Internal Transfer Details -->
+        <div class="form-section" *ngIf="transfer.transferType === 'internal'">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">🏫</span>
+              New Class Assignment
+            </h2>
+            <p class="section-description">Select the new class for this student</p>
+          </div>
+
+          <div class="form-group">
+            <label for="newClassId">New Class <span class="required">*</span></label>
+            <select 
+              id="newClassId"
+              [(ngModel)]="transfer.newClassId" 
+              name="newClassId"
+              required
+              class="form-select">
+              <option value="">Select new class...</option>
+              <option 
+                *ngFor="let cls of classes" 
+                [value]="cls.id"
+                [disabled]="selectedStudent?.classId === cls.id">
+                {{ cls.name }} {{ selectedStudent?.classId === cls.id ? '(Current)' : '' }}
+              </option>
+            </select>
+            <small class="form-hint">Select the class the student will be transferred to</small>
+          </div>
+        </div>
+
+        <!-- External Transfer Details -->
+        <div class="form-section" *ngIf="transfer.transferType === 'external'">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">🏛️</span>
+              Destination School
+            </h2>
+            <p class="section-description">Enter details about the destination school</p>
+          </div>
+
+          <div class="form-group">
+            <label for="destinationSchool">Destination School Name <span class="required">*</span></label>
+            <input 
+              type="text" 
+              id="destinationSchool"
+              [(ngModel)]="transfer.destinationSchool" 
+              name="destinationSchool"
+              required
+              placeholder="Enter destination school name"
+              class="form-input"
+              maxlength="200">
+            <small class="form-hint">Name of the school the student is transferring to</small>
+          </div>
+        </div>
+
+        <!-- Transfer Details Section -->
+        <div class="form-section">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">📝</span>
+              Transfer Details
+            </h2>
+            <p class="section-description">Additional information about the transfer</p>
+          </div>
+
+          <div class="form-group">
+            <label for="effectiveDate">Effective Date <span class="required">*</span></label>
+            <input 
+              type="date" 
+              id="effectiveDate"
+              [(ngModel)]="transfer.effectiveDate" 
+              name="effectiveDate"
+              required
+              class="form-input"
+              [max]="maxEffectiveDate">
+            <small class="form-hint">Date when the transfer takes effect</small>
+          </div>
+
+          <div class="form-group">
+            <label for="reason">Reason for Transfer</label>
+            <textarea 
+              id="reason"
+              [(ngModel)]="transfer.reason" 
+              name="reason"
+              placeholder="Enter reason for transfer (optional)"
+              class="form-input"
+              rows="3"
+              maxlength="500"></textarea>
+            <small class="form-hint">Optional: Explain why this transfer is being made</small>
+          </div>
+
+          <div class="form-group">
+            <label for="notes">Additional Notes</label>
+            <textarea 
+              id="notes"
+              [(ngModel)]="transfer.notes" 
+              name="notes"
+              placeholder="Any additional notes or comments (optional)"
+              class="form-input"
+              rows="2"
+              maxlength="1000"></textarea>
+            <small class="form-hint">Optional: Add any additional information</small>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            (click)="navigateToHistory()"
+            [disabled]="submitting">
+            ❌ Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="btn btn-primary btn-submit"
+            [disabled]="submitting">
+            <span *ngIf="!submitting">
+              ✅ Process Transfer
+            </span>
+            <span *ngIf="submitting" class="submit-loading">
+              <span class="spinner-small"></span>
+              Processing...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,96 @@
+<div class="fm-wrap">
+  <header class="fm-header">
+    <h1 class="fm-title">Finance Manager</h1>
+    <p class="fm-sub">Billing, payments, balances, unpaid invoices, and audit</p>
+  </header>
+
+  <nav class="fm-tabs" aria-label="Finance manager sections">
+    <a
+      routerLink="/finance/manage/fees"
+      routerLinkActive="active"
+      class="fm-tab"
+    >
+      <span class="fm-tab-ico" aria-hidden="true">💰</span>
+      Fees
+    </a>
+    <a
+      routerLink="/finance/manage/exemptions"
+      routerLinkActive="active"
+      class="fm-tab"
+    >
+      <span class="fm-tab-ico" aria-hidden="true">&#37;</span>
+      Exemptions
+    </a>
+    <a
+      routerLink="/finance/manage/billing"
+      routerLinkActive="active"
+      class="fm-tab"
+    >
+      <span class="fm-tab-ico" aria-hidden="true">🧾</span>
+      Billing &amp; Invoicing
+    </a>
+    <a
+      routerLink="/finance/manage/record-payment"
+      routerLinkActive="active"
+      class="fm-tab"
+    >
+      <span class="fm-tab-ico" aria-hidden="true">💳</span>
+      Record Payment
+    </a>
+    <button
+      type="button"
+      class="fm-tab fm-tab-btn"
+      (click)="openBalanceEnquiry()"
+    >
+      <span class="fm-tab-ico" aria-hidden="true">🔎</span>
+      Balance Enquiry
+    </button>
+    <a
+      routerLink="/finance/manage/unpaid-invoices"
+      routerLinkActive="active"
+      class="fm-tab"
+    >
+      <span class="fm-tab-ico" aria-hidden="true">⛔</span>
+      Unpaid Invoices
+    </a>
+    <a
+      routerLink="/finance/manage/reports"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: false }"
+      class="fm-tab"
+    >
+      <span class="fm-tab-ico" aria-hidden="true">📊</span>
+      Financial Reports
+    </a>
+    <a
+      *ngIf="showAuditTab()"
+      routerLink="/finance/manage/system-audit"
+      routerLinkActive="active"
+      class="fm-tab"
+    >
+      <span class="fm-tab-ico" aria-hidden="true">🛡️</span>
+      System Audit
+    </a>
+  </nav>
+
+  <div class="fm-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>
+
+<!-- Balance Enquiry modal -->
+<div
+  class="fm-be-backdrop"
+  *ngIf="showBalanceEnquiryModal"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Balance Enquiry"
+  (click)="onModalBackdropClick($event)"
+>
+  <div class="fm-be-panel">
+    <app-balance-enquiry
+      [modalMode]="true"
+      (closeModal)="closeBalanceEnquiry()"
+    ></app-balance-enquiry>
+  </div>
+</div>

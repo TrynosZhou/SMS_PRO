@@ -1,0 +1,24 @@
+<div class="fr-shell">
+  <header class="fr-head">
+    <h2 class="fr-title">Financial Reports</h2>
+    <p class="fr-meta" *ngIf="generatedAt">
+      Data snapshot: {{ generatedAt | date : 'medium' }}
+    </p>
+    <p class="fr-meta fr-err" *ngIf="loadError" role="alert">{{ loadError }}</p>
+  </header>
+
+  <nav class="fr-subnav" aria-label="Financial report sections">
+    <a
+      *ngFor="let item of subMenus"
+      [routerLink]="item.path"
+      routerLinkActive="fr-sub-on"
+      class="fr-sub"
+    >
+      {{ item.label }}
+    </a>
+  </nav>
+
+  <div class="fr-body">
+    <router-outlet></router-outlet>
+  </div>
+</div>

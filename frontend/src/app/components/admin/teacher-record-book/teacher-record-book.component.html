@@ -1,0 +1,300 @@
+<div class="record-book-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div>
+        <h1>📚 Teacher Record Book</h1>
+        <p>View and manage teacher record books</p>
+      </div>
+      <div class="header-actions" *ngIf="selectedClass">
+        <button class="btn btn-outline" (click)="downloadPDF()" title="Download PDF" [disabled]="loading || students.length === 0">
+          📄 Download PDF
+        </button>
+        <button class="btn btn-outline" (click)="exportToExcel()" title="Export to Excel" [disabled]="loading || students.length === 0">
+          📊 Export Excel
+        </button>
+        <button class="btn btn-outline" (click)="printRecordBook()" title="Print Record Book" [disabled]="loading || students.length === 0">
+          🖨️ Print
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error/Success Messages -->
+  <div *ngIf="error" class="alert alert-error">
+    <span class="alert-icon">⚠️</span>
+    <span>{{ error }}</span>
+    <button class="alert-close" (click)="error = ''">&times;</button>
+  </div>
+  
+  <div *ngIf="success" class="alert alert-success">
+    <span class="alert-icon">✓</span>
+    <span>{{ success }}</span>
+    <button class="alert-close" (click)="success = ''">&times;</button>
+  </div>
+
+  <!-- Teacher Search Section -->
+  <div class="card search-card">
+    <div class="card-header">
+      <h3>🔍 Search Teacher</h3>
+    </div>
+    <div class="search-container">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="searchTeachers()"
+          placeholder="Search by Teacher ID, First Name, or Last Name..."
+          class="search-input">
+        <button *ngIf="searchTerm" class="clear-search" (click)="clearSearch()">&times;</button>
+      </div>
+      
+      <!-- Teacher Results -->
+      <div *ngIf="filteredTeachers.length > 0" class="teacher-results">
+        <div class="teacher-list">
+          <div 
+            *ngFor="let teacher of filteredTeachers" 
+            class="teacher-item"
+            [class.selected]="selectedTeacher?.id === teacher.id"
+            (click)="selectTeacher(teacher)">
+            <div class="teacher-info">
+              <div class="teacher-name">{{ teacher.firstName }} {{ teacher.lastName }}</div>
+              <div class="teacher-id">ID: {{ teacher.teacherId }}</div>
+            </div>
+            <div class="teacher-classes-count" *ngIf="teacher.classes">
+              {{ teacher.classes.length }} class{{ teacher.classes.length !== 1 ? 'es' : '' }}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div *ngIf="searchTerm && filteredTeachers.length === 0" class="no-results">
+        <p>No teachers found matching "{{ searchTerm }}"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selected Teacher Classes -->
+  <div *ngIf="selectedTeacher" class="card classes-card">
+    <div class="card-header">
+      <h3>📋 Classes Assigned to {{ selectedTeacher.firstName }} {{ selectedTeacher.lastName }}</h3>
+      <span class="class-count" *ngIf="teacherClasses.length > 0">
+        {{ teacherClasses.length }} class{{ teacherClasses.length !== 1 ? 'es' : '' }}
+      </span>
+    </div>
+    <div *ngIf="teacherClasses.length > 0" class="classes-list">
+      <div 
+        *ngFor="let classItem of teacherClasses" 
+        class="class-item"
+        [class.active]="selectedClassId === classItem.id"
+        (click)="onClassClick(classItem)">
+        <span class="class-icon">🎓</span>
+        <span class="class-name">{{ classItem.name }}</span>
+        <span class="class-arrow">→</span>
+      </div>
+    </div>
+    <div *ngIf="teacherClasses.length === 0" class="no-classes">
+      <p>No classes assigned to this teacher.</p>
+    </div>
+  </div>
+
+  <!-- Subject Selection -->
+  <div *ngIf="selectedTeacher && selectedClass" class="card subject-card">
+    <div class="card-header">
+      <h3>📚 Select Subject</h3>
+    </div>
+    <div class="subject-selection">
+      <select 
+        [(ngModel)]="selectedSubjectId" 
+        (change)="onSubjectChange()"
+        class="subject-select">
+        <option value="">-- Select Subject --</option>
+        <option *ngFor="let subject of availableSubjects" [value]="subject.id">
+          {{ subject.name }} ({{ subject.code }})
+        </option>
+      </select>
+    </div>
+    <div *ngIf="availableSubjects.length === 0" class="no-subjects">
+      <p>No subjects assigned to this teacher.</p>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading record book...</p>
+  </div>
+
+  <!-- Record Book Table -->
+  <div *ngIf="!loading && selectedClass && selectedSubjectId && students.length > 0" class="record-book-content">
+    <!-- Header Information -->
+    <div class="record-book-header modern-header">
+      <div class="header-grid">
+        <div class="header-item">
+          <span class="header-icon">🏫</span>
+          <div>
+            <div class="header-label">School</div>
+            <div class="header-value">{{ schoolName }}</div>
+          </div>
+        </div>
+        <div class="header-item">
+          <span class="header-icon">👨‍🏫</span>
+          <div>
+            <div class="header-label">Teacher</div>
+            <div class="header-value">{{ selectedTeacher?.firstName }} {{ selectedTeacher?.lastName }}</div>
+          </div>
+        </div>
+        <div class="header-item">
+          <span class="header-icon">🎓</span>
+          <div>
+            <div class="header-label">Class</div>
+            <div class="header-value">{{ selectedClass.name }}</div>
+          </div>
+        </div>
+        <div class="header-item">
+          <span class="header-icon">📅</span>
+          <div>
+            <div class="header-label">Term</div>
+            <div class="header-value">{{ currentTerm }}</div>
+          </div>
+        </div>
+        <div class="header-item">
+          <span class="header-icon">👥</span>
+          <div>
+            <div class="header-label">Students</div>
+            <div class="header-value">{{ students.length }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-icon">📝</div>
+        <div class="stat-content">
+          <div class="stat-label">Total Tests</div>
+          <div class="stat-value">{{ visibleTests }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value">{{ getCompletedCount() }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-content">
+          <div class="stat-label">Pending</div>
+          <div class="stat-value">{{ getPendingCount() }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+          <div class="stat-label">Avg Score</div>
+          <div class="stat-value">{{ getAverageScore() }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Students -->
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          [(ngModel)]="studentSearchTerm" 
+          (input)="filterStudents()"
+          placeholder="Search students by name or ID..."
+          class="search-input">
+        <button *ngIf="studentSearchTerm" class="clear-search" (click)="clearStudentSearch()">&times;</button>
+      </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="table-wrapper">
+      <table class="record-table modern-table">
+        <thead>
+          <tr>
+            <th class="sticky-col">#</th>
+            <th class="sticky-col">Student ID</th>
+            <th>LastName</th>
+            <th>FirstName</th>
+            <th *ngFor="let testNum of getVisibleTestNumbers()" class="test-header">
+              <div class="test-header-content">
+                <span>Test {{ testNum }}</span>
+                <span class="test-max">/100</span>
+                <span class="test-date" *ngIf="testDates['test' + testNum]">
+                  {{ formatDateDisplay(testDates['test' + testNum]) }}
+                </span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let student of filteredStudents; let i = index" 
+              [class.even-row]="i % 2 === 0"
+              [class.odd-row]="i % 2 !== 0">
+            <td class="sticky-col row-number">{{ i + 1 }}</td>
+            <td class="sticky-col student-id">{{ student.studentNumber }}</td>
+            <td class="student-name">{{ student.lastName }}</td>
+            <td class="student-name">{{ student.firstName }}</td>
+            <td *ngFor="let testNum of getVisibleTestNumbers()" class="mark-cell">
+              <div class="mark-display">
+                <span 
+                  class="mark-value"
+                  [class.excellent]="student['test' + testNum] >= 80"
+                  [class.good]="student['test' + testNum] >= 60 && student['test' + testNum] < 80"
+                  [class.average]="student['test' + testNum] >= 40 && student['test' + testNum] < 60"
+                  [class.poor]="student['test' + testNum] < 40 && student['test' + testNum] !== null">
+                  {{ student['test' + testNum] !== null && student['test' + testNum] !== '' ? student['test' + testNum] : '—' }}
+                </span>
+                <span class="mark-indicator" *ngIf="student['test' + testNum] !== null && student['test' + testNum] !== ''">
+                  {{ getGradeIcon(student['test' + testNum]) }}
+                </span>
+              </div>
+            </td>
+          </tr>
+          <!-- Topic Row -->
+          <tr class="topic-row">
+            <td colspan="4" class="topic-label">Topic</td>
+            <td *ngFor="let testNum of getVisibleTestNumbers()">
+              <div class="topic-display">{{ topics['test' + testNum] || '—' }}</div>
+            </td>
+          </tr>
+          <!-- Date Row -->
+          <tr class="date-row">
+            <td colspan="4" class="date-label">Date</td>
+            <td *ngFor="let testNum of getVisibleTestNumbers()">
+              <div class="date-display">{{ testDates['test' + testNum] || '—' }}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- No Students Message -->
+  <div *ngIf="!loading && selectedClass && students.length === 0" class="no-data">
+    <p>No students enrolled in this class.</p>
+  </div>
+
+  <!-- No Subject Selected -->
+  <div *ngIf="!loading && selectedClass && !selectedSubjectId && availableSubjects.length > 0" class="no-data">
+    <p>Please select a subject to view the record book.</p>
+  </div>
+
+  <!-- No Class Selected -->
+  <div *ngIf="!loading && selectedTeacher && !selectedClass" class="no-data">
+    <p>Please select a class to view the record book.</p>
+  </div>
+
+  <!-- No Teacher Selected -->
+  <div *ngIf="!loading && !selectedTeacher" class="no-data">
+    <p>Please search and select a teacher to view their record books.</p>
+  </div>
+</div>
+

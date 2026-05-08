@@ -1,0 +1,126 @@
+.ct-wrap {
+  padding: 0.25rem 0.5rem 1.5rem;
+  max-width: 960px;
+}
+
+.ct-header h2 {
+  margin: 0 0 0.35rem;
+  color: #1f2d7a;
+  font-size: 1.35rem;
+}
+
+.ct-lead {
+  margin: 0 0 1rem;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.ct-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #64748b;
+  padding: 1rem 0;
+}
+
+.ct-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0d9488;
+  border-radius: 50%;
+  animation: ct-spin 0.7s linear infinite;
+}
+
+@keyframes ct-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ct-table-scroll {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.ct-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.95rem;
+}
+
+.ct-table thead th {
+  background: linear-gradient(92deg, #0f766e 0%, #0d9488 45%, #14b8a6 100%);
+  color: #fff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+  padding: 0.85rem 0.75rem;
+  text-align: left;
+  border: none;
+}
+
+.ct-th-num {
+  width: 48px;
+  text-align: center !important;
+}
+
+.ct-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ct-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.ct-table tbody td {
+  padding: 0.75rem 0.75rem;
+  vertical-align: top;
+  color: #0f172a;
+}
+
+.ct-td-num {
+  text-align: center;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.ct-td-class strong {
+  font-weight: 800;
+}
+
+.ct-td-form {
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.ct-td-teachers {
+  min-width: 200px;
+}
+
+.ct-teacher-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+.ct-none {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.ct-empty {
+  padding: 1.25rem;
+  text-align: center;
+  color: #94a3b8;
+  margin: 0;
+}

@@ -1,0 +1,353 @@
+<div class="container">
+  <div class="card">
+    <h1>System Settings</h1>
+    <div class="alert alert-success" *ngIf="success" style="display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; padding: 16px 20px; margin-bottom: 20px; animation: slideIn 0.3s ease-out;">
+      <span style="font-size: 20px;">✓</span>
+      <span>{{ success }}</span>
+    </div>
+    <div class="alert alert-error" *ngIf="error" style="display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; padding: 16px 20px; margin-bottom: 20px;">
+      <span style="font-size: 20px;">✗</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <div *ngIf="loading && (!settings.studentIdPrefix || !settings.teacherIdPrefix)">Loading settings...</div>
+
+    <div class="demo-settings-banner" *ngIf="isDemoUser()">
+      <div class="demo-settings-icon">🧪</div>
+      <div>
+        <h3>Demo Mode — Read Only</h3>
+        <p>Settings are locked for the shared demo account. Switch to your own admin account to make permanent changes.</p>
+      </div>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" *ngIf="settings.studentIdPrefix && settings.teacherIdPrefix">
+      <fieldset
+        [attr.disabled]="isDemoUser() ? true : null"
+        [class.demo-readonly]="isDemoUser()">
+      <!-- Student ID Prefix -->
+      <div class="form-section">
+        <h2>Student ID Settings</h2>
+        <div class="form-group">
+          <label>Student ID Prefix *</label>
+          <input type="text" [(ngModel)]="settings.studentIdPrefix" name="studentIdPrefix" required maxlength="10">
+          <small>Prefix for auto-generated student IDs (e.g., JPS, ABC)</small>
+        </div>
+      </div>
+
+      <!-- Teacher ID Prefix -->
+      <div class="form-section">
+        <h2>Teacher ID Settings</h2>
+        <div class="form-group">
+          <label>Teacher ID Prefix *</label>
+          <input type="text" [(ngModel)]="settings.teacherIdPrefix" name="teacherIdPrefix" required maxlength="10">
+          <small>Prefix for auto-generated teacher IDs (e.g., JPST, TCH)</small>
+        </div>
+      </div>
+
+      <!-- Uniform Items -->
+      <div class="form-section">
+        <h2>Uniform Items</h2>
+        <p class="section-description">Manage uniform items and pricing. Items listed here will be available when creating student invoices.</p>
+        <div style="margin-bottom: 15px;">
+          <button type="button" class="btn btn-secondary" (click)="openUniformItemModal()">➕ Add Uniform Item</button>
+        </div>
+        <div *ngIf="uniformItems.length === 0" class="alert alert-info" style="margin-bottom: 15px;">
+          No uniform items configured yet. Click "Add Uniform Item" to create one.
+        </div>
+        <div *ngIf="uniformItems.length > 0" class="uniform-table-wrapper">
+          <table class="uniform-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Description</th>
+                <th>Unit Price ({{ settings.currencySymbol }})</th>
+                <th>Status</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of uniformItems">
+                <td>{{ item.name }}</td>
+                <td>{{ item.description || '—' }}</td>
+                <td>{{ item.unitPrice | number:'1.2-2' }}</td>
+                <td>
+                  <span [ngClass]="item.isActive ? 'status-active' : 'status-inactive'">
+                    {{ item.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td style="text-align: center;">
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="openUniformItemModal(item)">✏️ Edit</button>
+                  <button type="button" class="btn btn-danger btn-sm" (click)="deleteUniformItem(item)">🗑️ Delete</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Currency Settings -->
+      <div class="form-section">
+        <h2>Currency Settings</h2>
+        <div class="form-group">
+          <label>Currency Symbol *</label>
+          <input type="text" [(ngModel)]="settings.currencySymbol" name="currencySymbol" required maxlength="10">
+          <small>Currency symbol to display with amounts (e.g., KES, $, €, £, ₹)</small>
+        </div>
+      </div>
+
+      <!-- Promotion Rules -->
+      <div class="form-section">
+        <h2>⬆️ Class Promotion Rules</h2>
+        <p class="section-description">Configure how students move from one class to another during promotion. This determines the promotion path for all students.</p>
+        
+        <div class="promotion-rules-container">
+          <!-- Add/Edit Form -->
+          <div class="promotion-rule-form" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e0e0e0;">
+            <h3 style="margin-top: 0; margin-bottom: 15px; color: #333;">
+              {{ editingPromotionRule ? '✏️ Edit Promotion Rule' : '➕ Add New Promotion Rule' }}
+            </h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div class="form-group">
+                <label>From Class *</label>
+                <select 
+                  [(ngModel)]="promotionRuleForm.fromClassId" 
+                  name="fromClassId"
+                  class="form-control"
+                  [disabled]="!!editingPromotionRule">
+                  <option value="">-- Select From Class --</option>
+                  <option *ngFor="let cls of getAvailableFromClasses()" [value]="cls.id">
+                    {{ getClassDisplayName(cls) }} ({{ cls.form }})
+                  </option>
+                </select>
+                <small>Select the class students are currently in</small>
+              </div>
+              
+              <div class="form-group">
+                <label>To Class *</label>
+                <select 
+                  [(ngModel)]="promotionRuleForm.toClassId" 
+                  name="toClassId"
+                  class="form-control"
+                  [disabled]="promotionRuleForm.isFinalClass"
+                  (change)="promotionRuleForm.toClassId === 'COMPLETED' ? promotionRuleForm.isFinalClass = true : null">
+                  <option value="">-- Select To Class --</option>
+                  <option value="COMPLETED">✅ Completed/Graduated</option>
+                  <option *ngFor="let cls of getAvailableToClasses()" [value]="cls.id">
+                    {{ getClassDisplayName(cls) }} ({{ cls.form }})
+                  </option>
+                </select>
+                <small>Select the class students will be promoted to, or "Completed" for final classes</small>
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div class="form-group">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="promotionRuleForm.isFinalClass" 
+                    name="isFinalClass"
+                    (change)="promotionRuleForm.isFinalClass ? promotionRuleForm.toClassId = null : null">
+                  <span><strong>Is Final Class?</strong></span>
+                </label>
+                <small>Check if this class leads to completion/graduation (no further promotion)</small>
+              </div>
+              
+              <div class="form-group">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="promotionRuleForm.isActive" 
+                    name="isActive">
+                  <span><strong>Active</strong></span>
+                </label>
+                <small>Uncheck to temporarily disable this rule without deleting it</small>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+              <button 
+                type="button" 
+                [class]="editingPromotionRule ? 'btn btn-primary' : 'btn btn-secondary'" 
+                (click)="savePromotionRule()"
+                [disabled]="!promotionRuleForm.fromClassId || (!promotionRuleForm.isFinalClass && !promotionRuleForm.toClassId)">
+                {{ editingPromotionRule ? '💾 Update Rule' : '➕ Add Rule' }}
+              </button>
+              <button 
+                *ngIf="editingPromotionRule"
+                type="button" 
+                class="btn btn-secondary" 
+                (click)="cancelEditPromotionRule()">
+                Cancel
+              </button>
+            </div>
+            
+            <div *ngIf="editingPromotionRule" class="alert alert-info" style="margin-top: 15px; padding: 10px 15px; background: #e3f2fd; border-left: 3px solid #2196f3; color: #1565c0;">
+              <strong>✏️ Editing:</strong> {{ getClassDisplayName(editingPromotionRule.fromClass) }} → 
+              {{ editingPromotionRule.isFinalClass ? 'Completed' : getClassDisplayName(editingPromotionRule.toClass) }}
+            </div>
+          </div>
+
+          <!-- Rules Table -->
+          <div *ngIf="loadingPromotionRules" style="text-align: center; padding: 20px;">
+            Loading promotion rules...
+          </div>
+          
+          <div *ngIf="!loadingPromotionRules && promotionRules.length > 0" class="promotion-rules-table-wrapper" style="overflow-x: auto;">
+            <table class="promotion-rules-table" style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f5f5f5;">
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">From Class</th>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">To Class</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd;">Final Class</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let rule of promotionRules" [class.editing]="editingPromotionRule?.id === rule.id" style="border-bottom: 1px solid #eee;">
+                  <td style="padding: 12px;">
+                    <strong>{{ getClassDisplayName(rule.fromClass) }}</strong>
+                    <br>
+                    <small style="color: #666;">{{ rule.fromClass?.form }}</small>
+                  </td>
+                  <td style="padding: 12px;">
+                    <span *ngIf="rule.isFinalClass" style="color: #28a745; font-weight: bold;">✅ Completed</span>
+                    <span *ngIf="!rule.isFinalClass">
+                      <strong>{{ getClassDisplayName(rule.toClass) }}</strong>
+                      <br>
+                      <small style="color: #666;">{{ rule.toClass?.form }}</small>
+                    </span>
+                  </td>
+                  <td style="padding: 12px; text-align: center;">
+                    <span *ngIf="rule.isFinalClass" style="color: #28a745; font-weight: bold;">✓</span>
+                    <span *ngIf="!rule.isFinalClass" style="color: #999;">-</span>
+                  </td>
+                  <td style="padding: 12px; text-align: center;">
+                    <label class="toggle-switch" style="cursor: pointer;">
+                      <input 
+                        type="checkbox" 
+                        [checked]="rule.isActive"
+                        (change)="toggleRuleStatus(rule)">
+                      <span class="toggle-slider"></span>
+                    </label>
+                    <br>
+                    <small [style.color]="rule.isActive ? '#28a745' : '#dc3545'">
+                      {{ rule.isActive ? 'Active' : 'Inactive' }}
+                    </small>
+                  </td>
+                  <td style="padding: 12px; text-align: center;">
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                      <button 
+                        type="button" 
+                        class="btn btn-primary btn-sm" 
+                        (click)="editPromotionRule(rule)"
+                        [disabled]="!!editingPromotionRule && editingPromotionRule.id !== rule.id"
+                        title="Edit this rule">
+                        ✏️
+                      </button>
+                      <button 
+                        type="button" 
+                        class="btn btn-danger btn-sm" 
+                        (click)="deletePromotionRule(rule)"
+                        [disabled]="editingPromotionRule?.id === rule.id"
+                        title="Delete this rule">
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="!loadingPromotionRules && promotionRules.length === 0" class="no-rules-message" style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px; color: #666;">
+            <p style="font-size: 16px; margin: 0;">No promotion rules configured yet.</p>
+            <p style="font-size: 14px; margin-top: 10px;">Add rules above to define how students move between classes.</p>
+          </div>
+          
+          <!-- Warning for classes without rules -->
+          <div *ngIf="!loadingPromotionRules && classes.length > 0" style="margin-top: 20px;">
+            <div *ngFor="let cls of classes" style="margin-bottom: 5px;">
+              <div *ngIf="cls.isActive && hasNoPromotionRule(cls.id)" class="alert alert-warning" style="padding: 8px 12px; margin-bottom: 5px; background: #fff3cd; border-left: 3px solid #ffc107; color: #856404; font-size: 13px;">
+                ⚠️ <strong>{{ getClassDisplayName(cls) }}</strong> has no active promotion rule defined
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </fieldset>
+
+      <div class="form-section danger-zone" *ngIf="authService.hasRole('admin') || authService.hasRole('superadmin')">
+        <h2>Danger Zone</h2>
+        <p class="section-description">
+          This reset erases student records, teacher records, and transaction data while keeping system settings intact.
+        </p>
+        <div class="reset-confirmation-group">
+          <label for="resetConfirmationInput">Type <strong>RESET</strong> to confirm</label>
+          <input
+            id="resetConfirmationInput"
+            type="text"
+            [(ngModel)]="resetConfirmationWord"
+            name="resetConfirmationWord"
+            [disabled]="isDemoUser() || resettingCoreData"
+            placeholder="Type RESET to continue">
+          <small>Only administrators should perform this action. This cannot be undone.</small>
+        </div>
+        <button
+          type="button"
+          class="btn btn-danger"
+          (click)="resetCoreData()"
+          [disabled]="!canResetCoreData()">
+          {{ resettingCoreData ? 'Resetting Data...' : 'Reset Data' }}
+        </button>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <button type="submit" class="btn btn-primary" [disabled]="loading || isDemoUser()">
+          {{ loading ? 'Saving...' : '💾 Save Settings' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Uniform Item Modal -->
+<div class="modal-backdrop" *ngIf="uniformItemModalOpen" (click)="closeUniformItemModal()"></div>
+<div class="modal-dialog" *ngIf="uniformItemModalOpen">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ uniformItemForm.id ? 'Edit Uniform Item' : 'Add Uniform Item' }}</h3>
+      <button type="button" class="modal-close" (click)="closeUniformItemModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div *ngIf="uniformItemError" class="alert alert-error" style="margin-bottom: 15px;">
+        {{ uniformItemError }}
+      </div>
+      <div class="form-group">
+        <label>Item Name *</label>
+        <input type="text" [(ngModel)]="uniformItemForm.name" name="uniformItemName" required>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea [(ngModel)]="uniformItemForm.description" name="uniformItemDescription" rows="3" placeholder="Optional item details"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Unit Price ({{ settings.currencySymbol }}) *</label>
+        <input type="number" [(ngModel)]="uniformItemForm.unitPrice" name="uniformItemPrice" min="0" step="0.01" required>
+      </div>
+      <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" [(ngModel)]="uniformItemForm.isActive" name="uniformItemActive" id="uniformItemActive">
+        <label for="uniformItemActive" style="margin: 0;">Active</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeUniformItemModal()" [disabled]="uniformItemSubmitting">Cancel</button>
+      <button type="button" class="btn btn-primary" (click)="saveUniformItem()" [disabled]="uniformItemSubmitting">
+        {{ uniformItemSubmitting ? 'Saving...' : 'Save Item' }}
+      </button>
+    </div>
+  </div>
+</div>
+

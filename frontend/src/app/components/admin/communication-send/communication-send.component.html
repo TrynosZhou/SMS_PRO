@@ -1,0 +1,202 @@
+<div class="cm-send">
+  <header class="cm-send-hero">
+    <div class="cm-send-hero-text">
+      <h2 class="cm-send-title">Broadcast to parents</h2>
+      <p class="cm-send-lead">
+        Deliver to every linked parent account or a single guardian. Messages land in the
+        <strong>parent portal inbox</strong>. Optional merge fields:
+      </p>
+      <div class="cm-chips" aria-label="Insert placeholder">
+        <button type="button" class="cm-chip" (click)="insertPlaceholder('[School Name]')">[School Name]</button>
+        <button type="button" class="cm-chip" (click)="insertPlaceholder('[Headmaster Name]')">[Headmaster Name]</button>
+        <button type="button" class="cm-chip" (click)="insertPlaceholder('[Recipient Name]')">[Recipient Name]</button>
+        <button type="button" class="cm-chip" (click)="insertPlaceholder('[Name]')">[Name]</button>
+      </div>
+    </div>
+    <div class="cm-send-hero-meta">
+      <span class="cm-meta-label">Delivery preview</span>
+      <span class="cm-meta-value">{{ recipientSummary }}</span>
+      <span class="cm-meta-hint" *ngIf="scope === 'all' && parents.length > 0">
+        Every parent receives their own copy; names are personalized when you use placeholders.
+      </span>
+    </div>
+  </header>
+
+  <div class="cm-alert cm-alert-error" *ngIf="error" role="alert">
+    <span class="cm-alert-ico" aria-hidden="true">!</span>
+    {{ error }}
+  </div>
+  <div class="cm-alert cm-alert-success" *ngIf="success" role="status">
+    <span class="cm-alert-ico cm-alert-ico-ok" aria-hidden="true">✓</span>
+    {{ success }}
+  </div>
+
+  <div class="cm-card">
+    <div class="cm-field">
+      <span class="cm-label" id="cm-audience-label">Audience</span>
+      <div class="cm-segmented" role="group" aria-labelledby="cm-audience-label">
+        <button
+          type="button"
+          class="cm-seg-btn"
+          [class.active]="scope === 'all'"
+          (click)="setScope('all')"
+          [disabled]="sending">
+          All parents
+        </button>
+        <button
+          type="button"
+          class="cm-seg-btn"
+          [class.active]="scope === 'one'"
+          (click)="setScope('one')"
+          [disabled]="sending">
+          One parent
+        </button>
+      </div>
+    </div>
+
+    <div class="cm-field" *ngIf="scope === 'one'">
+      <label class="cm-label" for="cm-parent-search">Find parent</label>
+      <input
+        id="cm-parent-search"
+        type="search"
+        class="cm-input cm-search"
+        [(ngModel)]="parentSearch"
+        placeholder="Search by name or email…"
+        autocomplete="off"
+        [disabled]="loadingParents || parents.length === 0 || sending"
+      />
+      <label class="cm-label cm-label-sub" for="cm-parent">Select recipient</label>
+      <div class="cm-parent-row" *ngIf="!loadingParents; else parentsSkeleton">
+        <select
+          id="cm-parent"
+          class="cm-input"
+          [(ngModel)]="parentId"
+          [disabled]="parents.length === 0 || sending"
+        >
+          <option value="">— Choose —</option>
+          <option *ngFor="let p of filteredParents" [value]="p.id">{{ p.label }}</option>
+        </select>
+        <span class="cm-count-pill" *ngIf="parents.length">
+          {{ filteredParents.length }} / {{ parents.length }}
+        </span>
+      </div>
+      <ng-template #parentsSkeleton>
+        <div class="cm-skeleton cm-skeleton-select" aria-hidden="true"></div>
+      </ng-template>
+      <p class="cm-hint" *ngIf="!loadingParents && parents.length === 0">No parents in the system yet.</p>
+      <p class="cm-hint cm-hint-warn" *ngIf="!loadingParents && scope === 'one' && parents.length && filteredParents.length === 0">
+        No matches — try a different search.
+      </p>
+    </div>
+
+    <div class="cm-field">
+      <div class="cm-label-row">
+        <label class="cm-label" for="cm-subject">Subject</label>
+        <span class="cm-counter" [class.cm-counter-warn]="subject.length > maxSubject - 40">
+          {{ subject.length }} / {{ maxSubject }}
+        </span>
+      </div>
+      <input
+        id="cm-subject"
+        class="cm-input"
+        type="text"
+        [(ngModel)]="subject"
+        [maxlength]="maxSubject"
+        placeholder="e.g. PTA meeting — Thursday 5pm"
+        [disabled]="sending"
+      />
+    </div>
+
+    <div class="cm-field">
+      <div class="cm-label-row">
+        <label class="cm-label" for="cm-body">Message</label>
+        <span class="cm-counter">{{ message.length }} characters</span>
+      </div>
+      <textarea
+        #bodyTa
+        id="cm-body"
+        class="cm-textarea"
+        rows="10"
+        [(ngModel)]="message"
+        placeholder="Write your message… Use the chips above to insert placeholders."
+        [disabled]="sending"
+      ></textarea>
+      <p class="cm-hint cm-hint-kbd">Tip: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> (or <kbd>⌘</kbd>+<kbd>Enter</kbd>) to send when a field is focused.</p>
+    </div>
+
+    <div class="cm-field">
+      <span class="cm-label">Attachment <span class="cm-optional">optional</span></span>
+      <input
+        #attachInput
+        id="cm-attach"
+        type="file"
+        class="cm-file-native"
+        (change)="onFileChange($event)"
+        [disabled]="sending"
+      />
+      <button
+        type="button"
+        class="cm-dropzone"
+        [class.cm-dropzone-active]="dropzoneActive"
+        [disabled]="sending"
+        (click)="openFilePicker()"
+        (dragover)="onDropZoneDragOver($event)"
+        (dragleave)="onDropZoneDragLeave($event)"
+        (drop)="onDropZoneDrop($event)"
+      >
+        <span class="cm-dropzone-ico" aria-hidden="true">📎</span>
+        <span class="cm-dropzone-text" *ngIf="!file">
+          <strong>Drop a file here</strong> or click to browse
+        </span>
+        <span class="cm-dropzone-file" *ngIf="file">
+          <strong>{{ file.name }}</strong>
+          <span class="cm-dropzone-size">{{ formatFileSize(file.size) }}</span>
+        </span>
+        <span class="cm-dropzone-hint">PDF, Word, Excel, images, ZIP, or text — max 15 MB</span>
+      </button>
+      <button *ngIf="file && !sending" type="button" class="cm-remove-file" (click)="clearFile()">Remove file</button>
+    </div>
+
+    <div class="cm-actions">
+      <button
+        type="button"
+        class="cm-btn cm-btn-primary"
+        (click)="requestSend()"
+        [disabled]="!canSend"
+      >
+        <span class="cm-btn-spinner" *ngIf="sending"></span>
+        {{ sending ? 'Sending…' : scope === 'all' ? 'Send to all parents' : 'Send message' }}
+      </button>
+      <span class="cm-actions-note" *ngIf="!sending && !canSend && (subject.trim() || message.trim())">
+        Complete required fields to enable send.
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Broadcast confirmation -->
+<div
+  class="cm-modal-backdrop"
+  *ngIf="broadcastConfirmOpen"
+  (click)="cancelBroadcastConfirm()"
+  role="presentation"
+></div>
+<div
+  class="cm-modal"
+  *ngIf="broadcastConfirmOpen"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cm-modal-title"
+>
+  <h3 id="cm-modal-title" class="cm-modal-title">Send to all parents?</h3>
+  <p class="cm-modal-body">
+    This will create <strong>{{ parents.length }}</strong> inbox message{{ parents.length === 1 ? '' : 's' }} — one for
+    each parent account. This cannot be undone from here (parents can delete from their inbox).
+  </p>
+  <div class="cm-modal-actions">
+    <button type="button" class="cm-btn cm-btn-ghost" (click)="cancelBroadcastConfirm()">Cancel</button>
+    <button type="button" class="cm-btn cm-btn-primary" (click)="confirmBroadcast()" [disabled]="sending">
+      Yes, send to all
+    </button>
+  </div>
+</div>

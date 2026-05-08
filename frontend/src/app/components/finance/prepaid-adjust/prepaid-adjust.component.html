@@ -1,0 +1,136 @@
+<div class="prepaid-adjust-container">
+  <div class="page-header">
+    <div class="header-row">
+      <h1>
+        <span class="header-icon">🧾</span>
+        Correct Prepaid
+      </h1>
+      <button type="button" class="btn btn-secondary" (click)="backToInvoices()">
+        ← Back to Invoices
+      </button>
+    </div>
+    <p class="page-subtitle">
+      Search for a student whose prepaid carry-forward invoice should be corrected. Enter the correct remaining prepaid amount; subsequent invoices will be recalculated.
+    </p>
+  </div>
+
+  <div class="search-section">
+    <div class="search-form">
+      <label for="prepaidSearch">Search by Student ID, Last Name, or First Name</label>
+      <div class="input-group">
+        <input
+          type="text"
+          id="prepaidSearch"
+          class="form-control"
+          placeholder="Enter Student ID, Last Name, or First Name"
+          [(ngModel)]="searchValue"
+          (keyup.enter)="searchStudent()"
+        />
+
+        <button type="button" class="btn btn-primary" (click)="searchStudent()" [disabled]="loading">
+          <span class="icon">🔍</span> Search
+        </button>
+
+        <button type="button" class="btn btn-secondary" (click)="clear()">
+          <span class="icon">🗑️</span> Clear
+        </button>
+      </div>
+    </div>
+
+    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+
+    <div
+      class="name-search-results"
+      *ngIf="canSearchByName() && showStudentPicker && nameSearchResults.length > 1"
+    >
+      <label class="results-label">Select Student</label>
+
+      <select class="form-control" [(ngModel)]="nameSearchSelectedStudentKey">
+        <option value="">-- Select --</option>
+        <option *ngFor="let s of nameSearchResults" [value]="s.id || s.studentNumber">
+          {{ s.firstName }} {{ s.lastName }} ({{ s.studentNumber }})
+        </option>
+      </select>
+
+      <button
+        type="button"
+        class="btn btn-primary mt-10"
+        (click)="confirmSelectedStudent()"
+        [disabled]="!nameSearchSelectedStudentKey || nameSearchLoading || loading"
+      >
+        Load Balance
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="studentData && studentData.lastInvoiceId" class="info-container">
+    <div class="info-card">
+      <h2>Latest invoice &amp; balances</h2>
+
+      <div class="info-row">
+        <div class="info-item">
+          <label>Full Name</label>
+          <div class="info-value">{{ studentData.fullName }}</div>
+        </div>
+        <div class="info-item">
+          <label>Student Number</label>
+          <div class="info-value">{{ studentData.studentNumber }}</div>
+        </div>
+      </div>
+
+      <div class="info-row" *ngIf="studentData.lastInvoiceNumber">
+        <div class="info-item">
+          <label>Latest Invoice</label>
+          <div class="info-value">{{ studentData.lastInvoiceNumber }}</div>
+        </div>
+        <div class="info-item">
+          <label>Term</label>
+          <div class="info-value">{{ studentData.lastInvoiceTerm }}</div>
+        </div>
+      </div>
+
+      <div class="info-row balance-row">
+        <div class="info-item">
+          <label>Current Invoice Balance</label>
+          <div class="info-value balance-amount">{{ currencySymbol }} {{ formatCurrency(studentData.balance) }}</div>
+        </div>
+        <div class="info-item">
+          <label>Current Prepaid (carry-forward)</label>
+          <div class="info-value prepaid-amount">{{ currencySymbol }} {{ formatCurrency(studentData.prepaidAmount || 0) }}</div>
+        </div>
+      </div>
+
+      <div class="adjust-form">
+        <label for="correctedPrepaid">Correct prepaid amount to carry forward *</label>
+        <div class="amount-input-row">
+          <span class="currency-prefix">{{ currencySymbol }}</span>
+          <input
+            type="number"
+            id="correctedPrepaid"
+            class="form-control amount-input"
+            [(ngModel)]="correctedPrepaidAmount"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+          />
+        </div>
+        <small class="field-hint">
+          Enter the correct remaining prepaid amount. This will update the prepaid on this invoice and recalculate subsequent invoices.
+        </small>
+
+        <div class="apply-row">
+          <button
+            type="button"
+            class="btn btn-primary btn-apply"
+            (click)="applyCorrection()"
+            [disabled]="applying || !canManageFinance()"
+          >
+            <span *ngIf="!applying">✅ Apply</span>
+            <span *ngIf="applying">Applying...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

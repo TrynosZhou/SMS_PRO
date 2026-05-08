@@ -1,0 +1,59 @@
+<div class="cm-wrap">
+  <header class="cm-header">
+    <h1 class="cm-title">Class Manager</h1>
+    <p class="cm-sub">Classes, class lists, and attendance</p>
+  </header>
+
+  <nav class="cm-tabs" aria-label="Class manager sections">
+    <a
+      *ngIf="showManageClassesTab()"
+      routerLink="/classes/manage/classes"
+      [class.active]="isManageClassesSectionActive()"
+      class="cm-tab"
+    >
+      <span class="cm-tab-ico" aria-hidden="true">🏫</span>
+      Manage Classes
+    </a>
+    <a
+      *ngIf="showClassTeachersTab()"
+      routerLink="/classes/manage/class-teachers"
+      fragment="class_teacher"
+      routerLinkActive="active"
+      class="cm-tab"
+    >
+      <span class="cm-tab-ico" aria-hidden="true">👤</span>
+      Class Teachers
+    </a>
+    <a
+      *ngIf="showClassListsTab()"
+      routerLink="/classes/manage/lists"
+      routerLinkActive="active"
+      class="cm-tab"
+    >
+      <span class="cm-tab-ico" aria-hidden="true">📋</span>
+      Class Lists
+    </a>
+    <a
+      *ngIf="showAttendanceTabs()"
+      routerLink="/classes/manage/mark-register"
+      routerLinkActive="active"
+      class="cm-tab"
+    >
+      <span class="cm-tab-ico" aria-hidden="true">✅</span>
+      Mark Register
+    </a>
+    <a
+      *ngIf="showAssignTeachersTab()"
+      routerLink="/classes/manage/assign-teachers"
+      routerLinkActive="active"
+      class="cm-tab"
+    >
+      <span class="cm-tab-ico" aria-hidden="true">🧑‍🏫</span>
+      Assign Teachers
+    </a>
+  </nav>
+
+  <div class="cm-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>

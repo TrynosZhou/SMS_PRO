@@ -1,0 +1,247 @@
+<div class="fs-page">
+
+  <!-- ── Header bar ─────────────────────────────────────────────────── -->
+  <div class="fs-header-bar">
+    <button class="fs-back-btn" routerLink="/finance/manage">&#8592;</button>
+    <div class="fs-header-text">
+      <h1 class="fs-header-title">School Fees Structure</h1>
+      <span class="fs-header-sub">Comprehensive fee breakdown for all student categories. These amounts are used when generating invoices (with Settings fees as a fallback if no matching items exist here).</span>
+    </div>
+  </div>
+
+  <!-- ── Success / Error banners ───────────────────────────────────── -->
+  <div class="fs-success-banner" *ngIf="successMsg">{{ successMsg }}</div>
+  <div class="fs-error-banner" *ngIf="error">{{ error }}</div>
+
+  <!-- ── Fee Management card ───────────────────────────────────────── -->
+  <div class="fs-mgmt-card">
+    <div class="fs-mgmt-top">
+      <span class="fs-mgmt-title">&#9881; Fee Management</span>
+    </div>
+    <div class="fs-mgmt-actions">
+      <button class="fs-btn-add" (click)="openAddFee()">+ Add New Fee</button>
+      <button class="fs-btn-cat" (click)="openAddCategory()">+ New Category</button>
+    </div>
+  </div>
+
+  <!-- ── Loading ──────────────────────────────────────────────────── -->
+  <div class="fs-loading" *ngIf="loading">Loading fee structure…</div>
+
+  <!-- ── Empty state ──────────────────────────────────────────────── -->
+  <div class="fs-empty" *ngIf="!loading && categories.length === 0">
+    No fee categories found. Click <strong>+ New Category</strong> to get started.
+  </div>
+
+  <!-- ── Fee Categories ────────────────────────────────────────────── -->
+  <div class="fs-cat-card" *ngFor="let cat of categories">
+
+    <!-- Category header -->
+    <div class="fs-cat-header">
+      <div class="fs-cat-left">
+        <span class="fs-cat-icon">&#127891;</span>
+        <span class="fs-cat-name">{{ cat.name }}</span>
+        <span class="fs-cat-desc" *ngIf="cat.description">{{ cat.description }}</span>
+      </div>
+      <div class="fs-cat-header-actions">
+        <span class="fs-cat-total">Total: {{ fmt(catTotal(cat)) }} {{ cat.items[0]?.currency || 'USD' }}</span>
+        <button class="fs-icon-btn fs-del-btn" title="Delete category" (click)="confirmDeleteCategory(cat)">&#128465;</button>
+      </div>
+    </div>
+
+    <!-- Sub-categories -->
+    <div class="fs-sub-wrap" *ngFor="let sub of subCategories(cat)">
+      <div class="fs-sub-header">
+        <span class="fs-sub-icon" [class.boarder]="sub.toLowerCase().includes('board')">
+          {{ sub.toLowerCase().includes('board') ? '&#128716;' : '&#127968;' }}
+        </span>
+        <span class="fs-sub-name">{{ sub }}</span>
+        <span class="fs-sub-total">Subtotal: {{ fmt(subTotal(cat, sub)) }}</span>
+      </div>
+
+      <!-- Fee items table -->
+      <table class="fs-items-table" *ngIf="itemsFor(cat, sub).length > 0">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="fs-amt-col">Amount</th>
+            <th class="fs-cur-col">Currency</th>
+            <th class="fs-act-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of itemsFor(cat, sub)">
+            <td>{{ item.itemName }}</td>
+            <td class="fs-amt-col">{{ fmt(item.amount) }}</td>
+            <td class="fs-cur-col">{{ item.currency }}</td>
+            <td class="fs-act-col">
+              <button class="fs-icon-btn fs-edit-btn" title="Edit" (click)="openEditItem(item)">&#9998;</button>
+              <button class="fs-icon-btn fs-del-btn" title="Delete" (click)="confirmDeleteItem(item)">&#128465;</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="fs-no-items" *ngIf="itemsFor(cat, sub).length === 0">
+        No fee items yet for {{ sub }}.
+      </div>
+    </div>
+
+    <!-- Empty category body -->
+    <div class="fs-empty-cat" *ngIf="subCategories(cat).length === 0">
+      No fee items. Use <strong>+ Add New Fee</strong> to add items to this category.
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       MODALS
+  ══════════════════════════════════════════════════════════════════ -->
+
+  <!-- ── Add Fee Modal ─────────────────────────────────────────────── -->
+  <div class="fs-overlay" *ngIf="showAddModal" (click)="cancelAdd()"></div>
+  <div class="fs-modal" *ngIf="showAddModal">
+    <div class="fs-modal-hdr">
+      <h3>Add New Fee</h3>
+      <button class="fs-modal-close" (click)="cancelAdd()">&#10005;</button>
+    </div>
+    <div class="fs-modal-body">
+      <div class="fs-error-inline" *ngIf="addError">{{ addError }}</div>
+
+      <div class="fs-field">
+        <label>Category *</label>
+        <select [(ngModel)]="addForm.categoryId">
+          <option value="">Select category…</option>
+          <option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+
+      <div class="fs-field">
+        <label>Sub-Category *</label>
+        <select [(ngModel)]="addForm.subCategory">
+          <option value="">Select sub-category…</option>
+          <option *ngFor="let s of allSubCategories" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div class="fs-field">
+        <label>Item Name *</label>
+        <input type="text" [(ngModel)]="addForm.itemName" placeholder="e.g. Tuition Fee" />
+      </div>
+
+      <div class="fs-field-row">
+        <div class="fs-field">
+          <label>Amount</label>
+          <input type="number" [(ngModel)]="addForm.amount" min="0" placeholder="0.00" />
+        </div>
+        <div class="fs-field">
+          <label>Currency</label>
+          <select [(ngModel)]="addForm.currency">
+            <option value="USD">USD</option>
+            <option value="ZWL">ZWL</option>
+            <option value="ZAR">ZAR</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="fs-modal-footer">
+      <button class="fs-btn-cancel" (click)="cancelAdd()" [disabled]="addSubmitting">Cancel</button>
+      <button class="fs-btn-save" (click)="saveNewFee()" [disabled]="addSubmitting">
+        {{ addSubmitting ? 'Saving…' : 'Save Fee' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Edit Fee Modal ────────────────────────────────────────────── -->
+  <div class="fs-overlay" *ngIf="showEditModal" (click)="cancelEdit()"></div>
+  <div class="fs-modal" *ngIf="showEditModal">
+    <div class="fs-modal-hdr">
+      <h3>Edit Fee Item</h3>
+      <button class="fs-modal-close" (click)="cancelEdit()">&#10005;</button>
+    </div>
+    <div class="fs-modal-body">
+      <div class="fs-error-inline" *ngIf="editError">{{ editError }}</div>
+
+      <div class="fs-field">
+        <label>Item Name *</label>
+        <input type="text" [(ngModel)]="editForm.itemName" />
+      </div>
+
+      <div class="fs-field">
+        <label>Sub-Category</label>
+        <select [(ngModel)]="editForm.subCategory">
+          <option *ngFor="let s of allSubCategories" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div class="fs-field-row">
+        <div class="fs-field">
+          <label>Amount</label>
+          <input type="number" [(ngModel)]="editForm.amount" min="0" />
+        </div>
+        <div class="fs-field">
+          <label>Currency</label>
+          <select [(ngModel)]="editForm.currency">
+            <option value="USD">USD</option>
+            <option value="ZWL">ZWL</option>
+            <option value="ZAR">ZAR</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="fs-modal-footer">
+      <button class="fs-btn-cancel" (click)="cancelEdit()" [disabled]="editSubmitting">Cancel</button>
+      <button class="fs-btn-save" (click)="saveEdit()" [disabled]="editSubmitting">
+        {{ editSubmitting ? 'Saving…' : 'Update Fee' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Add Category Modal ────────────────────────────────────────── -->
+  <div class="fs-overlay" *ngIf="showCatModal" (click)="cancelCat()"></div>
+  <div class="fs-modal" *ngIf="showCatModal">
+    <div class="fs-modal-hdr">
+      <h3>New Fee Category</h3>
+      <button class="fs-modal-close" (click)="cancelCat()">&#10005;</button>
+    </div>
+    <div class="fs-modal-body">
+      <div class="fs-error-inline" *ngIf="catError">{{ catError }}</div>
+      <div class="fs-field">
+        <label>Category Name *</label>
+        <input type="text" [(ngModel)]="catForm.name" placeholder="e.g. A Level Fees" />
+      </div>
+      <div class="fs-field">
+        <label>Description</label>
+        <input type="text" [(ngModel)]="catForm.description" placeholder="e.g. Advanced Level Student Fees" />
+      </div>
+    </div>
+    <div class="fs-modal-footer">
+      <button class="fs-btn-cancel" (click)="cancelCat()" [disabled]="catSubmitting">Cancel</button>
+      <button class="fs-btn-save" (click)="saveCat()" [disabled]="catSubmitting">
+        {{ catSubmitting ? 'Saving…' : 'Create Category' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Confirm Delete Modal ──────────────────────────────────────── -->
+  <div class="fs-overlay" *ngIf="showDeleteModal" (click)="cancelDelete()"></div>
+  <div class="fs-modal fs-modal-sm" *ngIf="showDeleteModal">
+    <div class="fs-modal-hdr fs-modal-hdr-danger">
+      <h3>Confirm Delete</h3>
+      <button class="fs-modal-close" (click)="cancelDelete()">&#10005;</button>
+    </div>
+    <div class="fs-modal-body">
+      <p>Are you sure you want to delete <strong>{{ deleteTarget?.label }}</strong>?</p>
+      <p class="fs-warn-text" *ngIf="deleteTarget?.type === 'category'">
+        This will also delete all fee items in this category.
+      </p>
+    </div>
+    <div class="fs-modal-footer">
+      <button class="fs-btn-cancel" (click)="cancelDelete()" [disabled]="deleting">Cancel</button>
+      <button class="fs-btn-danger" (click)="doDelete()" [disabled]="deleting">
+        {{ deleting ? 'Deleting…' : 'Delete' }}
+      </button>
+    </div>
+  </div>
+
+</div>

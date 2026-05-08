@@ -1,0 +1,166 @@
+.cm-view-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cm-view-title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #263238;
+}
+
+.cm-view-lead {
+  margin: 0.35rem 0 1rem;
+  font-size: 0.88rem;
+  color: #546e7a;
+}
+
+.cm-search {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.cm-search-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+  color: #37474f;
+}
+
+.cm-view-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #78909c;
+}
+
+.cm-split {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 1.4fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .cm-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cm-list {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.cm-list-head {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #607d8b;
+  border-bottom: 1px solid #eceff1;
+}
+
+.cm-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cm-list-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border: none;
+  border-bottom: 1px solid #f5f5f5;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.cm-list-item:hover {
+  background: #f1f8e9;
+}
+
+.cm-list-item-active {
+  background: #e8f5e9;
+  border-left: 3px solid #43a047;
+}
+
+.cm-list-subj {
+  font-weight: 600;
+  color: #263238;
+}
+
+.cm-list-meta {
+  font-size: 0.8rem;
+  color: #546e7a;
+}
+
+.cm-list-item time {
+  font-size: 0.75rem;
+  color: #90a4ae;
+}
+
+.cm-detail {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  min-height: 200px;
+}
+
+.cm-detail-placeholder {
+  color: #90a4ae;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cm-detail h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  color: #1b5e20;
+}
+
+.cm-detail-from {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+}
+
+.cm-detail-time {
+  display: block;
+  font-size: 0.8rem;
+  color: #78909c;
+  margin-bottom: 0.75rem;
+}
+
+.cm-detail-body {
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #37474f;
+}
+
+.cm-muted {
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  color: #90a4ae;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+}

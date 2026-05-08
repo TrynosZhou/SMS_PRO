@@ -1,0 +1,82 @@
+<section class="sel-elearn" aria-labelledby="view-task-title">
+  <h3 id="view-task-title" class="sel-h2">View tasks</h3>
+  <p class="sel-lead">
+    Open assignments, tests, and notes your teachers sent. Each item shows the teacher and date sent. Use <strong>Submit Task</strong> to upload your work.
+  </p>
+
+  <div class="alert alert-error" *ngIf="error" role="alert">{{ error }}</div>
+
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading materials…</p>
+  </div>
+
+  <div class="sel-toolbar" *ngIf="!loading && tasks.length">
+    <div class="sel-filters" role="group" aria-label="Filter by type">
+      <button type="button" class="sel-chip" [class.active]="filterKind === 'all'" (click)="setFilter('all')">All</button>
+      <button type="button" class="sel-chip" [class.active]="filterKind === 'assignment'" (click)="setFilter('assignment')">Assignments</button>
+      <button type="button" class="sel-chip" [class.active]="filterKind === 'test'" (click)="setFilter('test')">Tests</button>
+      <button type="button" class="sel-chip" [class.active]="filterKind === 'notes'" (click)="setFilter('notes')">Notes</button>
+    </div>
+    <label class="sel-search-wrap">
+      <span class="sel-sr-only">Search</span>
+      <input
+        type="search"
+        class="sel-search"
+        [(ngModel)]="searchQuery"
+        placeholder="Search title, class, or teacher…"
+        autocomplete="off"
+      />
+    </label>
+  </div>
+
+  <div class="tasks-grid" *ngIf="!loading && filteredTasks.length">
+    <article class="task-card" *ngFor="let t of filteredTasks">
+      <div class="task-card-top">
+        <h4 class="task-card-title">{{ t.title }}</h4>
+        <span
+          class="type-pill"
+          [class.test]="t.taskType === 'test'"
+          [class.notes]="t.taskType === 'notes'"
+        >
+          {{ typeLabel(t) }}
+        </span>
+      </div>
+
+      <dl class="sel-meta">
+        <div class="sel-meta-row">
+          <dt>Teacher</dt>
+          <dd>{{ teacherDisplay(t) }}</dd>
+        </div>
+        <div class="sel-meta-row">
+          <dt>Date sent</dt>
+          <dd>{{ t.sentAt | date:'medium' }}</dd>
+        </div>
+        <div class="sel-meta-row">
+          <dt>Class</dt>
+          <dd>{{ classLabel(t) }}</dd>
+        </div>
+      </dl>
+
+      <p class="desc" *ngIf="t.description">{{ t.description }}</p>
+      <p class="due" *ngIf="needsDueLine(t)">
+        <strong>Due:</strong> {{ t.dueDate | date:'mediumDate' }}
+      </p>
+
+      <div class="links">
+        <a *ngIf="linkFor(t) as href" [href]="href" target="_blank" rel="noopener" class="btn-link primary">
+          📎 Open attachment
+        </a>
+        <span *ngIf="!linkFor(t)" class="no-file">No file attached — see instructions above.</span>
+      </div>
+    </article>
+  </div>
+
+  <div class="empty-box" *ngIf="!loading && tasks.length && !filteredTasks.length && !error">
+    <p>No materials match this filter or search.</p>
+  </div>
+
+  <div class="empty-box" *ngIf="!loading && !tasks.length && !error">
+    <p>No materials yet. Your teachers will post assignments, tests, and notes for your class here.</p>
+  </div>
+</section>

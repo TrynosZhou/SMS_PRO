@@ -1,0 +1,52 @@
+<div class="si-page">
+  <h1>My books &amp; fines</h1>
+  <p class="si-lead">Items currently linked to your student record and any outstanding inventory-related fines.</p>
+
+  <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+  <div *ngIf="loading">Loading…</div>
+
+  <ng-container *ngIf="!loading && summary">
+    <div class="si-flag" *ngIf="summary.hasUnpaidFines">
+      <strong>Outstanding fines:</strong> {{ summary.unpaidFinesTotal }}
+    </div>
+
+    <section class="si-block">
+      <h2>Permanent textbook issues</h2>
+      <p *ngIf="!summary.activePermanentIssues?.length">None active.</p>
+      <ul *ngIf="summary.activePermanentIssues?.length">
+        <li *ngFor="let p of summary.activePermanentIssues">
+          {{ p.copy?.catalog?.title }} — since {{ p.issuedAt | date:'mediumDate' }}
+          <span *ngIf="p.courseLabel"> ({{ p.courseLabel }})</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="si-block">
+      <h2>Library loans</h2>
+      <p *ngIf="!summary.activeLoans?.length">No open loans.</p>
+      <ul *ngIf="summary.activeLoans?.length">
+        <li *ngFor="let l of summary.activeLoans">
+          {{ l.copy?.catalog?.title }} — due {{ l.dueAt | date:'mediumDate' }}
+        </li>
+      </ul>
+    </section>
+
+    <section class="si-block">
+      <h2>Furniture</h2>
+      <p *ngIf="!summary.furnitureAssignment">No active desk/chair assignment on file.</p>
+      <ul *ngIf="summary.furnitureAssignment">
+        <li *ngIf="summary.furnitureAssignment.deskItem">Desk: {{ summary.furnitureAssignment.deskItem.itemCode }}</li>
+        <li *ngIf="summary.furnitureAssignment.chairItem">Chair: {{ summary.furnitureAssignment.chairItem.itemCode }}</li>
+      </ul>
+    </section>
+
+    <section class="si-block" *ngIf="summary.pendingFines?.length">
+      <h2>Pending fines</h2>
+      <ul>
+        <li *ngFor="let f of summary.pendingFines">
+          {{ f.fineType }} — {{ f.amount }} ({{ f.status }})
+        </li>
+      </ul>
+    </section>
+  </ng-container>
+</div>

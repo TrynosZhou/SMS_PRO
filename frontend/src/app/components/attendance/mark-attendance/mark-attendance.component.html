@@ -1,0 +1,311 @@
+<div class="attendance-container">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <span class="header-icon">✅</span>
+        Mark Register
+      </h1>
+      <div class="header-actions" *ngIf="selectedClassId && students.length > 0">
+        <div class="save-indicator" *ngIf="hasUnsavedChanges">
+          <span class="indicator-dot"></span>
+          <span>Unsaved changes</span>
+        </div>
+        <div class="save-indicator saved" *ngIf="!hasUnsavedChanges && lastSavedDate">
+          <span class="indicator-dot"></span>
+          <span>Saved {{ lastSavedDate | date:'short' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div class="alert alert-success" *ngIf="success">
+    <span class="alert-icon">✓</span>
+    <span>{{ success }}</span>
+  </div>
+  <div class="alert alert-error" *ngIf="error">
+    <span class="alert-icon">✗</span>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- Selection Form -->
+  <div class="selection-card">
+    <form (ngSubmit)="submitAttendance()" #attendanceForm="ngForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>
+            <span class="label-icon">🏫</span>
+            Class *
+          </label>
+          <select 
+            [(ngModel)]="selectedClassId" 
+            name="classId" 
+            (change)="onClassChange()" 
+            required
+            class="form-select">
+            <option value="">Select Class</option>
+            <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <span class="label-icon">📅</span>
+            Date *
+          </label>
+          <div class="date-input-wrapper">
+            <input 
+              type="date" 
+              [(ngModel)]="selectedDate" 
+              name="date" 
+              (change)="onDateChange()" 
+              required
+              class="form-input">
+            <div class="date-navigation">
+              <button type="button" class="date-nav-btn" (click)="goToYesterday()" title="Yesterday">
+                ◀
+              </button>
+              <button type="button" class="date-nav-btn today-btn" (click)="goToToday()" [class.active]="isToday()" title="Today">
+                Today
+              </button>
+              <button type="button" class="date-nav-btn" (click)="goToTomorrow()" title="Tomorrow">
+                ▶
+              </button>
+            </div>
+          </div>
+          <div class="date-display" *ngIf="selectedDate">
+            {{ getFormattedDate() }}
+          </div>
+          <div class="weekend-warning" *ngIf="selectedDate && !isMarkingAllowed">
+            {{ weekendNotAllowedMessage }}
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid" *ngIf="!loading && students.length > 0">
+    <div class="stat-card present">
+      <div class="stat-icon">✓</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getStatistics().present }}</div>
+        <div class="stat-label">Present</div>
+      </div>
+    </div>
+    <div class="stat-card absent">
+      <div class="stat-icon">✗</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getStatistics().absent }}</div>
+        <div class="stat-label">Absent</div>
+      </div>
+    </div>
+    <div class="stat-card late">
+      <div class="stat-icon">⏰</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getStatistics().late }}</div>
+        <div class="stat-label">Late</div>
+      </div>
+    </div>
+    <div class="stat-card excused">
+      <div class="stat-icon">📝</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getStatistics().excused }}</div>
+        <div class="stat-label">Excused</div>
+      </div>
+    </div>
+    <div class="stat-card total">
+      <div class="stat-icon">📊</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getStatistics().total }}</div>
+        <div class="stat-label">Total Students</div>
+        <div class="stat-rate">{{ getAttendanceRate() }}% Present</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="skeleton-loader">
+      <div class="skeleton-header"></div>
+      <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5]"></div>
+    </div>
+  </div>
+
+  <!-- Attendance Section -->
+  <div *ngIf="!loading && students.length > 0" class="attendance-section">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            [(ngModel)]="searchQuery" 
+            (input)="onSearchChange()"
+            placeholder="Search by name or student number..."
+            class="search-input">
+          <button 
+            type="button" 
+            class="clear-btn" 
+            *ngIf="searchQuery"
+            (click)="clearSearch()"
+            title="Clear search">
+            ✕
+          </button>
+        </div>
+        
+        <div class="filter-group">
+          <select 
+            [(ngModel)]="statusFilter" 
+            (change)="onStatusFilterChange()"
+            class="filter-select">
+            <option value="all">All Status</option>
+            <option value="present">Present</option>
+            <option value="absent">Absent</option>
+            <option value="late">Late</option>
+            <option value="excused">Excused</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="toolbar-right">
+        <div class="bulk-actions">
+          <button type="button" class="bulk-btn present" (click)="markAll('present')" [disabled]="!isMarkingAllowed || submitting" title="Mark all as Present">
+            ✓ All Present
+          </button>
+          <button type="button" class="bulk-btn absent" (click)="markAll('absent')" [disabled]="!isMarkingAllowed || submitting" title="Mark all as Absent">
+            ✗ All Absent
+          </button>
+          <button type="button" class="bulk-btn late" (click)="markAll('late')" [disabled]="!isMarkingAllowed || submitting" title="Mark all as Late">
+            ⏰ All Late
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Count -->
+    <div class="results-info" *ngIf="searchQuery || statusFilter !== 'all'">
+      Showing {{ filteredAttendanceData.length }} of {{ attendanceData.length }} students
+      <button type="button" class="clear-filter-btn" (click)="clearSearch(); clearStatusFilter()">
+        Clear filters
+      </button>
+    </div>
+
+    <!-- Attendance Table -->
+    <div class="attendance-table-wrapper">
+      <table class="attendance-table">
+        <thead>
+          <tr>
+            <th class="col-number">#</th>
+            <th class="col-number">Student No.</th>
+            <th class="col-name">Name</th>
+            <th class="col-status">Status</th>
+            <th class="col-remarks">Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filteredAttendanceData; let i = index" [class.row-highlight]="item.status === 'absent'">
+            <td class="col-number">{{ i + 1 }}</td>
+            <td class="col-number">{{ getStudentNumber(item.studentId) }}</td>
+            <td class="col-name">
+              <div class="student-name">{{ getStudentName(item.studentId) }}</div>
+            </td>
+            <td class="col-status">
+              <div class="status-buttons">
+                <button 
+                  type="button"
+                  class="status-btn present" 
+                  [class.active]="item.status === 'present'"
+                  (click)="updateStatus(item.studentId, 'present')"
+                  [disabled]="!isMarkingAllowed"
+                  title="Present">
+                  ✓ Present
+                </button>
+                <button 
+                  type="button"
+                  class="status-btn absent" 
+                  [class.active]="item.status === 'absent'"
+                  (click)="updateStatus(item.studentId, 'absent')"
+                  [disabled]="!isMarkingAllowed"
+                  title="Absent">
+                  ✗ Absent
+                </button>
+                <button 
+                  type="button"
+                  class="status-btn late" 
+                  [class.active]="item.status === 'late'"
+                  (click)="updateStatus(item.studentId, 'late')"
+                  [disabled]="!isMarkingAllowed"
+                  title="Late">
+                  ⏰ Late
+                </button>
+                <button 
+                  type="button"
+                  class="status-btn excused" 
+                  [class.active]="item.status === 'excused'"
+                  (click)="updateStatus(item.studentId, 'excused')"
+                  [disabled]="!isMarkingAllowed"
+                  title="Excused">
+                  📝 Excused
+                </button>
+              </div>
+            </td>
+            <td class="col-remarks">
+              <input 
+                type="text" 
+                [(ngModel)]="item.remarks" 
+                [name]="'remarks_' + i"
+                placeholder="Optional remarks..."
+                class="remarks-input"
+                [disabled]="!isMarkingAllowed"
+                (input)="hasUnsavedChanges = true">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div class="empty-filter-state" *ngIf="filteredAttendanceData.length === 0">
+        <div class="empty-icon">🔍</div>
+        <p>No students match your search or filter criteria.</p>
+        <button type="button" class="clear-filter-btn" (click)="clearSearch(); clearStatusFilter()">
+          Clear filters
+        </button>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="submit-section">
+      <button 
+        type="button" 
+        class="btn btn-secondary" 
+        (click)="attendanceForm.resetForm(); onClassChange()"
+        [disabled]="submitting">
+        Reset
+      </button>
+      <button 
+        type="submit" 
+        class="btn btn-primary submit-btn" 
+        (click)="submitAttendance()"
+        [disabled]="submitting || !hasUnsavedChanges || !isMarkingAllowed">
+        <span *ngIf="!submitting">💾 Save Attendance</span>
+        <span *ngIf="submitting" class="loading-spinner">⏳ Saving...</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && selectedClassId && students.length === 0" class="empty-state">
+    <div class="empty-icon">👥</div>
+    <h3>No Active Students</h3>
+    <p>No active students found in the selected class.</p>
+  </div>
+
+  <!-- Initial State -->
+  <div *ngIf="!loading && !selectedClassId" class="initial-state">
+    <div class="initial-icon">✅</div>
+    <h3>Get Started</h3>
+    <p>Select a class and date to begin marking attendance.</p>
+  </div>
+</div>

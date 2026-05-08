@@ -1,0 +1,223 @@
+<div class="pem-page">
+  <div
+    class="pem-mobile-overlay"
+    *ngIf="mobileMenuOpen && isMobile"
+    (click)="closeMobileTabMenu()"
+    aria-hidden="true"
+  ></div>
+
+  <div class="pem-layout">
+    <aside class="pem-sidebar" [class.pem-sidebar--open]="mobileMenuOpen">
+      <div class="pem-sidebar-brand">
+        <span class="pem-logo" aria-hidden="true">📚</span>
+        <div class="pem-sidebar-brand-text">
+          <h2>Family hub</h2>
+          <p class="pem-sidebar-user">{{ getParentDisplayName() }}</p>
+        </div>
+      </div>
+      <nav id="pem-sidebar-nav" class="pem-sidebar-nav" aria-label="Hub sections">
+        <button type="button" class="pem-nav-item" [class.active]="isTabActive('overview')" (click)="setTab('overview')">
+          <span class="pem-nav-ico" aria-hidden="true">📊</span>
+          <span>Overview</span>
+        </button>
+        <button type="button" class="pem-nav-item" [class.active]="isTabActive('messages')" (click)="setTab('messages')">
+          <span class="pem-nav-ico" aria-hidden="true">📥</span>
+          <span class="pem-nav-text">Messages</span>
+          <span class="pem-nav-badge" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+        </button>
+        <button type="button" class="pem-nav-item" [class.active]="isTabActive('records')" (click)="setTab('records')">
+          <span class="pem-nav-ico" aria-hidden="true">📋</span>
+          <span>Report Card(s)</span>
+        </button>
+      </nav>
+      <div class="pem-sidebar-footer">
+        <a routerLink="/parent/dashboard" class="pem-footer-link" (click)="closeMobileTabMenu()">← Parent dashboard</a>
+      </div>
+    </aside>
+
+    <main class="pem-main">
+      <header class="pem-mobile-topbar">
+        <button
+          type="button"
+          class="pem-icon-btn"
+          (click)="toggleMobileTabMenu()"
+          [attr.aria-expanded]="mobileMenuOpen"
+          aria-controls="pem-sidebar-nav"
+          aria-label="Open menu"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <span class="pem-mobile-title">Family hub</span>
+        <a
+          routerLink="/parent/dashboard"
+          class="pem-topbar-dashboard-link"
+          (click)="closeMobileTabMenu()"
+        >
+          Dashboard
+        </a>
+        <span class="pem-mobile-topbar-spacer"></span>
+      </header>
+
+      <header class="pem-hero">
+        <div class="pem-hero-copy">
+          <p class="pem-kicker">Messages, portal &amp; school records</p>
+          <h1>One place for messages, your children’s portal, and reports</h1>
+          <p class="pem-date">{{ getTodayDisplayDate() }}</p>
+        </div>
+        <div class="pem-hero-actions">
+          <a
+            routerLink="/parent/dashboard"
+            class="btn btn-primary pem-hero-primary-btn"
+            (click)="closeMobileTabMenu()"
+          >
+            ← Back to dashboard
+          </a>
+          <button type="button" class="btn btn-primary pem-hero-primary-btn" (click)="linkStudents()">Link students</button>
+          <button type="button" class="btn btn-primary pem-hero-primary-btn" (click)="manageAccount()">My account</button>
+        </div>
+      </header>
+
+      <div class="alert alert-error" *ngIf="error" role="alert">{{ error }}</div>
+
+      <!-- Overview -->
+      <section class="pem-panel" *ngIf="isTabActive('overview')" aria-labelledby="pem-overview-title">
+        <h2 id="pem-overview-title" class="pem-panel-title">Overview</h2>
+        <p class="pem-panel-lead">
+          Quick access to your inbox, each child’s portal, invoice preview, and report cards (when fees are clear).
+        </p>
+
+        <div class="pem-loading" *ngIf="loading">
+          <div class="spinner"></div>
+          <p>Loading linked students…</p>
+        </div>
+
+        <div class="pem-summary" *ngIf="!loading">
+          <article class="pem-stat">
+            <span class="pem-stat-ico" aria-hidden="true">👨‍👩‍👧</span>
+            <div>
+              <p class="pem-stat-label">Linked children</p>
+              <p class="pem-stat-value">{{ students.length }}</p>
+            </div>
+          </article>
+          <article class="pem-stat">
+            <span class="pem-stat-ico" aria-hidden="true">📥</span>
+            <div>
+              <p class="pem-stat-label">Unread messages</p>
+              <p class="pem-stat-value">{{ unreadCount }}</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="pem-tiles" *ngIf="!loading">
+          <button type="button" class="pem-tile" (click)="goInbox()">
+            <span class="pem-tile-ico" aria-hidden="true">📥</span>
+            <span class="pem-tile-text"><strong>Inbox</strong><small>Messages from school</small></span>
+            <span class="pem-tile-badge" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+          </button>
+          <button type="button" class="pem-tile" (click)="openStudentPortal()">
+            <span class="pem-tile-ico" aria-hidden="true">🎓</span>
+            <span class="pem-tile-text"><strong>Student portal</strong><small>Open first linked child</small></span>
+          </button>
+          <button type="button" class="pem-tile" (click)="viewCurrentInvoice()">
+            <span class="pem-tile-ico" aria-hidden="true">🧾</span>
+            <span class="pem-tile-text"><strong>Latest invoice preview</strong><small>First linked student</small></span>
+          </button>
+        </div>
+
+        <section class="pem-children-preview" *ngIf="!loading && students.length > 0">
+          <h3 class="pem-subhead">Your children</h3>
+          <ul class="pem-child-list">
+            <li *ngFor="let s of students" class="pem-child-row">
+              <div class="pem-child-name">
+                <span class="pem-avatar">{{ (s.firstName || '?').charAt(0) }}{{ (s.lastName || '').charAt(0) }}</span>
+                <span>{{ s.firstName }} {{ s.lastName }}</span>
+              </div>
+              <div class="pem-child-actions">
+                <button type="button" class="btn btn-sm btn-outline" (click)="openStudentPortalFor(s.id)">Portal</button>
+                <button type="button" class="btn btn-sm btn-primary" (click)="viewReportCard(s)" [disabled]="(s.termBalance || 0) > 0">
+                  Report card
+                </button>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <section class="pem-empty" *ngIf="!loading && students.length === 0">
+          <p>No linked students yet. Link a child to use the portal and records tools.</p>
+          <button type="button" class="btn btn-primary" (click)="linkStudents()">Link by Student ID</button>
+        </section>
+      </section>
+
+      <!-- Messages -->
+      <section class="pem-panel" *ngIf="isTabActive('messages')" aria-labelledby="pem-msg-title">
+        <h2 id="pem-msg-title" class="pem-panel-title">Messages</h2>
+        <p class="pem-panel-lead">Read school notices and send messages to the school office.</p>
+        <div class="pem-actions-row">
+          <button type="button" class="btn btn-primary" (click)="goInbox()">
+            Inbox
+            <span class="pem-inline-badge" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }} new</span>
+          </button>
+          <button type="button" class="btn btn-outline" (click)="goCompose()">Compose</button>
+          <button type="button" class="btn btn-outline" (click)="goOutbox()">Outbox</button>
+        </div>
+      </section>
+
+      <!-- Report cards -->
+      <section class="pem-panel" *ngIf="isTabActive('records')" aria-labelledby="pem-rec-title">
+        <h2 id="pem-rec-title" class="pem-panel-title">Report Card(s)</h2>
+        <p class="pem-panel-lead">Report cards unlock when the term balance is cleared. Preview your latest invoice from Overview.</p>
+
+        <div class="pem-loading" *ngIf="loading">
+          <div class="spinner"></div>
+          <p>Loading…</p>
+        </div>
+
+        <div class="pem-table-wrap" *ngIf="!loading && students.length > 0">
+          <table class="pem-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Class</th>
+                <th>Term balance</th>
+                <th>Report card</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of students">
+                <td>
+                  <div class="pem-child-name">
+                    <span class="pem-avatar pem-avatar--sm">{{ (s.firstName || '?').charAt(0) }}{{ (s.lastName || '').charAt(0) }}</span>
+                    {{ s.firstName }} {{ s.lastName }}
+                  </div>
+                </td>
+                <td>{{ s.class?.name || '—' }}</td>
+                <td [class.pem-balance-due]="(s.termBalance || 0) > 0">{{ formatCurrency(s.termBalance || 0) }}</td>
+                <td>
+                  <span class="pem-pill pem-pill--ok" *ngIf="(s.termBalance || 0) === 0">Ready</span>
+                  <span class="pem-pill pem-pill--lock" *ngIf="(s.termBalance || 0) > 0">Locked</span>
+                  <button type="button" class="btn btn-sm btn-primary pem-table-btn" (click)="viewReportCard(s)" [disabled]="(s.termBalance || 0) > 0">
+                    Open
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <section class="pem-empty" *ngIf="!loading && students.length === 0">
+          <p>Link a student to see report card status here.</p>
+          <button type="button" class="btn btn-primary" (click)="linkStudents()">Link students</button>
+        </section>
+      </section>
+    </main>
+  </div>
+</div>
+
+<app-invoice-pdf-preview
+  [open]="invoicePreviewOpen"
+  [blob]="invoicePreviewBlob"
+  [filename]="invoicePreviewFilename"
+  (closed)="closeInvoicePreview()"
+></app-invoice-pdf-preview>

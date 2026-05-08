@@ -1,0 +1,278 @@
+.elearning-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  position: relative;
+}
+
+.btn-back {
+  border: none;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.btn-back:hover {
+  background: #e2e8f0;
+}
+
+.page-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 1.75rem;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-icon {
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.alert-error {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  margin-bottom: 16px;
+}
+
+.elearning-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  color: #64748b;
+}
+
+.elearning-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.elearning-panel {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.panel-title {
+  margin: 0 0 8px 0;
+  font-size: 1.15rem;
+  color: #0f172a;
+}
+
+.panel-intro {
+  margin: 0 0 20px 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.class-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.class-list li {
+  margin-bottom: 10px;
+}
+
+.class-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  cursor: pointer;
+  text-align: left;
+  font-size: 15px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.class-row:hover {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.class-name {
+  flex: 1;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.class-meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.class-arrow {
+  color: #6366f1;
+  font-weight: 700;
+}
+
+.empty-msg {
+  color: #94a3b8;
+  font-size: 14px;
+  margin: 12px 0 0 0;
+}
+
+.work-toolbar {
+  margin-bottom: 20px;
+}
+
+.btn-back-inline {
+  border: none;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.btn-back-inline:hover {
+  background: #e2e8f0;
+}
+
+.selected-class-title {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+.work-caption {
+  margin: 0 0 14px 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.work-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.work-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fafafa;
+}
+
+.work-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.work-type {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6366f1;
+  background: #eef2ff;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.work-status {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.work-status.published {
+  color: #059669;
+}
+
+.work-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.work-meta {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.work-subjects {
+  font-size: 13px;
+  color: #334155;
+}
+
+.work-desc {
+  margin: 10px 0 0 0;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.footer-actions {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-open-exams {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.btn-open-exams:hover {
+  filter: brightness(1.05);
+}
+
+@media (max-width: 540px) {
+  .elearning-page {
+    padding: 16px 12px 32px;
+  }
+}

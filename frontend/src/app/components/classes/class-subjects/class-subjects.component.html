@@ -1,0 +1,148 @@
+<div class="cs-wrap">
+  <header class="cs-head">
+    <div class="cs-title-row">
+      <span class="cs-ico">👥</span>
+      <div>
+        <h1 class="cs-title">Lessons for class</h1>
+        <p class="cs-class-name">{{ className || '…' }}</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="cs-msg cs-err" *ngIf="error">{{ error }}</div>
+  <div class="cs-msg" *ngIf="loading">Loading…</div>
+
+  <div class="cs-table-wrap" *ngIf="!loading">
+    <table class="cs-table">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Teacher</th>
+          <th>Class</th>
+          <th class="th-c">C…</th>
+          <th class="th-c">Len…</th>
+          <th>Classroom</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          *ngFor="let row of lessons"
+          (click)="selectRow(row)"
+          (dblclick)="onRowDblClick(row)"
+          [class.is-selected]="selected?.contractLessonId === row.contractLessonId"
+        >
+          <td>
+            <span class="subj-ico" [ngClass]="subjectIconClass(row.subjectName)"></span>
+            {{ row.subjectName }}
+          </td>
+          <td>{{ row.teacherName }}</td>
+          <td>
+            {{ row.className }}
+            <span class="cs-scope-badge" *ngIf="row.classScope && row.classScope !== 'entire'">
+              {{ classScopeLabel(row.classScope) }}
+            </span>
+          </td>
+          <td class="td-c">{{ row.sessionsPerWeek }}</td>
+          <td class="td-c">{{ row.lessonLength }}</td>
+          <td><span class="cs-room-ico" title="Classroom">🏠</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="cs-empty" *ngIf="lessons.length === 0">No lessons yet. Use <strong>New lesson</strong>.</p>
+  </div>
+
+  <footer class="cs-foot">
+    <div class="cs-foot-left">
+      <button type="button" class="cs-btn cs-btn-primary" (click)="newLesson()">New lesson</button>
+      <button type="button" class="cs-btn" (click)="editLesson()" [disabled]="!selected">Edit lesson</button>
+      <button type="button" class="cs-btn cs-btn-danger" (click)="removeLesson()" [disabled]="!selected">Remove</button>
+    </div>
+    <div class="cs-foot-mid">
+      <button type="button" class="cs-btn" disabled title="Coming soon">Copy to</button>
+      <button type="button" class="cs-btn" disabled title="Coming soon">Add more</button>
+    </div>
+    <div class="cs-foot-right">
+      <button type="button" class="cs-btn" (click)="close()">Close</button>
+    </div>
+  </footer>
+</div>
+
+<div class="ls-overlay" *ngIf="dialogOpen" (click)="closeDialog()">
+  <div class="ls-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="ls-dlg-title">
+    <header class="ls-dlg-head">
+      <h2 id="ls-dlg-title">Lesson</h2>
+      <button type="button" class="ls-close" (click)="closeDialog()" aria-label="Close">×</button>
+    </header>
+
+    <div class="ls-section">
+      <span class="ls-sec-ico">🎓</span>
+      <div class="ls-sec-body">
+        <label class="ls-lbl">Teacher</label>
+        <select class="ls-input" [(ngModel)]="formTeacherId">
+          <option *ngFor="let t of teachers" [value]="t.id">
+            {{ t.firstName }} {{ t.lastName }} ({{ t.teacherId }})
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ls-section">
+      <span class="ls-sec-ico">📘</span>
+      <div class="ls-sec-body">
+        <label class="ls-lbl">Subject</label>
+        <select class="ls-input" [(ngModel)]="formSubjectId">
+          <option *ngFor="let s of subjects" [value]="s.id">{{ s.name }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ls-section">
+      <span class="ls-sec-ico">👥</span>
+      <div class="ls-sec-body">
+        <label class="ls-lbl">Class</label>
+        <div class="ls-row2">
+          <input type="text" class="ls-input" [value]="className" disabled />
+          <select class="ls-input" [(ngModel)]="formClassScope">
+            <option *ngFor="let o of scopeOptions" [value]="o.value">{{ o.label }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="ls-section">
+      <span class="ls-sec-ico">📅</span>
+      <div class="ls-sec-body">
+        <label class="ls-lbl">Lessons/week</label>
+        <div class="ls-row2">
+          <select class="ls-input" [(ngModel)]="formSessions">
+            <option *ngFor="let n of [1,2,3,4,5,6,7,8,9,10]" [ngValue]="n">{{ n }}</option>
+          </select>
+          <select class="ls-input" [(ngModel)]="formDouble">
+            <option [ngValue]="false">Single</option>
+            <option [ngValue]="true">Double</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="ls-section">
+      <span class="ls-sec-ico">🚪</span>
+      <div class="ls-sec-body">
+        <label class="ls-lbl">Classroom</label>
+        <div class="ls-check-grid">
+          <label class="ls-check"><input type="checkbox" checked disabled /> Home classroom {{ className }}</label>
+          <label class="ls-check"><input type="checkbox" disabled /> Shared rooms</label>
+          <label class="ls-check"><input type="checkbox" disabled /> Teacher's classrooms</label>
+          <label class="ls-check"><input type="checkbox" disabled /> Subject's classrooms</label>
+        </div>
+        <input type="text" class="ls-input ls-mt" placeholder="Other available classrooms" disabled />
+      </div>
+    </div>
+
+    <footer class="ls-dlg-foot">
+      <button type="button" class="ls-btn" (click)="closeDialog()">Cancel</button>
+      <button type="button" class="ls-btn" disabled>Help</button>
+      <button type="button" class="ls-btn ls-btn-ok" (click)="saveDialog()" [disabled]="saving">OK</button>
+    </footer>
+  </div>
+</div>

@@ -1,0 +1,218 @@
+<div class="transfers-container">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-title">
+        <h1>🔄 Transfer History</h1>
+        <p class="subtitle">View and manage student transfers</p>
+      </div>
+      <button class="btn btn-primary btn-add" (click)="initiateTransfer()">
+        <span class="btn-icon">➕</span>
+        <span>Initiate Transfer</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div class="alert alert-error" *ngIf="error">
+    <span class="alert-icon">⚠️</span>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label>Transfer Type</label>
+        <select class="filter-select" [(ngModel)]="transferTypeFilter" (change)="applyFilters()">
+          <option value="all">All Types</option>
+          <option value="internal">Internal Only</option>
+          <option value="external">External Only</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Class</label>
+        <select class="filter-select" [(ngModel)]="classFilter" (change)="applyFilters()">
+          <option value="">All Classes</option>
+          <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Student</label>
+        <select class="filter-select" [(ngModel)]="studentFilter" (change)="applyFilters()">
+          <option value="">All Students</option>
+          <option *ngFor="let student of students" [value]="student.id">
+            {{ student.firstName }} {{ student.lastName }} ({{ student.studentNumber }})
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Search Student Name</label>
+        <input 
+          type="text" 
+          class="filter-input" 
+          [(ngModel)]="studentNameSearch"
+          (input)="applyFilters()"
+          placeholder="Search by student name...">
+      </div>
+
+      <div class="filter-group">
+        <label>Start Date</label>
+        <input 
+          type="date" 
+          class="filter-input" 
+          [(ngModel)]="startDate"
+          (change)="applyFilters()">
+      </div>
+
+      <div class="filter-group">
+        <label>End Date</label>
+        <input 
+          type="date" 
+          class="filter-input" 
+          [(ngModel)]="endDate"
+          (change)="applyFilters()">
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn btn-secondary" (click)="clearFilters()">
+          <span>🔄</span> Clear Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-container" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading transfer history...</p>
+  </div>
+
+  <!-- Transfers Table -->
+  <div class="table-container" *ngIf="!loading">
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Student</th>
+          <th>Type</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Reason</th>
+          <th>Processed By</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let transfer of filteredTransfers" class="table-row">
+          <td class="date-cell">
+            <div class="date-display">
+              <strong>{{ formatDate(transfer.transferDate) }}</strong>
+              <small *ngIf="transfer.effectiveDate && transfer.effectiveDate !== transfer.transferDate">
+                Effective: {{ formatDate(transfer.effectiveDate) }}
+              </small>
+            </div>
+          </td>
+          <td class="student-cell">
+            <div class="student-info">
+              <strong>{{ getStudentName(transfer) }}</strong>
+              <span class="student-number">{{ getStudentNumber(transfer) }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge" [ngClass]="getTransferTypeClass(transfer.transferType)">
+              {{ getTransferTypeLabel(transfer.transferType) }}
+            </span>
+          </td>
+          <td>
+            <span *ngIf="transfer.transferType === 'internal'">
+              {{ getPreviousClassName(transfer) }}
+            </span>
+            <span *ngIf="transfer.transferType === 'external'">
+              {{ transfer.fromSchoolName || 'This School' }}
+            </span>
+          </td>
+          <td>
+            <span *ngIf="transfer.transferType === 'internal'">
+              {{ getNewClassName(transfer) }}
+            </span>
+            <span *ngIf="transfer.transferType === 'external'" [class.text-external]="true">
+              {{ transfer.toSchoolName || transfer.destinationSchool || 'N/A' }}
+            </span>
+          </td>
+          <td class="reason-cell">
+            <span *ngIf="transfer.reason" class="reason-text" [title]="transfer.reason">
+              {{ transfer.reason.length > 50 ? (transfer.reason.substring(0, 50) + '...') : transfer.reason }}
+            </span>
+            <span *ngIf="!transfer.reason" class="text-muted">-</span>
+          </td>
+          <td>
+            <span class="processed-by">{{ getProcessedByName(transfer) }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredTransfers.length === 0 && !loading">
+      <div class="empty-icon">📋</div>
+      <h3>No transfers found</h3>
+      <p *ngIf="transferTypeFilter !== 'all' || classFilter || studentFilter || startDate || endDate">
+        Try adjusting your filters to see more results.
+      </p>
+      <p *ngIf="transferTypeFilter === 'all' && !classFilter && !studentFilter && !startDate && !endDate">
+        No student transfers have been recorded yet.
+      </p>
+      <button class="btn btn-primary" (click)="initiateTransfer()" *ngIf="transferTypeFilter === 'all' && !classFilter && !studentFilter && !startDate && !endDate">
+        <span class="btn-icon">➕</span>
+        <span>Initiate First Transfer</span>
+      </button>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="pagination-container" *ngIf="totalPages > 1">
+      <div class="pagination-info">
+        <span>Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ Math.min(currentPage * pageSize, totalItems) }} of {{ totalItems }} transfers</span>
+        <span class="page-size-selector">
+          <label>Items per page:</label>
+          <select [(ngModel)]="pageSize" (change)="onPageSizeChange(pageSize)" class="page-size-select">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+          </select>
+        </span>
+      </div>
+      <div class="pagination-controls">
+        <button 
+          class="btn-pagination" 
+          [disabled]="currentPage === 1"
+          (click)="onPageChange(currentPage - 1)">
+          ← Previous
+        </button>
+        <div class="page-numbers">
+          <button 
+            *ngFor="let page of getPageNumbers()"
+            class="btn-page-number"
+            [class.active]="page === currentPage"
+            (click)="onPageChange(page)">
+            {{ page }}
+          </button>
+        </div>
+        <button 
+          class="btn-pagination" 
+          [disabled]="currentPage === totalPages"
+          (click)="onPageChange(currentPage + 1)">
+          Next →
+        </button>
+      </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="results-summary" *ngIf="filteredTransfers.length > 0 && totalPages <= 1">
+      <span class="summary-text">
+        Showing {{ filteredTransfers.length }} transfer{{ filteredTransfers.length !== 1 ? 's' : '' }}
+      </span>
+    </div>
+  </div>
+</div>
+

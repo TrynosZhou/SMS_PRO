@@ -1,0 +1,267 @@
+<div class="rankings-container">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <span class="header-icon">🏆</span>
+        Student Rankings
+      </h1>
+      <p class="subtitle">View and analyze student performance rankings across different categories</p>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="filter-card">
+    <div class="card-header">
+      <h2>
+        <span class="icon">🔍</span>
+        Filter Rankings
+      </h2>
+    </div>
+    <form (ngSubmit)="loadRankings()" class="filter-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="rankingType">
+            <span class="label-icon">📊</span>
+            Ranking Type <span class="required">*</span>
+          </label>
+          <select 
+            id="rankingType"
+            [(ngModel)]="rankingType" 
+            name="rankingType" 
+            (change)="onRankingTypeChange()"
+            class="form-select">
+            <option value="class">Class Position</option>
+            <option value="subject">Subject Position</option>
+            <option value="overall-performance">Form Position</option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="rankingType === 'class' || rankingType === 'subject' || rankingType === 'overall-performance'">
+          <label for="selectedExamType">
+            <span class="label-icon">📊</span>
+            Exam Type <span class="required">*</span>
+          </label>
+          <select 
+            id="selectedExamType"
+            [(ngModel)]="selectedExamType" 
+            name="examType" 
+            required
+            class="form-select">
+            <option value="">Select Exam Type</option>
+            <option *ngFor="let examType of examTypes" [value]="examType.value">
+              {{ examType.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="rankingType === 'class'">
+          <label for="selectedClass">
+            <span class="label-icon">🏫</span>
+            Class <span class="required">*</span>
+          </label>
+          <select 
+            id="selectedClass"
+            [(ngModel)]="selectedClass" 
+            name="class"
+            required
+            class="form-select">
+            <option value="">Select Class</option>
+            <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="rankingType === 'subject'">
+          <label for="selectedSubject">
+            <span class="label-icon">📚</span>
+            Subject <span class="required">*</span>
+          </label>
+          <select 
+            id="selectedSubject"
+            [(ngModel)]="selectedSubject" 
+            name="subject" 
+            required
+            class="form-select">
+            <option value="">Select Subject</option>
+            <option *ngFor="let subject of subjects" [value]="subject.id">
+              {{ subject.code ? (subject.code + ' ' + subject.name) : subject.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="rankingType === 'overall-performance'">
+          <label for="selectedGrade">
+            <span class="label-icon">📋</span>
+            Form <span class="required">*</span>
+          </label>
+          <select 
+            id="selectedGrade"
+            [(ngModel)]="selectedForm" 
+            name="grade" 
+            required
+            class="form-select">
+            <option value="">Select Form</option>
+            <option *ngFor="let grade of availableGrades" [value]="grade">
+              {{ grade }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button 
+          type="submit" 
+          class="btn btn-primary"
+          [disabled]="loading">
+          <span *ngIf="!loading">📊</span>
+          <span *ngIf="loading" class="spinner"></span>
+          {{ loading ? 'Loading Rankings...' : 'Load Rankings' }}
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-secondary"
+          (click)="clearFilters()"
+          *ngIf="rankings.length > 0">
+          🗑️ Clear
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid" *ngIf="rankings.length > 0">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ rankings.length }}</div>
+        <div class="stat-label">Total Students</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📈</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getAverageScore() }}%</div>
+        <div class="stat-label">Average Score</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getTopScore() | number:'1.2-2' }}%</div>
+        <div class="stat-label">Top Score</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getPassRate() }}%</div>
+        <div class="stat-label">Pass Rate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rankings Table -->
+  <div class="rankings-card" *ngIf="rankings.length > 0">
+    <div class="card-header">
+      <h2>
+        <span class="icon">📊</span>
+        Rankings Results
+      </h2>
+      <div class="header-actions">
+        <button class="btn-icon" (click)="exportToCSV()" title="Export to CSV">
+          📥 Export CSV
+        </button>
+        <button
+          class="btn-icon"
+          type="button"
+          (click)="printRankings()"
+          [disabled]="pdfBusy"
+          title="Open PDF preview (school letterhead, grid)">
+          {{ pdfBusy ? '⏳ Generating…' : '🖨️ Print' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="rankings-table">
+        <thead>
+          <tr>
+            <th class="position-col">Position</th>
+            <th class="student-col">Student Name</th>
+            <th *ngIf="rankingType === 'overall-performance'" class="class-col">Class</th>
+            <th *ngIf="rankingType === 'class' || rankingType === 'overall-performance'" class="score-col">Average (%)</th>
+            <th *ngIf="rankingType === 'subject'" class="score-col">Score</th>
+            <th *ngIf="rankingType === 'subject'" class="score-col">Percentage (%)</th>
+            <th class="progress-col">Performance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr 
+            *ngFor="let ranking of rankings; let i = index" 
+            [class.top-three]="i < 3"
+            [class.position-1]="i === 0"
+            [class.position-2]="i === 1"
+            [class.position-3]="i === 2">
+            <td class="position-cell">
+              <div class="position-badge" [class.gold]="i === 0" [class.silver]="i === 1" [class.bronze]="i === 2">
+                <span class="medal-icon" *ngIf="i < 3">
+                  {{ i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉' }}
+                </span>
+                <strong>{{ ranking.classPosition || ranking.subjectPosition || ranking.overallPosition }}</strong>
+              </div>
+            </td>
+            <td class="student-cell">
+              <div class="student-info">
+                <span class="student-name">{{ ranking.studentName }}</span>
+              </div>
+            </td>
+            <td *ngIf="rankingType === 'overall-performance'" class="class-cell">
+              {{ ranking.class || 'N/A' }}
+            </td>
+            <td *ngIf="rankingType === 'class' || rankingType === 'overall-performance'" class="score-cell">
+              <div class="score-display">
+                <span class="score-value">{{ ranking.average.toFixed(2) }}%</span>
+                <div class="score-bar">
+                  <div class="score-fill" [style.width.%]="ranking.average"></div>
+                </div>
+              </div>
+            </td>
+            <td *ngIf="rankingType === 'subject'" class="score-cell">
+              <span class="score-value">{{ ranking.score }} / {{ ranking.maxScore }}</span>
+            </td>
+            <td *ngIf="rankingType === 'subject'" class="score-cell">
+              <div class="score-display">
+                <span class="score-value">{{ ranking.percentage.toFixed(2) }}%</span>
+                <div class="score-bar">
+                  <div class="score-fill" [style.width.%]="ranking.percentage"></div>
+                </div>
+              </div>
+            </td>
+            <td class="progress-cell">
+              <div class="performance-badge" [class.excellent]="getPerformanceLevel(ranking) === 'excellent'"
+                   [class.good]="getPerformanceLevel(ranking) === 'good'"
+                   [class.average]="getPerformanceLevel(ranking) === 'average'"
+                   [class.poor]="getPerformanceLevel(ranking) === 'poor'">
+                {{ getPerformanceLabel(ranking) }}
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="pdf-error" *ngIf="pdfError">{{ pdfError }}</p>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && rankings.length === 0 && hasSearched">
+    <div class="empty-icon">📊</div>
+    <h3>No Rankings Found</h3>
+    <p>Try adjusting your filters or select different criteria to view rankings.</p>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner-large"></div>
+    <p>Loading rankings...</p>
+  </div>
+</div>

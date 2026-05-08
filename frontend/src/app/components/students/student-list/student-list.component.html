@@ -1,0 +1,395 @@
+<div class="students-container">
+  <!-- Alert Messages -->
+  <div class="alert alert-success" *ngIf="success">
+    <span class="alert-icon">✓</span>
+    {{ success }}
+  </div>
+  <div class="alert alert-error" *ngIf="error">
+    <span class="alert-icon">⚠</span>
+    {{ error }}
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="filter-card">
+    <div class="filter-header">
+      <h2>
+        <span class="icon">🔍</span>
+        Search & Filter
+      </h2>
+      <button class="btn-clear" (click)="clearFilters()" *ngIf="hasActiveFilters()">
+        🗑️ Clear Filters
+      </button>
+    </div>
+    <div class="filter-content">
+      <div class="search-box">
+        <input 
+          type="text" 
+          [(ngModel)]="searchQuery" 
+          [ngModelOptions]="{standalone: true}"
+          placeholder="Search by name, student number, or contact..."
+          class="search-input"
+          (input)="onSearchInput()">
+        <span class="search-icon">🔍</span>
+      </div>
+      <div class="filter-options">
+        <div class="filter-group">
+          <label>Filter by Class</label>
+          <select 
+            [(ngModel)]="selectedClass" 
+            [ngModelOptions]="{standalone: true}"
+            (change)="filterStudents()"
+            class="filter-select">
+            <option value="">All Classes</option>
+            <option *ngFor="let cls of classes" [value]="cls.id">
+              {{ cls.name }}
+            </option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Filter by Type</label>
+          <select 
+            [(ngModel)]="selectedType" 
+            [ngModelOptions]="{standalone: true}"
+            (change)="filterStudents()"
+            class="filter-select">
+            <option value="">All Types</option>
+            <option value="Day Scholar">Day Scholar</option>
+            <option value="Boarder">Boarder</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Filter by Gender</label>
+          <select 
+            [(ngModel)]="selectedGender" 
+            [ngModelOptions]="{standalone: true}"
+            (change)="filterStudents()"
+            class="filter-select">
+            <option value="">All Genders</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>View Mode</label>
+          <div class="view-toggle">
+            <button 
+              class="toggle-btn" 
+              [class.active]="viewMode === 'grid'"
+              (click)="viewMode = 'grid'">
+              ⬜ Grid
+            </button>
+            <button 
+              class="toggle-btn" 
+              [class.active]="viewMode === 'list'"
+              (click)="viewMode = 'list'">
+              ☰ List
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pagination-bar" *ngIf="!loading && (pagination.totalPages > 1 || pagination.total > pagination.limit)">
+    <button class="btn btn-secondary" (click)="changePage(pagination.page - 1)" [disabled]="pagination.page === 1">
+      ‹ Previous
+    </button>
+    <span class="page-info">
+      Page {{ pagination.page }} of {{ pagination.totalPages }} • {{ pagination.total }} records
+    </span>
+    <button class="btn btn-secondary" (click)="changePage(pagination.page + 1)" [disabled]="pagination.page === pagination.totalPages">
+      Next ›
+    </button>
+    <div class="page-size-selector">
+      <label for="pageSize">Rows per page:</label>
+      <select id="pageSize" (change)="changePageSize($event.target.value)" [value]="pagination.limit">
+        <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner-large"></div>
+    <p>Loading students...</p>
+  </div>
+
+  <!-- Students Grid View -->
+  <div class="students-grid" *ngIf="!loading && viewMode === 'grid' && filteredStudents.length > 0">
+    <div *ngFor="let student of filteredStudents" class="student-card">
+      <div class="card-header">
+        <div class="avatar-with-upload">
+          <div class="student-avatar" [class.male]="student.gender === 'Male'" [class.female]="student.gender === 'Female'">
+            <img *ngIf="student.photo" 
+                 [src]="serverBaseUrl + student.photo" 
+                 [alt]="student.firstName + ' ' + student.lastName"
+                 class="student-photo"
+                 onerror="this.style.display='none'">
+            <span class="avatar-icon avatar-initials" *ngIf="!student.photo">{{ getInitials(student) }}</span>
+          </div>
+          <button
+            *ngIf="canUploadStudentPhoto()"
+            type="button"
+            class="btn-passport-upload"
+            (click)="openPassportPhotoPicker(student, $event)"
+            [disabled]="loading"
+            title="Upload passport-size photo"
+            aria-label="Upload passport photo for {{ student.firstName }} {{ student.lastName }}">
+            📷
+          </button>
+        </div>
+        <div class="student-badge clickable-value" [class.boarder]="student.studentType === 'Boarder'" [class.day-scholar]="student.studentType === 'Day Scholar'" (click)="openFieldEdit(student, 'studentType', $event)" title="Click to edit type">
+          {{ student.studentType || 'Day Scholar' }}
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="student-info student-info-names">
+          <div class="info-item">
+            <span class="info-label">First name</span>
+            <span class="info-value student-name-highlight clickable-value" (click)="openFieldEdit(student, 'firstName', $event)" title="Click to edit">{{ student.firstName || '—' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Last name</span>
+            <span class="info-value student-name-highlight clickable-value" (click)="openFieldEdit(student, 'lastName', $event)" title="Click to edit">{{ student.lastName || '—' }}</span>
+          </div>
+        </div>
+        <div class="student-info">
+          <div class="info-item">
+            <span class="info-label">Student #</span>
+            <span class="info-value student-id-link" (click)="openIdCardPreview(student.id, $event)" title="Preview student ID card (PDF)">{{ student.studentNumber }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Class</span>
+            <span class="info-value clickable-value" (click)="openFieldEdit(student, 'classId', $event)" title="Click to edit">{{ getClassName(student) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Gender</span>
+            <span class="info-value clickable-value" (click)="openFieldEdit(student, 'gender', $event)" title="Click to edit">{{ student.gender }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Date of birth</span>
+            <span class="info-value clickable-value" (click)="openFieldEdit(student, 'dateOfBirth', $event)" title="Click to edit">
+              {{ student.dateOfBirth ? (student.dateOfBirth | date:'mediumDate') : '—' }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-action btn-view" (click)="viewStudentDetails(student)">
+          👁️ View
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Students List View -->
+  <div class="students-list-view" *ngIf="!loading && viewMode === 'list' && filteredStudents.length > 0">
+    <div class="table-scroll">
+      <table class="students-data-table">
+        <thead>
+          <tr>
+            <th class="col-student-num" scope="col">Student #</th>
+            <th class="col-firstname" scope="col">First name</th>
+            <th class="col-lastname" scope="col">Last name</th>
+            <th class="col-class" scope="col">Class</th>
+            <th class="col-gender" scope="col">Gender</th>
+            <th class="col-passport" scope="col">Passport photo</th>
+            <th class="col-type" scope="col">Type</th>
+            <th class="col-actions" scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let student of filteredStudents">
+            <td class="col-student-num">
+              <strong class="student-id-link" (click)="openIdCardPreview(student.id, $event)" title="Preview student ID card (PDF)">{{ student.studentNumber }}</strong>
+            </td>
+            <td class="col-firstname">
+              <span class="name-text clickable-value" (click)="openFieldEdit(student, 'firstName', $event)" title="Click to edit">{{ student.firstName || '—' }}</span>
+            </td>
+            <td class="col-lastname">
+              <span class="name-text clickable-value" (click)="openFieldEdit(student, 'lastName', $event)" title="Click to edit">{{ student.lastName || '—' }}</span>
+            </td>
+            <td class="col-class"><span class="clickable-value" (click)="openFieldEdit(student, 'classId', $event)" title="Click to edit">{{ getClassName(student) }}</span></td>
+            <td class="col-gender"><span class="clickable-value" (click)="openFieldEdit(student, 'gender', $event)" title="Click to edit">{{ student.gender }}</span></td>
+            <td class="col-passport">
+              <div class="passport-cell">
+                <img *ngIf="student.photo"
+                     [src]="serverBaseUrl + student.photo"
+                     [alt]="'Photo of ' + student.firstName"
+                     class="passport-thumb"
+                     onerror="this.style.display='none'">
+                <span *ngIf="!student.photo" class="passport-thumb passport-thumb--empty" aria-hidden="true">—</span>
+                <button
+                  *ngIf="canUploadStudentPhoto()"
+                  type="button"
+                  class="btn-passport-upload-inline"
+                  (click)="openPassportPhotoPicker(student, $event)"
+                  [disabled]="loading"
+                  title="Upload passport-size photo"
+                  aria-label="Upload passport photo for {{ student.firstName }} {{ student.lastName }}">
+                  📷
+                </button>
+              </div>
+            </td>
+            <td class="col-type">
+              <span class="type-badge clickable-value" [class.boarder]="student.studentType === 'Boarder'" [class.day-scholar]="student.studentType === 'Day Scholar'" (click)="openFieldEdit(student, 'studentType', $event)" title="Click to edit">
+                {{ student.studentType || 'Day Scholar' }}
+              </span>
+            </td>
+            <td class="col-actions">
+              <div class="action-buttons">
+                <button type="button" class="btn-icon-small" (click)="viewStudentDetails(student)" title="View Details" aria-label="View">👁️</button>
+                <button type="button" class="btn-icon-small btn-delete" (click)="deleteStudent(student.id, student.firstName + ' ' + student.lastName, student.studentNumber)" title="Delete" [disabled]="loading" aria-label="Delete">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && filteredStudents.length === 0">
+    <div class="empty-icon">👨‍🎓</div>
+    <h3>{{ searchQuery || selectedClass || selectedType || selectedGender ? 'No Students Found' : 'No Students Yet' }}</h3>
+    <p *ngIf="searchQuery || selectedClass || selectedType || selectedGender">
+      Try adjusting your search or filters to find students.
+    </p>
+    <p *ngIf="!searchQuery && !selectedClass && !selectedType && !selectedGender">
+      Get started by adding your first student to the system.
+    </p>
+    <button type="button" class="btn btn-primary" (click)="goToNewStudent()" *ngIf="!searchQuery && !selectedClass && !selectedType && !selectedGender">
+      ➕ Add First Student
+    </button>
+  </div>
+
+  <!-- Student Details Modal -->
+  <div class="modal-overlay modal-overlay-modern" *ngIf="selectedStudent" (click)="closeStudentDetails()">
+    <div class="modal-content student-detail-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="student-modal-title">
+      <button type="button" class="modal-close modal-close-modern" (click)="closeStudentDetails()" aria-label="Close dialog">&times;</button>
+      <div class="modal-header modal-header-modern">
+        <div class="modal-avatar-block">
+          <div class="modal-avatar" [class.male]="selectedStudent.gender === 'Male'" [class.female]="selectedStudent.gender === 'Female'">
+            <img *ngIf="selectedStudent.photo" 
+                 [src]="serverBaseUrl + selectedStudent.photo" 
+                 [alt]="selectedStudent.firstName + ' ' + selectedStudent.lastName"
+                 class="student-photo-large"
+                 onerror="this.style.display='none'">
+            <span class="avatar-icon-large avatar-initials" *ngIf="!selectedStudent.photo">{{ getInitials(selectedStudent) }}</span>
+          </div>
+          <button
+            *ngIf="canUploadStudentPhoto()"
+            type="button"
+            class="btn-passport-upload-modal"
+            (click)="openPassportPhotoPicker(selectedStudent, $event)"
+            [disabled]="loading">
+            📷 Upload photo
+          </button>
+        </div>
+        <div class="modal-title">
+          <h2 id="student-modal-title">{{ selectedStudent.firstName }} {{ selectedStudent.lastName }}</h2>
+          <p class="student-number student-id-chip" (click)="openIdCardPreview(selectedStudent.id, $event)" title="Preview student ID card (PDF)" role="button" tabindex="0" (keydown.enter)="openIdCardPreview(selectedStudent.id)">
+            {{ selectedStudent.studentNumber }}
+          </p>
+        </div>
+      </div>
+      <div class="modal-body modal-body-landscape modal-body-modern">
+        <div class="detail-section detail-section-card">
+          <h3 class="detail-section-title">Student Information</h3>
+          <div class="detail-grid detail-grid-landscape detail-grid-modern">
+            <div class="detail-item detail-field">
+              <span class="detail-label">First name</span>
+              <span class="detail-value clickable-value" (click)="openFieldEdit(selectedStudent, 'firstName', $event)" title="Click to edit">{{ selectedStudent.firstName || '—' }}</span>
+            </div>
+            <div class="detail-item detail-field">
+              <span class="detail-label">Last name</span>
+              <span class="detail-value clickable-value" (click)="openFieldEdit(selectedStudent, 'lastName', $event)" title="Click to edit">{{ selectedStudent.lastName || '—' }}</span>
+            </div>
+            <div class="detail-item detail-field">
+              <span class="detail-label">Class</span>
+              <span class="detail-value clickable-value" (click)="openFieldEdit(selectedStudent, 'classId', $event)" title="Click to edit">{{ selectedStudent.class?.name || selectedStudent.classEntity?.name || 'Not assigned' }}</span>
+            </div>
+            <div class="detail-item detail-field">
+              <span class="detail-label">Student Type</span>
+              <span class="detail-value clickable-value" (click)="openFieldEdit(selectedStudent, 'studentType', $event)" title="Click to edit">{{ selectedStudent.studentType || 'Day Scholar' }}</span>
+            </div>
+            <div class="detail-item detail-field">
+              <span class="detail-label">Gender</span>
+              <span class="detail-value clickable-value" (click)="openFieldEdit(selectedStudent, 'gender', $event)" title="Click to edit">{{ selectedStudent.gender }}</span>
+            </div>
+            <div class="detail-item detail-field">
+              <span class="detail-label">Date of Birth</span>
+              <span class="detail-value clickable-value" (click)="openFieldEdit(selectedStudent, 'dateOfBirth', $event)" title="Click to edit">{{ selectedStudent.dateOfBirth ? (selectedStudent.dateOfBirth | date) : '—' }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="detail-section detail-section-card">
+          <h3 class="detail-section-title">Contact Information</h3>
+          <div class="detail-grid detail-grid-landscape detail-grid-modern">
+            <div class="detail-item detail-field">
+              <span class="detail-label">Contact Number</span>
+              <span class="detail-value clickable-value" (click)="openFieldEdit(selectedStudent, 'contactNumber', $event)" title="Click to edit">{{ selectedStudent.contactNumber || selectedStudent.phoneNumber || 'Not provided' }}</span>
+            </div>
+            <div class="detail-item detail-field" *ngIf="selectedStudent.phoneNumber && selectedStudent.phoneNumber !== selectedStudent.contactNumber">
+              <span class="detail-label">Phone Number</span>
+              <span class="detail-value clickable-value" (click)="openFieldEdit(selectedStudent, 'contactNumber', $event)" title="Click to edit (same as contact)">{{ selectedStudent.phoneNumber }}</span>
+            </div>
+            <div class="detail-item detail-item-span detail-field detail-field-address">
+              <span class="detail-label">Address</span>
+              <span class="detail-value detail-value-multiline clickable-value" (click)="openFieldEdit(selectedStudent, 'address', $event)" title="Click to edit">{{ selectedStudent.address || '—' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-modern">
+        <button type="button" class="btn btn-modal-close" (click)="closeStudentDetails()">Close</button>
+        <button type="button" class="btn btn-modal-outline" (click)="viewReportCard(selectedStudent.id)">
+          View Report Card
+        </button>
+        <button type="button" class="btn btn-modal-cta" (click)="editStudent(selectedStudent.id)">
+          Edit Student
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student ID card PDF preview -->
+  <div class="modal-overlay id-card-preview-overlay" *ngIf="idCardPreviewOpen" (click)="closeIdCardPreview()">
+    <div class="modal-content id-card-preview-modal" (click)="$event.stopPropagation()" role="dialog" aria-label="Student ID card preview">
+      <div class="id-card-preview-toolbar">
+        <span class="id-card-preview-title">Student ID card</span>
+        <button type="button" class="modal-close modal-close-modern" (click)="closeIdCardPreview()" aria-label="Close preview">&times;</button>
+      </div>
+      <iframe *ngIf="idCardPreviewUrl" class="id-card-preview-iframe" title="Student ID PDF" [src]="idCardPreviewUrl"></iframe>
+    </div>
+  </div>
+
+  <!-- Quick edit field popup -->
+  <div class="modal-overlay field-edit-overlay" *ngIf="fieldEditOpen" (click)="closeFieldEdit()">
+    <div class="modal-content field-edit-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <h3 class="field-edit-heading">Edit {{ fieldEditLabel }}</h3>
+      <div class="field-edit-body">
+        <input *ngIf="fieldEditInputMode === 'text'" type="text" class="field-edit-input" [(ngModel)]="fieldEditValue" [name]="'fe_' + fieldEditKey" />
+        <input *ngIf="fieldEditInputMode === 'tel'" type="tel" class="field-edit-input" [(ngModel)]="fieldEditValue" [name]="'fe_' + fieldEditKey" />
+        <input *ngIf="fieldEditInputMode === 'date'" type="date" class="field-edit-input" [(ngModel)]="fieldEditValue" [name]="'fe_' + fieldEditKey" />
+        <textarea *ngIf="fieldEditInputMode === 'textarea'" class="field-edit-textarea" rows="4" [(ngModel)]="fieldEditValue" [name]="'fe_' + fieldEditKey"></textarea>
+        <select *ngIf="fieldEditInputMode === 'select'" class="field-edit-select" [(ngModel)]="fieldEditValue" [name]="'fe_' + fieldEditKey">
+          <option *ngFor="let o of fieldEditSelectOptions" [value]="o.value">{{ o.label }}</option>
+        </select>
+      </div>
+      <div class="field-edit-actions">
+        <button type="button" class="btn btn-modal-close" (click)="closeFieldEdit()" [disabled]="fieldEditSaving">Cancel</button>
+        <button type="button" class="btn btn-modal-cta" (click)="saveFieldEdit()" [disabled]="fieldEditSaving">{{ fieldEditSaving ? 'Saving…' : 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+
+  <input
+    #passportPhotoFile
+    type="file"
+    accept="image/*"
+    class="passport-file-input-hidden"
+    (change)="onPassportPhotoFileSelected($event)"
+    aria-hidden="true"
+    tabindex="-1">
+</div>

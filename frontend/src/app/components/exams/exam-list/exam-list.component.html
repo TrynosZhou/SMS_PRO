@@ -1,0 +1,230 @@
+<div class="em-page">
+
+  <!-- ── Top header bar ───────────────────────────── -->
+  <div class="em-header-bar">
+    <span class="em-header-title">Enter Marks</span>
+  </div>
+
+  <!-- ── Marks entered counter ────────────────────── -->
+  <div class="em-counter-bar">
+    <span class="em-counter-badge">
+      {{ getEnteredMarksCount() }} / {{ filteredStudents.length }} Marks Entered
+    </span>
+  </div>
+
+  <!-- ── Feedback ──────────────────────────────────── -->
+  <div class="em-alert em-alert-success" *ngIf="success" [@fadeInOut]>✓ {{ success }}</div>
+  <div class="em-alert em-alert-error"   *ngIf="error"   [@fadeInOut]>✕ {{ error }}</div>
+
+  <!-- ── Selection card ───────────────────────────── -->
+  <div class="em-card em-select-card">
+    <div class="em-dropdowns-row">
+
+      <!-- Term -->
+      <div class="em-dropdown-wrap">
+        <select class="em-select" [(ngModel)]="selectedTerm" (change)="onSelectionChange()">
+          <option value="">Choose Term*</option>
+          <option *ngFor="let t of terms" [value]="t.label">
+            {{ t.label }}{{ t.status === 'active' ? ' ✓' : '' }}
+          </option>
+        </select>
+        <span class="em-sel-arrow">▾</span>
+      </div>
+
+      <!-- Exam Type -->
+      <div class="em-dropdown-wrap">
+        <select class="em-select" [(ngModel)]="selectedExamType" (change)="onSelectionChange()">
+          <option value="">Exam Type*</option>
+          <option *ngFor="let et of examTypes" [value]="et.value">{{ et.label }}</option>
+        </select>
+        <span class="em-sel-arrow">▾</span>
+      </div>
+
+      <!-- Class -->
+      <div class="em-dropdown-wrap">
+        <select class="em-select" [(ngModel)]="selectedClassId" (change)="onSelectionChange()">
+          <option value="">Choose Class*</option>
+          <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+        </select>
+        <span class="em-sel-arrow">▾</span>
+      </div>
+
+      <!-- Subject -->
+      <div class="em-dropdown-wrap">
+        <select class="em-select" [(ngModel)]="selectedSubjectId" (change)="onSelectionChange()"
+          [disabled]="!selectedClassId || subjects.length === 0">
+          <option value="">{{ selectedClassId ? (subjects.length === 0 ? 'No subjects' : 'Choose Subject*') : 'Choose Subject*' }}</option>
+          <option *ngFor="let s of subjects" [value]="s.id">{{ s.name }}</option>
+        </select>
+        <span class="em-sel-arrow">▾</span>
+      </div>
+
+      <!-- List (load) button -->
+      <button class="em-list-btn"
+        (click)="manualLoadStudents()"
+        [disabled]="!isSelectionValid() || loadingStudents || showMarksEntry"
+        title="Fetch student marks">
+        <span *ngIf="!loadingStudents" class="em-list-ico" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
+            <line x1="4" y1="6"  x2="20" y2="6"/>
+            <line x1="4" y1="12" x2="20" y2="12"/>
+            <line x1="4" y1="18" x2="20" y2="18"/>
+          </svg>
+        </span>
+        <span *ngIf="loadingStudents" class="em-spin" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Content card ──────────────────────────────── -->
+  <div class="em-card em-content-card">
+
+    <!-- Filter + quick-actions row (visible when marks loaded) -->
+    <div class="em-toolbar" *ngIf="showMarksEntry">
+      <div class="em-chip-group" role="group">
+        <button class="em-chip" [class.em-chip-active]="marksViewFilter==='all'"     (click)="setMarksViewFilter('all')">All <span class="em-chip-n">{{ filteredStudents.length }}</span></button>
+        <button class="em-chip" [class.em-chip-active]="marksViewFilter==='entered'"  (click)="setMarksViewFilter('entered')">With mark <span class="em-chip-n">{{ getEnteredMarksCount() }}</span></button>
+        <button class="em-chip" [class.em-chip-active]="marksViewFilter==='missing'"  (click)="setMarksViewFilter('missing')">Missing <span class="em-chip-n">{{ missingMarksCount }}</span></button>
+      </div>
+      <div class="em-qa">
+        <button class="em-qa-btn" (click)="focusNextEmptyScore()"   [disabled]="isPublished || missingMarksCount===0">Next empty</button>
+        <button class="em-qa-btn" (click)="fillRemainingWithZero()" [disabled]="loading || isPublished">Fill 0</button>
+        <button class="em-qa-btn em-qa-danger" (click)="clearAllMarks()" [disabled]="loading || getEnteredMarksCount()===0 || isPublished">Clear all</button>
+        <button class="em-qa-btn" (click)="cancelMarksEntry()">Reset</button>
+      </div>
+    </div>
+
+    <!-- Filter search -->
+    <div class="em-filter-row">
+      <div class="em-filter-wrap" *ngIf="showMarksEntry">
+        <input class="em-filter-inp" type="search"
+          [(ngModel)]="studentSearchQuery"
+          placeholder="Filter"
+          (input)="filterStudents()" />
+        <svg class="em-filter-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="em-progress-wrap" *ngIf="showMarksEntry && !isPublished">
+      <div class="em-progress-track">
+        <div class="em-progress-fill" [style.width.%]="getMarksProgress()"></div>
+      </div>
+      <span class="em-progress-pct">{{ getMarksProgress() }}%</span>
+    </div>
+
+    <!-- Published notice -->
+    <div class="em-published-notice" *ngIf="isPublished">
+      ✅ Results have been published — editing is disabled.
+    </div>
+
+    <!-- ── Marks table ──────────────────────────────── -->
+    <div class="em-table-wrap" *ngIf="showMarksEntry && displayStudents.length > 0">
+      <form (ngSubmit)="onSubmit()">
+        <table class="em-table">
+          <thead>
+            <tr>
+              <th class="em-th-num">#</th>
+              <th>Student ID</th>
+              <th>Last Name</th>
+              <th>First Name</th>
+              <th class="em-th-mark">Mark /100</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let student of displayStudents; let i=index; trackBy:trackByStudentId"
+                [class.em-row-has-mark]="hasMarks(student.id)"
+                [class.em-row-no-mark]="!hasMarks(student.id)">
+              <td class="em-td-num">{{ i + 1 }}</td>
+              <td><strong>{{ student.studentNumber }}</strong></td>
+              <td>{{ student.lastName }}</td>
+              <td>{{ student.firstName }}</td>
+              <td class="em-td-mark">
+                <div class="em-mark-wrap">
+                  <input type="number"
+                    [id]="'mc-score-' + student.id"
+                    [(ngModel)]="marks[getMarkKey(student.id, selectedSubjectId)].score"
+                    [name]="'score_' + student.id"
+                    placeholder="—" min="0" max="100" step="1"
+                    class="em-mark-inp"
+                    [disabled]="isPublished" [readonly]="isPublished"
+                    (input)="onMarkChange(student.id)"
+                    (blur)="validateMark(student.id); onStudentBlur(student.id)"
+                    (focus)="onStudentFocus(student.id)" />
+                  <span class="em-save-dot saving" *ngIf="getMarkSavingStatus(student.id)==='saving'"><span class="em-spin-xs"></span></span>
+                  <span class="em-save-dot saved"  *ngIf="getMarkSavingStatus(student.id)==='saved'">✓</span>
+                  <span class="em-save-dot error"  *ngIf="getMarkSavingStatus(student.id)==='error'">✗</span>
+                </div>
+              </td>
+              <td class="em-td-rem">
+                <div class="em-rem-wrap">
+                  <textarea
+                    [(ngModel)]="marks[getMarkKey(student.id, selectedSubjectId)].comments"
+                    [name]="'comments_' + student.id"
+                    [placeholder]="isGeneratingRemark(student.id) ? 'Generating AI remark…' : 'Remarks (optional)'"
+                    class="em-rem-inp" rows="2" maxlength="200"
+                    [disabled]="isPublished || isGeneratingRemark(student.id)"
+                    [readonly]="isPublished || isGeneratingRemark(student.id)"
+                    (input)="onCommentsChange(student.id)"
+                    (blur)="onStudentBlur(student.id)"
+                    (focus)="onStudentFocus(student.id)"></textarea>
+                  <span class="em-ai-dot" *ngIf="isGeneratingRemark(student.id)" title="AI generating"><span class="em-spin-xs"></span></span>
+                  <span class="em-save-dot saving" *ngIf="getCommentsSavingStatus(student.id)==='saving' && !isGeneratingRemark(student.id)"><span class="em-spin-xs"></span></span>
+                  <span class="em-save-dot saved"  *ngIf="getCommentsSavingStatus(student.id)==='saved'  && !isGeneratingRemark(student.id)">✓</span>
+                  <span class="em-save-dot error"  *ngIf="getCommentsSavingStatus(student.id)==='error'  && !isGeneratingRemark(student.id)">✗</span>
+                  <button type="button" class="em-clear-btn" (click)="cancelMarkAndRemark(student.id)" [disabled]="isPublished" title="Clear mark & remark">✕</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </form>
+
+      <!-- Stats row -->
+      <div class="em-stats-bar">
+        <span class="em-stat"><span class="em-stat-lbl">In view</span> <span class="em-stat-val">{{ displayStudents.length }}</span></span>
+        <span class="em-stat"><span class="em-stat-lbl">Total</span> <span class="em-stat-val">{{ filteredStudents.length }}</span></span>
+        <span class="em-stat"><span class="em-stat-lbl">Marks entered</span> <span class="em-stat-val em-val-ok">{{ getEnteredMarksCount() }}</span></span>
+        <span class="em-stat"><span class="em-stat-lbl">Pending</span> <span class="em-stat-val em-val-warn">{{ missingMarksCount }}</span></span>
+        <span class="em-stat"><span class="em-stat-lbl">Avg score</span> <span class="em-stat-val">{{ getAverageScore() | number:'1.0-0' }}</span></span>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="em-actions-bar" *ngIf="!isPublished">
+        <button class="em-btn-save" (click)="onSubmit()" [disabled]="loading || filteredStudents.length===0">
+          <span *ngIf="!loading">💾 Save Marks</span>
+          <span *ngIf="loading" class="em-spin-xs" style="margin-right:6px"></span>
+          <span *ngIf="loading">Saving…</span>
+        </button>
+        <button class="em-btn-publish" *ngIf="isAdmin" (click)="openPublishResults()" [disabled]="loading || !canPublish">
+          📢 Publish Results
+        </button>
+        <button class="em-btn-progress" (click)="openMarkInputProgress()">📈 Progress</button>
+      </div>
+    </div>
+
+    <!-- No match after filter chip -->
+    <div class="em-empty-filter" *ngIf="showMarksEntry && filteredStudents.length>0 && displayStudents.length===0">
+      No students match this filter.
+      <button class="em-empty-reset" (click)="setMarksViewFilter('all')">Show all</button>
+    </div>
+
+    <!-- No students in class -->
+    <div class="em-empty" *ngIf="showMarksEntry && filteredStudents.length===0 && !loadingStudents">
+      <p>No students found in the selected class.</p>
+    </div>
+
+    <!-- Initial empty state -->
+    <div class="em-empty" *ngIf="!showMarksEntry && !loadingStudents">
+      <p>Please select Term, Exam Type, Class, and Subject, then click the list button to fetch student marks.</p>
+    </div>
+
+    <!-- Loading -->
+    <div class="em-loading" *ngIf="loadingStudents">
+      <span class="em-spin"></span>
+      <span>Loading students…</span>
+    </div>
+  </div>
+
+</div>

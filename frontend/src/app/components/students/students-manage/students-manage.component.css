@@ -1,0 +1,154 @@
+.sm-wrap {
+  min-height: calc(100vh - 48px);
+  padding: 1rem 1.25rem 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.sm-header {
+  margin-bottom: 1rem;
+}
+
+.sm-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1a237e;
+}
+
+.sm-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #5c6bc0;
+}
+
+.sm-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  margin-bottom: 1rem;
+  background: #e8eaf6;
+  border-radius: 10px;
+  border: 1px solid #c5cae9;
+}
+
+.sm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #3949ab;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.sm-tab:hover {
+  background: rgba(255, 255, 255, 0.65);
+  color: #1a237e;
+}
+
+.sm-tab.active {
+  background: #fff;
+  color: #1a237e;
+  border-color: #9fa8da;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.sm-tab-ico {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sm-outlet {
+  background: #fafafa;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  padding: 0.75rem;
+  min-height: 280px;
+}
+
+.sm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 12px 32px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: rgba(15, 23, 42, 0.48);
+  box-sizing: border-box;
+}
+
+.sm-modal-panel {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  margin: 12px auto 24px;
+  border-radius: 16px;
+  background: #e8eaef;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  max-height: calc(100vh - 32px - env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-modal-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1e293b;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.sm-modal-close:hover {
+  background: #fff;
+  transform: scale(1.05);
+}
+
+.sm-modal-panel app-student-form {
+  flex: 1;
+  min-height: 0;
+  display: block;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 640px) {
+  .sm-modal-panel {
+    margin: 4px 0 16px;
+    max-height: calc(100vh - 12px);
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sm-tabs {
+    flex-direction: column;
+  }
+
+  .sm-tab {
+    justify-content: flex-start;
+  }
+}

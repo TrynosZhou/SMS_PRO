@@ -1,0 +1,89 @@
+<div class="sm-wrap">
+  <header class="sm-header">
+    <h1 class="sm-title">Student Manager</h1>
+    <p class="sm-sub">Register, list, enroll, and transfer students</p>
+  </header>
+
+  <nav class="sm-tabs" aria-label="Student manager sections">
+    <a
+      *ngIf="showAddNewTab()"
+      href="/students/manage/add-new"
+      [class.active]="isAddNewTabActive()"
+      class="sm-tab"
+      (click)="onAddNewTabClick($event)"
+    >
+      <span class="sm-tab-ico" aria-hidden="true">📝</span>
+      Add New
+    </a>
+    <a
+      *ngIf="showStudentsTab()"
+      routerLink="/students/manage/students"
+      [class.active]="isStudentsSectionActive()"
+      class="sm-tab"
+    >
+      <span class="sm-tab-ico" aria-hidden="true">👥</span>
+      Students
+    </a>
+    <a
+      *ngIf="canEnrollStudents()"
+      routerLink="/students/manage/enroll"
+      routerLinkActive="active"
+      class="sm-tab"
+    >
+      <span class="sm-tab-ico" aria-hidden="true">📋</span>
+      Enroll Student
+    </a>
+    <a
+      *ngIf="canEnrollStudents()"
+      routerLink="/students/manage/unenrolled"
+      routerLinkActive="active"
+      class="sm-tab"
+    >
+      <span class="sm-tab-ico" aria-hidden="true">🧒</span>
+      Unenrolled
+    </a>
+    <a
+      *ngIf="showTransferTab()"
+      routerLink="/students/manage/transfer"
+      routerLinkActive="active"
+      class="sm-tab"
+    >
+      <span class="sm-tab-ico" aria-hidden="true">🔁</span>
+      Transfer
+    </a>
+    <a
+      *ngIf="showPromoteTab()"
+      routerLink="/students/manage/promote"
+      routerLinkActive="active"
+      class="sm-tab"
+    >
+      <span class="sm-tab-ico" aria-hidden="true">🎓</span>
+      Promote Students
+    </a>
+  </nav>
+
+  <div class="sm-outlet">
+    <router-outlet></router-outlet>
+  </div>
+
+  <div
+    class="sm-modal-backdrop"
+    *ngIf="showAddStudentModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="sm-add-student-title"
+    (click)="onAddModalBackdropClick($event)"
+  >
+    <div class="sm-modal-panel" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="sm-modal-close"
+        (click)="closeAddStudentModal()"
+        aria-label="Close add student dialog"
+      >
+        ×
+      </button>
+      <app-student-form [modalMode]="true" (dismissAddModal)="closeAddStudentModal()"></app-student-form>
+    </div>
+  </div>
+</div>

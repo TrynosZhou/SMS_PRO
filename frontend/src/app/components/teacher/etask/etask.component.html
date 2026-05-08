@@ -1,0 +1,266 @@
+<div class="etask-page etask-modern">
+  <!-- Hero -->
+  <section class="et-hero" aria-labelledby="et-hero-title">
+    <div class="et-hero-bg" aria-hidden="true"></div>
+    <div class="et-hero-inner">
+      <p class="et-kicker">E-learning</p>
+      <h1 id="et-hero-title" class="et-title">
+        <span class="et-title-icon" aria-hidden="true">📝</span>
+        Create task
+      </h1>
+      <p class="et-lead">
+        Post an <strong>assignment</strong>, <strong>test</strong>, or <strong>notes</strong>, add instructions and an optional file, and deliver it to every student in the class you choose.
+      </p>
+      <div class="et-hero-actions">
+        <a routerLink="/teacher/elearning-manage/submissions" class="et-btn et-btn-secondary">
+          <span aria-hidden="true">📥</span> View submissions
+        </a>
+        <button type="button" class="et-btn et-btn-ghost" (click)="loadTasks()" [disabled]="loadingList">
+          <span aria-hidden="true">🔄</span> Refresh list
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <div class="alert alert-error" *ngIf="error" role="alert">{{ error }}</div>
+  <div class="alert alert-success" *ngIf="success" role="status">{{ success }}</div>
+
+  <!-- Stats (when data loaded and has tasks) -->
+  <div class="et-stats" *ngIf="!loadingList && totalTaskCount > 0">
+    <div class="et-stat">
+      <span class="et-stat-icon" aria-hidden="true">📋</span>
+      <div>
+        <span class="et-stat-value">{{ totalTaskCount }}</span>
+        <span class="et-stat-label">Total sent</span>
+      </div>
+    </div>
+    <div class="et-stat">
+      <span class="et-stat-icon" aria-hidden="true">📘</span>
+      <div>
+        <span class="et-stat-value">{{ assignmentCount }}</span>
+        <span class="et-stat-label">Assignments</span>
+      </div>
+    </div>
+    <div class="et-stat">
+      <span class="et-stat-icon" aria-hidden="true">📄</span>
+      <div>
+        <span class="et-stat-value">{{ testCount }}</span>
+        <span class="et-stat-label">Tests</span>
+      </div>
+    </div>
+    <div class="et-stat">
+      <span class="et-stat-icon" aria-hidden="true">📝</span>
+      <div>
+        <span class="et-stat-value">{{ notesCount }}</span>
+        <span class="et-stat-label">Notes</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="etask-layout">
+    <!-- Form column -->
+    <section class="etask-card et-form-card">
+      <div class="et-card-head">
+        <h2 class="et-card-title">New task</h2>
+        <p class="et-card-desc">Students in the selected class will see this under <strong>E-learning Services</strong>.</p>
+      </div>
+
+      <!-- Skeleton form -->
+      <div class="et-form-skeleton" *ngIf="loadingClasses" aria-busy="true">
+        <div class="et-sk-line sk"></div>
+        <div class="et-sk-line sk short"></div>
+        <div class="et-sk-line sk"></div>
+        <div class="et-sk-line sk tall"></div>
+        <div class="et-sk-line sk"></div>
+        <div class="et-sk-btn sk"></div>
+      </div>
+
+      <form (ngSubmit)="submit()" *ngIf="!loadingClasses">
+        <div class="et-field">
+          <label for="title">Title <span class="req">*</span></label>
+          <input
+            id="title"
+            name="title"
+            [(ngModel)]="title"
+            class="et-input"
+            placeholder="e.g. Chapter 5 homework"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="et-field">
+          <span class="et-label" id="type-label">Type</span>
+          <div class="et-segment" role="group" aria-labelledby="type-label">
+            <button
+              type="button"
+              class="et-seg-btn"
+              [class.active]="taskType === 'assignment'"
+              [attr.aria-pressed]="taskType === 'assignment'"
+              (click)="setTaskType('assignment')"
+            >
+              <span aria-hidden="true">📘</span> Assignment
+            </button>
+            <button
+              type="button"
+              class="et-seg-btn"
+              [class.active]="taskType === 'test'"
+              [attr.aria-pressed]="taskType === 'test'"
+              (click)="setTaskType('test')"
+            >
+              <span aria-hidden="true">📄</span> Test
+            </button>
+            <button
+              type="button"
+              class="et-seg-btn"
+              [class.active]="taskType === 'notes'"
+              [attr.aria-pressed]="taskType === 'notes'"
+              (click)="setTaskType('notes')"
+            >
+              <span aria-hidden="true">📝</span> Notes
+            </button>
+          </div>
+        </div>
+
+        <div class="et-field">
+          <label for="classId">Class <span class="req">*</span></label>
+          <select id="classId" name="classId" [(ngModel)]="classId" class="et-input et-select" [disabled]="classes.length === 0">
+            <option value="">— Select class —</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+          <p class="et-hint et-hint-warn" *ngIf="classes.length === 0">No classes assigned. Ask an admin to assign classes to your account.</p>
+        </div>
+
+        <div class="et-field">
+          <label for="description">Instructions / description</label>
+          <textarea
+            id="description"
+            name="description"
+            [(ngModel)]="description"
+            class="et-input et-textarea"
+            rows="4"
+            placeholder="What should students do? Add links or page numbers if helpful."
+          ></textarea>
+        </div>
+
+        <div class="et-field">
+          <label for="dueDate">Due date</label>
+          <input id="dueDate" name="dueDate" type="date" [(ngModel)]="dueDate" class="et-input" />
+        </div>
+
+        <div class="et-field">
+          <span class="et-label" id="file-label">Attachment <span class="et-opt">(optional)</span></span>
+          <div class="et-file-zone">
+            <input
+              #attachmentInput
+              id="file"
+              type="file"
+              (change)="onFileChange($event)"
+              class="et-file-input"
+              aria-labelledby="file-label"
+            />
+            <label for="file" class="et-file-label">
+              <span class="et-file-icon" aria-hidden="true">📎</span>
+              <span class="et-file-text" *ngIf="!attachmentName">Click to choose a file</span>
+              <span class="et-file-name" *ngIf="attachmentName">{{ attachmentName }}</span>
+            </label>
+            <button type="button" class="et-file-clear" *ngIf="attachmentName" (click)="clearAttachment()">Remove</button>
+          </div>
+          <p class="et-hint">PDF, Word, Excel, images, ZIP, or text — max 15 MB.</p>
+        </div>
+
+        <button type="submit" class="et-submit" [disabled]="loadingSubmit || classes.length === 0">
+          <span *ngIf="!loadingSubmit">Send to class</span>
+          <span *ngIf="loadingSubmit">Sending…</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- List column -->
+    <section class="etask-card et-list-card">
+      <div class="et-card-head et-list-head">
+        <div>
+          <h2 class="et-card-title">Tasks you sent</h2>
+          <p class="et-card-desc">Most recent first. Open attachments in a new tab.</p>
+        </div>
+      </div>
+
+      <div class="et-list-toolbar" *ngIf="!loadingList && recentTasks.length">
+        <label class="et-sr-only" for="et-list-search">Search tasks</label>
+        <div class="et-search-wrap">
+          <span class="et-search-icon" aria-hidden="true">🔍</span>
+          <input
+            id="et-list-search"
+            type="search"
+            class="et-search"
+            placeholder="Search by title or class…"
+            [(ngModel)]="listSearch"
+          />
+        </div>
+        <p class="et-list-count">Showing <strong>{{ filteredTasks.length }}</strong> of {{ totalTaskCount }}</p>
+      </div>
+
+      <div class="et-list-skeleton" *ngIf="loadingList">
+        <div class="et-task-card sk-card" *ngFor="let _ of [1,2,3,4]">
+          <div class="sk sk-line"></div>
+          <div class="sk sk-meta"></div>
+        </div>
+      </div>
+
+      <ul class="et-task-list" *ngIf="!loadingList && filteredTasks.length">
+        <li *ngFor="let t of filteredTasks; trackBy: trackByTaskId" class="et-task-card">
+          <div class="et-task-top">
+            <span class="et-task-title">{{ t.title }}</span>
+            <span
+              class="et-badge"
+              [class.et-badge-test]="t.taskType === 'test'"
+              [class.et-badge-notes]="t.taskType === 'notes'"
+            >
+              {{ t.taskType === 'test' ? 'Test' : t.taskType === 'notes' ? 'Notes' : 'Assignment' }}
+            </span>
+          </div>
+          <div class="et-task-meta">
+            <span class="et-meta-pill" *ngIf="t.classEntity?.name">
+              <span aria-hidden="true">🏫</span> {{ t.classEntity?.name }}
+            </span>
+            <span class="et-meta-pill">
+              <span aria-hidden="true">📅</span> Sent {{ t.sentAt | date:'medium' }}
+            </span>
+            <span class="et-meta-pill et-due" *ngIf="t.dueDate">
+              <span aria-hidden="true">⏰</span> Due {{ t.dueDate | date:'mediumDate' }}
+            </span>
+          </div>
+          <div class="et-task-actions">
+            <a
+              *ngIf="attachmentLink(t.attachmentUrl) as link"
+              [href]="link"
+              target="_blank"
+              rel="noopener"
+              class="et-open-attach"
+            >
+              <span aria-hidden="true">↗</span> View attachment
+            </a>
+            <button
+              type="button"
+              class="et-delete-task"
+              (click)="deleteTask(t.id)"
+              [disabled]="deletingTaskId === t.id"
+              title="Delete this task"
+            >
+              <span aria-hidden="true">🗑️</span>
+              {{ deletingTaskId === t.id ? 'Deleting…' : 'Delete' }}
+            </button>
+          </div>
+        </li>
+      </ul>
+
+      <p class="et-empty" *ngIf="!loadingList && recentTasks.length && !filteredTasks.length">
+        No tasks match your search. <button type="button" class="et-link-btn" (click)="listSearch = ''">Clear search</button>
+      </p>
+
+      <p class="et-empty" *ngIf="!loadingList && !recentTasks.length">
+        <span class="et-empty-icon" aria-hidden="true">✨</span>
+        No tasks yet. Create one using the form — it will show up here.
+      </p>
+    </section>
+  </div>
+</div>

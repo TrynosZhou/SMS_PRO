@@ -1,0 +1,161 @@
+<div class="container user-log-wrapper">
+  <div class="card user-log-card">
+    <div class="card-header">
+      <h2>
+        <span class="section-icon">🧾</span>
+        Activity Log
+      </h2>
+      <p class="section-description">History of admin/accountant/superadmin logins and menus accessed.</p>
+    </div>
+
+    <div class="alert alert-error" *ngIf="error" style="margin-bottom: 15px;">
+      <span class="alert-icon">✕</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar" *ngIf="!loading">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>From</label>
+          <input type="date" [(ngModel)]="fromDate" (change)="onFilterChange()" />
+        </div>
+        <div class="filter-group">
+          <label>To</label>
+          <input type="date" [(ngModel)]="toDate" (change)="onFilterChange()" />
+        </div>
+        <div class="filter-group filter-search">
+          <label>Search</label>
+          <input
+            type="text"
+            placeholder="Username or menu path..."
+            [(ngModel)]="searchQuery"
+            (input)="onFilterChange()"
+          />
+        </div>
+        <div class="filter-group">
+          <label>Role</label>
+          <select [(ngModel)]="roleFilter" (change)="onFilterChange()">
+            <option value="all">All</option>
+            <option value="ADMIN">Admin</option>
+            <option value="ACCOUNTANT">Accountant</option>
+            <option value="SUPERADMIN">Super Admin</option>
+          </select>
+        </div>
+        <div class="filter-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="activeOnly" (change)="onFilterChange()" />
+            Active sessions only
+          </label>
+        </div>
+        <div class="filter-group filter-actions">
+          <button type="button" class="btn btn-secondary" (click)="clearFilters()" [disabled]="loading">
+            Clear
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div *ngIf="loading" class="loading-skeleton">
+      <div class="skeleton-row" *ngFor="let _ of [0,1,2,3,4]">
+        <div class="skel skel-username"></div>
+        <div class="skel skel-date"></div>
+        <div class="skel skel-time"></div>
+        <div class="skel skel-time"></div>
+        <div class="skel skel-menu"></div>
+      </div>
+    </div>
+
+    <div *ngIf="!loading">
+      <div *ngIf="!logs || logs.length === 0" class="empty-state">
+        No activity logs found for the selected filters.
+      </div>
+
+      <div class="table-responsive" *ngIf="logs && logs.length > 0">
+        <div class="table-topbar">
+          <div class="page-summary">{{ pageSummary() }}</div>
+          <div class="page-size">
+            <label>Rows</label>
+            <select [(ngModel)]="limit" (change)="onLimitChange()">
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="20">20</option>
+              <option [ngValue]="50">50</option>
+              <option [ngValue]="100">100</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="user-log-table">
+          <thead>
+            <tr>
+              <th (click)="toggleSort('username')" class="sortable">
+                Username
+                <span class="sort-indicator" *ngIf="sortBy === 'username'">{{ sortDir === 'ASC' ? '▲' : '▼' }}</span>
+              </th>
+              <th (click)="toggleSort('role')" class="sortable">
+                Role
+                <span class="sort-indicator" *ngIf="sortBy === 'role'">{{ sortDir === 'ASC' ? '▲' : '▼' }}</span>
+              </th>
+              <th (click)="toggleSort('loginAt')" class="sortable">
+                Login
+                <span class="sort-indicator" *ngIf="sortBy === 'loginAt'">{{ sortDir === 'ASC' ? '▲' : '▼' }}</span>
+              </th>
+              <th (click)="toggleSort('logoutAt')" class="sortable">
+                Logout
+                <span class="sort-indicator" *ngIf="sortBy === 'logoutAt'">{{ sortDir === 'ASC' ? '▲' : '▼' }}</span>
+              </th>
+              <th (click)="toggleSort('lastMenuAccessed')" class="sortable">
+                Menu Accessed
+                <span class="sort-indicator" *ngIf="sortBy === 'lastMenuAccessed'">{{ sortDir === 'ASC' ? '▲' : '▼' }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let log of logs">
+              <td class="nowrap">{{ log.username }}</td>
+              <td>
+                <span [ngClass]="formatRole(log.role).cls" class="role-badge">
+                  {{ formatRole(log.role).label }}
+                </span>
+              </td>
+              <td>
+                <div class="cell-stack">
+                  <div class="muted">{{ formatDate(log.loginAt) }}</div>
+                  <div class="mono">{{ formatTime(log.loginAt) }}</div>
+                </div>
+              </td>
+              <td>
+                <div class="cell-stack">
+                  <div class="mono">{{ log.logoutAt ? formatTime(log.logoutAt) : '—' }}</div>
+                </div>
+              </td>
+              <td>
+                <div class="menu-cell" *ngIf="log.lastMenuAccessed; else noMenu">
+                  <div class="menu-last mono">{{ log.lastMenuAccessed }}</div>
+                  <div class="menu-more">
+                    <details *ngIf="getMenusCount(log) > 1">
+                      <summary>View all ({{ getMenusCount(log) }})</summary>
+                      <pre class="menu-pre">{{ log.menusAccessed }}</pre>
+                    </details>
+                  </div>
+                  <div class="menu-count" *ngIf="getMenusCount(log) <= 1">
+                    {{ getMenusCount(log) }} item
+                  </div>
+                </div>
+                <ng-template #noMenu>—</ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="pagination">
+          <button type="button" class="btn btn-secondary" (click)="prevPage()" [disabled]="page <= 1">Prev</button>
+          <div class="pagination-meta">Page {{ page }} / {{ totalPages }}</div>
+          <button type="button" class="btn btn-secondary" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

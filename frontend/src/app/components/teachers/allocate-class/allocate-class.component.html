@@ -1,0 +1,136 @@
+<div class="allocate-class-container">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <span class="icon">🏫</span>
+        Allocate Classes
+      </h1>
+      <p class="subtitle">Assign classes to the selected teacher and review workload</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-secondary" (click)="goBack()">← Back to Teachers</button>
+    </div>
+  </div>
+
+  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+  <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+  <div class="card" *ngIf="teacher">
+    <div class="card-header">
+      <h2>
+        <span class="section-icon">👨‍🏫</span>
+        {{ teacher.firstName }} {{ teacher.lastName }}
+      </h2>
+    </div>
+
+    <div class="card-body">
+      <div class="load-summary" *ngIf="teacherLoad">
+        <div class="load-card">
+          <div class="load-icon">🏫</div>
+          <div class="load-info">
+            <div class="load-value">{{ teacherLoad.load.totalClasses }}</div>
+            <div class="load-label">Classes</div>
+          </div>
+        </div>
+        <div class="load-card">
+          <div class="load-icon">📚</div>
+          <div class="load-info">
+            <div class="load-value">{{ teacherLoad.load.totalSubjects }}</div>
+            <div class="load-label">Subjects</div>
+          </div>
+        </div>
+        <div class="load-card">
+          <div class="load-icon">👥</div>
+          <div class="load-info">
+            <div class="load-value">{{ teacherLoad.load.totalStudents }}</div>
+            <div class="load-label">Students</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="current-classes-section" *ngIf="teacherClasses.length > 0">
+        <h3>Currently Assigned Classes</h3>
+        <p class="section-hint">Subjects shown are those this teacher is assigned to teach <em>and</em> that the class offers.</p>
+        <div class="classes-list classes-list-detailed">
+          <div *ngFor="let cls of assignedClassesRows" class="class-card assigned">
+            <div class="class-card-top">
+              <span class="class-name">{{ cls.name }}</span>
+              <span class="class-form" *ngIf="cls.form">{{ cls.form }}</span>
+              <span class="student-count" *ngIf="cls.studentCount != null && cls.studentCount !== undefined">
+                {{ cls.studentCount }} students
+              </span>
+            </div>
+            <div class="class-subjects-row" *ngIf="cls.subjects?.length">
+              <span class="subjects-label">Teaching:</span>
+              <span *ngFor="let s of cls.subjects" class="subject-chip">{{ subjectChipLabel(s) }}</span>
+            </div>
+            <div class="class-subjects-row none" *ngIf="!cls.subjects?.length">
+              <span class="subjects-none">No subject overlap yet — assign subjects to this teacher and/or add these subjects to the class.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="class-selection-section">
+        <h3>Select Classes to Assign</h3>
+        <div class="search-box">
+          <input
+            type="text"
+            [(ngModel)]="classSearchQuery"
+            placeholder="Search classes..."
+            class="search-input"
+          />
+          <span class="search-icon">🔍</span>
+        </div>
+
+        <div class="checkbox-group">
+          <div
+            *ngFor="let cls of getFilteredClasses()"
+            class="checkbox-item"
+            [class.selected]="isClassSelected(cls.id)"
+          >
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                [checked]="isClassSelected(cls.id)"
+                (change)="toggleClass(cls.id)"
+                class="checkbox-input"
+              />
+              <span class="checkbox-custom"></span>
+              <span class="checkbox-text">
+                {{ cls.name }}<span *ngIf="cls.form"> ({{ cls.form }})</span>
+              </span>
+            </label>
+            <div class="checkbox-subjects-line" *ngIf="formatSubjectsForAllocation(cls)">
+              {{ formatSubjectsForAllocation(cls) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="selection-summary">
+          <span class="summary-text">
+            <strong>{{ selectedClassIds.length }}</strong>
+            class{{ selectedClassIds.length !== 1 ? 'es' : '' }} selected
+          </span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary" (click)="saveAssignment()" [disabled]="submitting">
+          <span *ngIf="!submitting">💾</span>
+          <span *ngIf="submitting" class="spinner"></span>
+          {{ submitting ? 'Saving...' : 'Save Allocation' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card empty-state-card" *ngIf="!teacher && !error">
+    <div class="empty-state">
+      <div class="empty-icon">👆</div>
+      <h3>Select a Teacher</h3>
+      <p>Open this page from the Teachers list using the Assign Class icon.</p>
+    </div>
+  </div>
+</div>
+

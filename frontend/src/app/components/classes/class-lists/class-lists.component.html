@@ -1,0 +1,249 @@
+<div class="class-lists-container">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-logo-section" *ngIf="schoolLogo">
+        <img [src]="schoolLogo" alt="School Logo" class="school-logo" (error)="schoolLogo = null" />
+      </div>
+      <div class="header-title">
+        <h1>{{ schoolName }}</h1>
+        <p class="subtitle">📋 Class Lists - View and manage student lists by class and term</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div class="alert alert-success" *ngIf="success" (click)="success = ''">
+    <span class="alert-icon">✅</span>
+    <span>{{ success }}</span>
+    <button class="alert-close" aria-label="Close">×</button>
+  </div>
+  <div class="alert alert-error" *ngIf="error" (click)="error = ''">
+    <span class="alert-icon">⚠️</span>
+    <span>{{ error }}</span>
+    <button class="alert-close" aria-label="Close">×</button>
+  </div>
+
+  <!-- Selection Section -->
+  <div class="selection-section">
+    <div class="selection-card">
+      <h2 class="selection-title">Select Class and Term</h2>
+      <div class="selection-fields">
+        <div class="field-group">
+          <label for="classSelect" class="field-label">
+            <span class="label-icon">🏫</span>
+            Class
+          </label>
+          <select 
+            id="classSelect"
+            class="field-select" 
+            [(ngModel)]="selectedClassId" 
+            (change)="onClassChange()"
+            [disabled]="loading">
+            <option value="">-- Select Class --</option>
+            <option *ngFor="let classItem of filteredClasses" [value]="classItem.id">
+              {{ classItem.name }} ({{ classItem.form }})
+            </option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="termSelect" class="field-label">
+            <span class="label-icon">📅</span>
+            Term
+          </label>
+          <select 
+            id="termSelect"
+            class="field-select" 
+            [(ngModel)]="selectedTerm" 
+            (change)="onTermChange()"
+            [disabled]="loading">
+            <option value="">-- Select Term --</option>
+            <option *ngFor="let term of availableTerms" [value]="term">
+              {{ term }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div class="loading-container" *ngIf="loading">
+    <div class="loading-spinner"></div>
+    <p>Loading classes...</p>
+  </div>
+
+  <!-- Students List Section -->
+  <div class="students-section" *ngIf="!loading && (students.length > 0 || loadingStudents)">
+    <div class="students-header">
+      <div class="students-title">
+        <h2 *ngIf="selectedClassId && selectedTerm">
+          {{ getSelectedClassName() }} - {{ selectedTerm }}
+        </h2>
+        <p class="students-count" *ngIf="students.length > 0">
+          Showing {{ paginatedStudents.length }} of {{ filteredStudents.length }} student(s)
+          <span *ngIf="filteredStudents.length !== students.length"> (filtered from {{ students.length }} total)</span>
+        </p>
+      </div>
+      <div class="students-actions" *ngIf="students.length > 0">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            class="search-input" 
+            placeholder="Search students..."
+            [(ngModel)]="searchQuery"
+            (input)="filterStudents()">
+          <button class="search-clear" *ngIf="searchQuery" (click)="clearSearch()" aria-label="Clear search">×</button>
+        </div>
+        <button class="btn btn-secondary btn-export" (click)="exportToCSV()" *ngIf="filteredStudents.length > 0">
+          <span class="btn-icon">📄</span>
+          <span>Export CSV</span>
+        </button>
+        <button class="btn btn-primary btn-export" (click)="downloadPDF()" *ngIf="selectedClassId && selectedTerm" [disabled]="loadingStudents">
+          <span class="btn-icon">📥</span>
+          <span>{{ loadingStudents ? 'Downloading...' : 'Download PDF' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading Students Indicator -->
+    <div class="loading-container" *ngIf="loadingStudents">
+      <div class="loading-spinner"></div>
+      <p>Loading students...</p>
+    </div>
+
+    <!-- Students Table -->
+    <div class="students-table-container" *ngIf="!loadingStudents">
+      <table class="students-table" *ngIf="filteredStudents.length > 0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student Number</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Gender</th>
+            <th>Date of Birth</th>
+            <th>Student Type</th>
+            <th>Contact Number</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let student of paginatedStudents; let i = index">
+            <td>{{ (pagination.page - 1) * pagination.limit + i + 1 }}</td>
+              <td class="student-number">{{ student.studentNumber || 'N/A' }}</td>
+              <td>
+                <span class="editable-cell" (click)="openEditModal(student, 'firstName')">
+                  {{ student.firstName || 'N/A' }}
+                </span>
+              </td>
+              <td>
+                <span class="editable-cell" (click)="openEditModal(student, 'lastName')">
+                  {{ student.lastName || 'N/A' }}
+                </span>
+              </td>
+              <td>
+                <span class="editable-cell" (click)="openEditModal(student, 'gender')">
+                  {{ student.gender || 'N/A' }}
+                </span>
+              </td>
+              <td>
+                <span class="editable-cell" (click)="openEditModal(student, 'dateOfBirth')">
+                  {{ formatDate(student.dateOfBirth) }}
+                </span>
+              </td>
+              <td>
+                <span class="editable-cell" (click)="openEditModal(student, 'studentType')">
+                  {{ student.studentType || 'N/A' }}
+                </span>
+              </td>
+              <td>
+                <span class="editable-cell" (click)="openEditModal(student, 'contactNumber')">
+                  {{ student.contactNumber || student.phoneNumber || 'N/A' }}
+                </span>
+              </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="no-results" *ngIf="filteredStudents.length === 0 && students.length > 0">
+        <span class="no-results-icon">🔍</span>
+        <p>No students found matching your search criteria.</p>
+      </div>
+
+      <div class="no-results" *ngIf="filteredStudents.length === 0 && students.length === 0 && selectedClassId && selectedTerm && !loadingStudents">
+        <span class="no-results-icon">📋</span>
+        <p>No students found in this class for the selected term.</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-bar" *ngIf="!loadingStudents && filteredStudents.length > 0 && (pagination.totalPages > 1 || pagination.total > pagination.limit)">
+      <button class="btn btn-secondary" (click)="changePage(pagination.page - 1)" [disabled]="pagination.page === 1">
+        ‹ Previous
+      </button>
+      <span class="page-info">
+        Page {{ pagination.page }} of {{ pagination.totalPages }} • {{ pagination.total }} student{{ pagination.total !== 1 ? 's' : '' }}
+      </span>
+      <button class="btn btn-secondary" (click)="changePage(pagination.page + 1)" [disabled]="pagination.page === pagination.totalPages">
+        Next ›
+      </button>
+      <div class="page-size-selector">
+        <label for="studentPageSize">Rows per page:</label>
+        <select id="studentPageSize" (change)="changePageSize($event.target.value)" [value]="pagination.limit">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && students.length === 0 && !loadingStudents && (!selectedClassId || !selectedTerm)">
+    <span class="empty-icon">📋</span>
+    <h3>Select Class and Term</h3>
+    <p>Please select a class and term above to view the class list.</p>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="edit-modal-overlay" *ngIf="showEditModal">
+  <div class="edit-modal">
+    <div class="edit-modal-header">
+      <h3>Edit {{ editingFieldLabel }}</h3>
+      <button type="button" class="modal-close" (click)="closeEditModal()" aria-label="Close">
+        ×
+      </button>
+    </div>
+
+    <div class="edit-modal-body">
+      <div class="alert alert-error" *ngIf="editError">
+        {{ editError }}
+      </div>
+
+      <div *ngIf="editInputType === 'select'">
+        <select class="form-control" [(ngModel)]="editValue" [ngModelOptions]="{ standalone: true }" name="editValue">
+          <option *ngFor="let opt of editSelectOptions" [value]="opt">{{ opt }}</option>
+        </select>
+      </div>
+
+      <div *ngIf="editInputType === 'date'">
+        <input type="date" class="form-control" [(ngModel)]="editValue" [ngModelOptions]="{ standalone: true }" name="editValue" />
+      </div>
+
+      <div *ngIf="editInputType === 'text'">
+        <input type="text" class="form-control" [(ngModel)]="editValue" [ngModelOptions]="{ standalone: true }" name="editValue" />
+      </div>
+    </div>
+
+    <div class="edit-modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeEditModal()" [disabled]="editSaving">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-primary" (click)="saveEdit()" [disabled]="editSaving">
+        {{ editSaving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+</div>
+

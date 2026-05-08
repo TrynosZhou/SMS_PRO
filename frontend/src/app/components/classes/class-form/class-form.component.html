@@ -1,0 +1,371 @@
+<div class="container">
+  <div class="class-form-wrapper">
+    <!-- Header Section -->
+    <div class="form-header">
+      <div class="header-content">
+        <h1>
+          <span class="icon">📚</span>
+          {{ isEdit ? 'Edit Class' : 'Create New Class' }}
+        </h1>
+        <p class="subtitle">{{ isEdit ? 'Update class information and settings' : 'Add a new class to the system' }}</p>
+      </div>
+      <button type="button" class="btn btn-icon" (click)="goToClassesList()" title="Back to Classes">
+        ← Back
+      </button>
+    </div>
+
+    <!-- Alert Messages -->
+    <div class="alert alert-success" *ngIf="success" [@fadeInOut]>
+      <span class="alert-icon">✓</span>
+      <span>{{ success }}</span>
+    </div>
+    <div class="alert alert-error" *ngIf="error" [@fadeInOut]>
+      <span class="alert-icon">✕</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Form Container -->
+    <div class="form-container">
+      <form (ngSubmit)="onSubmit()" #classForm="ngForm">
+        <!-- Basic Information Section -->
+        <div class="form-section">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">📋</span>
+              Basic Information
+            </h2>
+            <p class="section-description">Enter the essential details for this class</p>
+          </div>
+
+          <div class="form-grid">
+            <!-- Class Name -->
+            <div class="form-group" [class.has-error]="isFieldInvalid('name')">
+              <label for="name">
+                Class Name <span class="required">*</span>
+                <span class="field-hint">e.g., Form 1A, Grade 7B</span>
+              </label>
+              <div class="input-wrapper">
+                <input 
+                  type="text" 
+                  id="name"
+                  [(ngModel)]="classItem.name" 
+                  name="name" 
+                  required
+                  [class.invalid]="isFieldInvalid('name')"
+                  placeholder="Enter class name"
+                  (blur)="validateField('name')"
+                  (input)="onFieldChange('name')"
+                  maxlength="50"
+                  autocomplete="off">
+                <span class="char-counter" *ngIf="classItem.name">{{ classItem.name.length }}/50</span>
+              </div>
+              <div class="field-error" *ngIf="isFieldInvalid('name')">
+                {{ getFieldError('name') }}
+              </div>
+            </div>
+
+            <!-- Class level -->
+            <div class="form-group" [class.has-error]="isFieldInvalid('form')">
+              <label for="form">
+                Class level <span class="required">*</span>
+                <span class="field-hint">e.g., Form 1, Form 2, Grade 7</span>
+              </label>
+              <div class="input-wrapper">
+              <input 
+                type="text" 
+                id="form"
+                [(ngModel)]="classItem.form" 
+                name="form" 
+                required
+                [class.invalid]="isFieldInvalid('form')"
+                [attr.list]="formSuggestionsId"
+                placeholder="Enter form level"
+                (blur)="validateField('form')"
+                (input)="onFieldChange('form')"
+                maxlength="30"
+                autocomplete="off">
+                <datalist [id]="formSuggestionsId">
+                  <option *ngFor="let suggestion of formSuggestions" [value]="suggestion">
+                </datalist>
+                <span class="char-counter" *ngIf="classItem.form">{{ classItem.form.length }}/30</span>
+              </div>
+              <div class="field-error" *ngIf="isFieldInvalid('form')">
+                {{ getFieldError('form') }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group full-width" [class.has-error]="isFieldInvalid('description')">
+            <label for="description">
+              Description
+              <span class="field-hint">Optional: Add additional information about this class</span>
+            </label>
+            <div class="textarea-wrapper">
+              <textarea 
+                id="description"
+                [(ngModel)]="classItem.description" 
+                name="description" 
+                rows="4"
+                [class.invalid]="isFieldInvalid('description')"
+                placeholder="Enter class description (optional)"
+                (blur)="validateField('description')"
+                (input)="onFieldChange('description')"
+                maxlength="500"></textarea>
+              <span class="char-counter" *ngIf="classItem.description">{{ classItem.description.length }}/500</span>
+            </div>
+            <div class="field-error" *ngIf="isFieldInvalid('description')">
+              {{ getFieldError('description') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Settings Section -->
+        <div class="form-section" *ngIf="isEdit">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">⚙️</span>
+              Settings
+            </h2>
+            <p class="section-description">Manage class status and availability</p>
+          </div>
+
+          <div class="form-group full-width">
+            <div class="toggle-switch">
+              <input 
+                type="checkbox" 
+                id="isActive"
+                [(ngModel)]="classItem.isActive" 
+                name="isActive"
+                class="toggle-input">
+              <label for="isActive" class="toggle-label">
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">
+                  <strong>Active Class</strong>
+                  <small>Inactive classes won't appear in student assignment options</small>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teachers Assignment Section -->
+        <div class="form-section">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">👨‍🏫</span>
+              Assign Teachers
+            </h2>
+            <p class="section-description">Select teachers to assign to this class (optional)</p>
+          </div>
+
+          <div class="form-group full-width" *ngIf="loadingTeachers">
+            <div class="loading-state">
+              <span class="spinner"></span>
+              <span>Loading teachers...</span>
+            </div>
+          </div>
+
+          <div class="form-group full-width" *ngIf="!loadingTeachers && teachers.length > 0">
+            <div class="multi-select-wrapper">
+              <div class="search-box">
+                <input 
+                  type="text" 
+                  [(ngModel)]="teacherSearchQuery"
+                  [ngModelOptions]="{standalone: true}"
+                  placeholder="Search teachers..."
+                  class="search-input"
+                  (input)="filterTeachers()">
+              </div>
+              <div class="select-list">
+                <div 
+                  *ngFor="let teacher of filteredTeachers" 
+                  class="select-item"
+                  [class.selected]="isTeacherSelected(teacher.id)"
+                  (click)="toggleTeacher(teacher.id)">
+                  <input 
+                    type="checkbox" 
+                    [checked]="isTeacherSelected(teacher.id)"
+                    [id]="'teacher-' + teacher.id"
+                    (change)="toggleTeacher(teacher.id)">
+                  <label [for]="'teacher-' + teacher.id">
+                    <strong>{{ teacher.firstName }} {{ teacher.lastName }}</strong>
+                    <small>{{ teacher.teacherId }}</small>
+                  </label>
+                </div>
+                <div *ngIf="filteredTeachers.length === 0" class="empty-state">
+                  No teachers found matching your search
+                </div>
+              </div>
+              <div class="selected-count" *ngIf="selectedTeacherIds.length > 0">
+                {{ selectedTeacherIds.length }} teacher(s) selected
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full-width" *ngIf="!loadingTeachers && teachers.length === 0">
+            <div class="empty-state-card">
+              <span class="empty-icon">👨‍🏫</span>
+              <p>No teachers available. Please add teachers first.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subjects Assignment Section -->
+        <div class="form-section">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">📖</span>
+              Assign Subjects
+            </h2>
+            <p class="section-description">Select subjects to assign to this class (optional)</p>
+          </div>
+
+          <div class="form-group full-width" *ngIf="loadingSubjects">
+            <div class="loading-state">
+              <span class="spinner"></span>
+              <span>Loading subjects...</span>
+            </div>
+      </div>
+
+          <div class="form-group full-width" *ngIf="!loadingSubjects && subjects.length > 0">
+            <div class="multi-select-wrapper">
+              <div class="search-box">
+                <input 
+                  type="text" 
+                  [(ngModel)]="subjectSearchQuery"
+                  [ngModelOptions]="{standalone: true}"
+                  placeholder="Search subjects..."
+                  class="search-input"
+                  (input)="filterSubjects()">
+      </div>
+              <div class="select-list">
+                <div 
+                  *ngFor="let subject of filteredSubjects" 
+                  class="select-item"
+                  [class.selected]="isSubjectSelected(subject.id)"
+                  (click)="toggleSubject(subject.id)">
+                  <input 
+                    type="checkbox" 
+                    [checked]="isSubjectSelected(subject.id)"
+                    [id]="'subject-' + subject.id"
+                    (change)="toggleSubject(subject.id)">
+                  <label [for]="'subject-' + subject.id">
+                    <strong>{{ subject.name }}</strong>
+                    <small>{{ subject.code }}</small>
+        </label>
+      </div>
+                <div *ngIf="filteredSubjects.length === 0" class="empty-state">
+                  No subjects found matching your search
+                </div>
+              </div>
+              <div class="selected-count" *ngIf="selectedSubjectIds.length > 0">
+                {{ selectedSubjectIds.length }} subject(s) selected
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full-width" *ngIf="!loadingSubjects && subjects.length === 0">
+            <div class="empty-state-card">
+              <span class="empty-icon">📖</span>
+              <p>No subjects available. Please add subjects first.</p>
+            </div>
+          </div>
+
+          <div class="form-group full-width home-teacher-field" *ngIf="loadingTeachers">
+            <div class="loading-state">
+              <span class="spinner"></span>
+              <span>Loading teachers for home teacher…</span>
+            </div>
+          </div>
+
+          <div class="form-group full-width home-teacher-field" *ngIf="!loadingTeachers && teachers.length > 0">
+            <label for="homeTeacherSelect">
+              Home Teacher
+              <span class="field-hint">Optional: choose from all registered teachers. They will be linked to this class if not already assigned.</span>
+            </label>
+            <select
+              id="homeTeacherSelect"
+              name="homeTeacherSelect"
+              class="form-control"
+              [(ngModel)]="selectedClassTeacherId"
+              (ngModelChange)="onHomeTeacherChange($event)"
+            >
+              <option value="">— None —</option>
+              <option *ngFor="let o of homeTeacherSelectOptions" [value]="o.id">{{ o.label }}</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width home-teacher-field" *ngIf="!loadingTeachers && teachers.length === 0">
+            <div class="empty-state-card">
+              <span class="empty-icon">🏠</span>
+              <p>No teachers available. Add teachers first to set a home teacher.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div class="form-section preview-section" *ngIf="classItem.name || classItem.form">
+          <div class="section-header">
+            <h2>
+              <span class="section-icon">👁️</span>
+              Preview
+            </h2>
+            <p class="section-description">Preview of your class information</p>
+          </div>
+          <div class="preview-card">
+            <div class="preview-item">
+              <span class="preview-label">Class Name:</span>
+              <span class="preview-value">{{ classItem.name || 'Not set' }}</span>
+            </div>
+            <div class="preview-item">
+              <span class="preview-label">Class level:</span>
+              <span class="preview-value">{{ classItem.form || 'Not set' }}</span>
+            </div>
+            <div class="preview-item" *ngIf="classItem.description">
+              <span class="preview-label">Description:</span>
+              <span class="preview-value">{{ classItem.description }}</span>
+            </div>
+            <div class="preview-item" *ngIf="isEdit">
+              <span class="preview-label">Status:</span>
+              <span class="preview-value" [class.active]="classItem.isActive" [class.inactive]="!classItem.isActive">
+                {{ classItem.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+            <div class="preview-item" *ngIf="selectedTeacherIds.length > 0">
+              <span class="preview-label">Teachers:</span>
+              <span class="preview-value">{{ selectedTeacherIds.length }} selected</span>
+            </div>
+            <div class="preview-item" *ngIf="selectedSubjectIds.length > 0">
+              <span class="preview-label">Subjects:</span>
+              <span class="preview-value">{{ selectedSubjectIds.length }} selected</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            (click)="goToClassesList()"
+            [disabled]="submitting">
+            ❌ Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="btn btn-primary btn-submit"
+            [disabled]="submitting || !isFormValid()">
+            <span *ngIf="!submitting">
+              {{ isEdit ? '💾 Update Class' : '➕ Create Class' }}
+            </span>
+            <span *ngIf="submitting" class="submit-loading">
+              <span class="spinner-small"></span>
+              {{ isEdit ? 'Updating...' : 'Creating...' }}
+            </span>
+          </button>
+        </div>
+    </form>
+    </div>
+  </div>
+</div>

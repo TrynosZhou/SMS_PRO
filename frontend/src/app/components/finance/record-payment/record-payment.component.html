@@ -1,0 +1,295 @@
+<div class="rp-page">
+  <header class="rp-hero">
+    <div class="rp-hero-copy">
+      <h1 class="rp-title">Record payment</h1>
+      <p class="rp-lead">
+        Find a student, confirm their balance, then post the payment against the latest invoice. Search by
+        <strong>student number</strong> or <strong>ID</strong>
+        <ng-container *ngIf="canSearchByName()">, or <strong>name</strong> (staff)</ng-container>.
+      </p>
+    </div>
+    <div class="rp-hero-meta">
+      <span class="rp-meta-label">Term (default)</span>
+      <span class="rp-meta-value">{{ currentTerm || '—' }}</span>
+      <span class="rp-meta-hint">Editable when recording; loaded from settings.</span>
+    </div>
+  </header>
+
+  <section class="rp-card rp-search-card" aria-label="Find student">
+    <label class="rp-label" for="studentId">Student lookup</label>
+    <div class="rp-input-row">
+      <span class="rp-input-icon" aria-hidden="true">🔍</span>
+      <input
+        type="search"
+        id="studentId"
+        [(ngModel)]="studentId"
+        placeholder="Student number, ID, or name…"
+        class="rp-input"
+        (keyup.enter)="getBalance()"
+        [disabled]="loading"
+        autocomplete="off"
+      />
+      <button type="button" class="rp-icon-btn" *ngIf="studentId && !loading" (click)="clear()" title="Clear all">
+        ✕
+      </button>
+    </div>
+    <p class="rp-hint" *ngIf="canSearchByName() && showStudentPicker && nameSearchResults.length > 1">
+      Multiple matches — pick one below. <kbd>Esc</kbd> to cancel.
+    </p>
+
+    <div class="rp-actions">
+      <button type="button" class="rp-btn rp-btn-primary" (click)="getBalance()" [disabled]="loading">
+        <span class="rp-spinner" *ngIf="loading" aria-hidden="true"></span>
+        {{ loading ? 'Loading…' : 'Get balance' }}
+      </button>
+      <button
+        type="button"
+        class="rp-btn rp-btn-ghost"
+        (click)="clear()"
+        [disabled]="!studentId && !studentData && !error && !success && !showStudentPicker && !nameSearchLoading"
+      >
+        Reset
+      </button>
+    </div>
+
+    <div
+      class="rp-picker"
+      *ngIf="canSearchByName() && showStudentPicker && nameSearchResults.length > 1 && !nameSearchLoading"
+    >
+      <div class="rp-picker-head">
+        <span class="rp-picker-title">Which student?</span>
+        <span class="rp-picker-sub">{{ nameSearchResults.length }} matches — select then continue.</span>
+      </div>
+      <ul class="rp-picker-list">
+        <li *ngFor="let s of nameSearchResults" class="rp-picker-item">
+          <label
+            class="rp-radio-card"
+            [class.rp-radio-selected]="nameSearchSelectedStudentNumber === studentPickKey(s)"
+          >
+            <input
+              type="radio"
+              name="rp-student-pick"
+              [value]="studentPickKey(s)"
+              [(ngModel)]="nameSearchSelectedStudentNumber"
+            />
+            <span class="rp-radio-body">
+              <span class="rp-radio-name">{{ s.firstName }} {{ s.lastName }}</span>
+              <span class="rp-radio-meta">#{{ s.studentNumber }}</span>
+            </span>
+          </label>
+        </li>
+      </ul>
+      <button
+        type="button"
+        class="rp-btn rp-btn-primary rp-btn-block"
+        (click)="useSelectedStudentFromNameSearch()"
+        [disabled]="!nameSearchSelectedStudentNumber"
+      >
+        Use selected student
+      </button>
+    </div>
+
+    <div class="rp-name-loading" *ngIf="nameSearchLoading">
+      <span class="rp-spinner rp-spinner-inline" aria-hidden="true"></span>
+ Searching directory…
+    </div>
+  </section>
+
+  <div class="rp-alert rp-alert-error" *ngIf="error" role="alert">
+    <span class="rp-alert-ico">!</span>
+    {{ error }}
+  </div>
+  <div class="rp-alert rp-alert-success" *ngIf="success" role="status">
+    <span class="rp-alert-ico rp-alert-ico-ok">✓</span>
+    {{ success }}
+  </div>
+
+  <div class="rp-card rp-skeleton-card" *ngIf="loading && !studentData" aria-busy="true">
+    <div class="rp-shimmer rp-sh-line wide"></div>
+    <div class="rp-shimmer rp-sh-line"></div>
+    <div class="rp-shimmer rp-sh-line short"></div>
+  </div>
+
+  <div class="rp-empty" *ngIf="!loading && !studentData && !error && !showStudentPicker">
+    <span class="rp-empty-icon" aria-hidden="true">💳</span>
+    <p class="rp-empty-title">Ready when you are</p>
+    <p class="rp-empty-text">Look up a student above to see balance and open the payment form.</p>
+  </div>
+
+  <div *ngIf="studentData" class="rp-results">
+    <div class="rp-student-card">
+      <h2 class="rp-section-title">Student</h2>
+      <div class="rp-balance-hero" [class.rp-balance-due]="getBalanceAmount() > 0.01" [class.rp-clear]="getBalanceAmount() <= 0.01">
+        <span class="rp-balance-label">Current balance</span>
+        <span class="rp-balance-num">{{ currencySymbol }} {{ formatCurrency(getBalanceAmount()) }}</span>
+        <span class="rp-balance-note" *ngIf="getBalanceAmount() <= 0.01">Nothing due on latest invoice — you can still record an overpayment as prepaid credit.</span>
+      </div>
+      <div class="rp-kv-grid">
+        <div class="rp-kv">
+          <span class="rp-k">Name</span>
+          <span class="rp-v">{{ studentData.fullName || '—' }}</span>
+        </div>
+        <div class="rp-kv">
+          <span class="rp-k">Student #</span>
+          <span class="rp-v">{{ studentData.studentNumber || '—' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rp-payment-card">
+      <h2 class="rp-section-title">Payment details</h2>
+      <form (ngSubmit)="recordPayment()" class="rp-form">
+        <div class="rp-form-grid">
+          <div class="rp-field">
+            <label class="rp-field-label" for="amount">Amount *</label>
+            <input
+              type="number"
+              id="amount"
+              [(ngModel)]="paymentForm.amount"
+              name="amount"
+              class="rp-control"
+              step="0.01"
+              min="0.01"
+              required
+            />
+            <span class="rp-field-hint">Defaults to outstanding balance</span>
+            <div class="rp-quick" *ngIf="getBalanceAmount() > 0">
+              <span class="rp-quick-label">Quick</span>
+              <button type="button" class="rp-pill" (click)="setQuickAmount(0.25)">25%</button>
+              <button type="button" class="rp-pill" (click)="setQuickAmount(0.5)">50%</button>
+              <button type="button" class="rp-pill" (click)="setQuickAmount(0.75)">75%</button>
+              <button type="button" class="rp-pill rp-pill-strong" (click)="setQuickAmount(1)">Full</button>
+            </div>
+          </div>
+          <div class="rp-field">
+            <label class="rp-field-label" for="term">Term *</label>
+            <input type="text" id="term" [(ngModel)]="paymentForm.term" name="term" class="rp-control" required />
+            <span class="rp-field-hint">From settings: {{ currentTerm }}</span>
+          </div>
+        </div>
+
+        <div class="rp-preview" *ngIf="studentData">
+          <div class="rp-preview-row">
+            <span class="rp-preview-label">After this payment</span>
+            <span
+              class="rp-preview-val"
+              [class.rp-text-warn]="getNewBalance() > 0"
+              [class.rp-text-neg]="getNewBalance() < 0"
+              [class.rp-text-ok]="getNewBalance() === 0"
+            >
+              {{ currencySymbol }} {{ formatCurrency(getAbsNewBalance()) }}
+              <span class="rp-preview-tag" *ngIf="getNewBalance() > 0">remaining</span>
+              <span class="rp-preview-tag" *ngIf="getNewBalance() < 0">prepaid credit</span>
+              <span class="rp-preview-tag" *ngIf="getNewBalance() === 0">settled</span>
+            </span>
+          </div>
+          <p class="rp-preview-extra" *ngIf="getOverpaymentCredit() > 0">
+            Overpayment stored as prepaid:
+            <strong>{{ currencySymbol }} {{ formatCurrency(getOverpaymentCredit()) }}</strong>
+          </p>
+        </div>
+
+        <div class="rp-form-grid">
+          <div class="rp-field">
+            <label class="rp-field-label" for="paymentDate">Payment date *</label>
+            <input
+              type="date"
+              id="paymentDate"
+              [(ngModel)]="paymentForm.paymentDate"
+              name="paymentDate"
+              class="rp-control"
+              required
+            />
+          </div>
+          <div class="rp-field">
+            <label class="rp-field-label" for="paymentMethod">Method *</label>
+            <select
+              id="paymentMethod"
+              [(ngModel)]="paymentForm.paymentMethod"
+              name="paymentMethod"
+              class="rp-control"
+              (change)="onPaymentMethodChange()"
+              required
+            >
+              <option value="Cash(USD)">Cash (USD)</option>
+              <option value="ZIG(ZW)">ZIG (ZW)</option>
+              <option value="EcoCash">EcoCash</option>
+              <option value="InnBucks">InnBucks</option>
+              <option value="Visa Card">Visa Card</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="rp-field" *ngIf="showPhoneNumberInput">
+          <label class="rp-field-label" for="phoneNumber">{{ phoneNumberLabel }} *</label>
+          <input
+            type="text"
+            id="phoneNumber"
+            [(ngModel)]="paymentForm.phoneNumber"
+            name="phoneNumber"
+            class="rp-control"
+            placeholder="0771234567 or +263771234567"
+            [required]="showPhoneNumberInput"
+          />
+          <span class="rp-field-hint">{{ phoneNumberHint }}</span>
+        </div>
+
+        <div class="rp-field" *ngIf="showCardNumberInput">
+          <label class="rp-field-label" for="cardNumber">Card number *</label>
+          <input
+            type="text"
+            id="cardNumber"
+            [(ngModel)]="paymentForm.cardNumber"
+            name="cardNumber"
+            class="rp-control"
+            placeholder="Last 4 digits or full number on file"
+            maxlength="19"
+            [required]="showCardNumberInput"
+          />
+        </div>
+
+        <div class="rp-field">
+          <label class="rp-field-label" for="notes">Notes</label>
+          <textarea id="notes" [(ngModel)]="paymentForm.notes" name="notes" class="rp-control rp-textarea" rows="3"></textarea>
+        </div>
+
+        <div class="rp-form-actions">
+          <button type="submit" class="rp-btn rp-btn-success" [disabled]="submitting || loading">
+            <span class="rp-spinner rp-spinner-light" *ngIf="submitting" aria-hidden="true"></span>
+            {{ submitting ? 'Recording…' : 'Record payment' }}
+          </button>
+          <button
+            type="button"
+            class="rp-btn rp-btn-secondary"
+            (click)="showReceiptPreview()"
+            [disabled]="loadingReceipt || (!success && !paymentRecorded)"
+          >
+            🧾 View receipt
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div *ngIf="showReceipt" class="rp-receipt">
+    <div class="rp-receipt-head">
+      <h3 class="rp-receipt-title">Receipt</h3>
+      <button type="button" class="rp-receipt-close" (click)="closeReceipt()" title="Close">×</button>
+    </div>
+    <div *ngIf="loadingReceipt" class="rp-receipt-loading">
+      <div class="rp-spinner-lg" aria-hidden="true"></div>
+      <p>Generating PDF…</p>
+    </div>
+    <div *ngIf="!loadingReceipt && !receiptPdfUrl" class="rp-receipt-loading">
+      <p>Receipt not available</p>
+    </div>
+    <div *ngIf="receiptPdfUrl && !loadingReceipt" class="rp-receipt-body">
+      <iframe [src]="receiptPdfUrl" class="rp-receipt-frame" title="Receipt PDF"></iframe>
+      <div class="rp-receipt-actions">
+        <button type="button" class="rp-btn rp-btn-primary" (click)="openReceiptInNewWindow()">Open in new tab</button>
+        <button type="button" class="rp-btn rp-btn-success" (click)="downloadReceipt()">Download PDF</button>
+      </div>
+    </div>
+  </div>
+</div>

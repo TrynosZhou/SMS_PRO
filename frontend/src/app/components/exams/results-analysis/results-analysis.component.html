@@ -1,0 +1,277 @@
+<div class="ra-wrap">
+  <div class="ra-header">
+    <h2>Results analysis</h2>
+    <p>Subject pass-rate by class, term, and exam type.</p>
+  </div>
+
+  <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+  <div class="ra-card">
+    <div class="ra-grid">
+      <div class="ra-field">
+        <label>Class <span class="req">*</span></label>
+        <select class="ra-control" [(ngModel)]="selectedClass" name="class">
+          <option value="">Select class</option>
+          <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+
+      <div class="ra-field">
+        <label>Term <span class="req">*</span></label>
+        <select class="ra-control" [(ngModel)]="selectedTerm" name="term">
+          <option value="">Select term</option>
+          <option *ngFor="let t of availableTerms" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+
+      <div class="ra-field">
+        <label>Exam type <span class="req">*</span></label>
+        <select class="ra-control" [(ngModel)]="selectedExamType" name="examType">
+          <option value="">Select exam type</option>
+          <option *ngFor="let e of examTypes" [value]="e.value">{{ e.label }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ra-actions">
+      <button class="btn btn-primary" (click)="getAnalysis()" [disabled]="loading">
+        {{ loading ? 'Loading...' : 'Get Analysis' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="ra-table-card" *ngIf="results && results.length > 0">
+    <div class="ra-table-head">
+      <div class="ra-table-title">
+        <div class="ra-table-ico" aria-hidden="true">↗</div>
+        <div>
+          <div class="ra-table-h">Subject Pass Rates</div>
+          <div class="ra-table-sub">Search and sort to explore performance.</div>
+        </div>
+      </div>
+
+      <div class="ra-tools">
+        <div class="ra-search">
+          <input
+            class="ra-search-input"
+            [(ngModel)]="query"
+            name="query"
+            placeholder="Search subject or code..."
+            autocomplete="off"
+          />
+        </div>
+        <div class="ra-count">
+          {{ filteredResults.length }} / {{ results.length }}
+        </div>
+      </div>
+    </div>
+
+    <div class="ra-table-scroll">
+      <table class="ra-table ra-table--modern">
+        <thead>
+          <tr>
+            <th>
+              <button
+                type="button"
+                class="ra-th-btn"
+                (click)="setSort('subject')"
+                [attr.aria-sort]="sortAria('subject')"
+              >
+                Subject
+                <span class="ra-sort" [class.active]="sortKey==='subject'">
+                  {{ sortKey==='subject' ? (sortDir==='asc' ? '↑' : '↓') : '↕' }}
+                </span>
+              </button>
+            </th>
+            <th class="col-code">
+              <button
+                type="button"
+                class="ra-th-btn"
+                (click)="setSort('subjectCode')"
+                [attr.aria-sort]="sortAria('subjectCode')"
+              >
+                Code
+                <span class="ra-sort" [class.active]="sortKey==='subjectCode'">
+                  {{ sortKey==='subjectCode' ? (sortDir==='asc' ? '↑' : '↓') : '↕' }}
+                </span>
+              </button>
+            </th>
+            <th class="col-rate">
+              <button
+                type="button"
+                class="ra-th-btn"
+                (click)="setSort('passRate')"
+                [attr.aria-sort]="sortAria('passRate')"
+              >
+                Pass rate
+                <span class="ra-sort" [class.active]="sortKey==='passRate'">
+                  {{ sortKey==='passRate' ? (sortDir==='asc' ? '↑' : '↓') : '↕' }}
+                </span>
+              </button>
+            </th>
+            <th class="col-num">
+              <button
+                type="button"
+                class="ra-th-btn"
+                (click)="setSort('passed')"
+                [attr.aria-sort]="sortAria('passed')"
+              >
+                Passed
+                <span class="ra-sort" [class.active]="sortKey==='passed'">
+                  {{ sortKey==='passed' ? (sortDir==='asc' ? '↑' : '↓') : '↕' }}
+                </span>
+              </button>
+            </th>
+            <th class="col-num">
+              <button
+                type="button"
+                class="ra-th-btn"
+                (click)="setSort('totalStudents')"
+                [attr.aria-sort]="sortAria('totalStudents')"
+              >
+                Total
+                <span class="ra-sort" [class.active]="sortKey==='totalStudents'">
+                  {{ sortKey==='totalStudents' ? (sortDir==='asc' ? '↑' : '↓') : '↕' }}
+                </span>
+              </button>
+            </th>
+            <th class="col-num">
+              <button
+                type="button"
+                class="ra-th-btn"
+                (click)="setSort('withMarks')"
+                [attr.aria-sort]="sortAria('withMarks')"
+              >
+                With marks
+                <span class="ra-sort" [class.active]="sortKey==='withMarks'">
+                  {{ sortKey==='withMarks' ? (sortDir==='asc' ? '↑' : '↓') : '↕' }}
+                </span>
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of filteredResults; trackBy: trackBySubject">
+            <td class="cell-subject">
+              <div class="subject-cell">
+                <div class="subject-bar" aria-hidden="true"></div>
+                <div class="subject-text">
+                  <div class="subject-name">{{ r.subject }}</div>
+                  <div class="subject-meta">{{ r.subjectCode || '-' }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="col-code mono">{{ r.subjectCode || '-' }}</td>
+            <td class="col-rate">
+              <div class="rate-wrap">
+                <span class="rate-pill" [attr.data-tone]="passRateTone(r.passRate)">
+                  {{ r.passRate | number:'1.0-1' }}%
+                </span>
+                <div class="rate-bar" aria-hidden="true">
+                  <div
+                    class="rate-bar-fill"
+                    [attr.data-tone]="passRateTone(r.passRate)"
+                    [style.width.%]="r.passRate"
+                  ></div>
+                </div>
+              </div>
+            </td>
+            <td class="col-num">{{ r.passed }}</td>
+            <td class="col-num">{{ r.totalStudents }}</td>
+            <td class="col-num">{{ r.withMarks }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ra-noresults" *ngIf="filteredResults.length === 0">
+      No subjects match your search.
+    </div>
+  </div>
+
+  <div class="ra-empty" *ngIf="!loading && (!results || results.length === 0) && !error">
+    No analysis yet. Select filters and click <strong>Get Analysis</strong>.
+  </div>
+
+  <!-- Subject-specific analysis (bottom section) -->
+  <div class="sa-wrap" *ngIf="results && results.length > 0">
+    <div class="sa-header">
+      <h3>Subject-Specific Analysis</h3>
+      <p>Select a subject to see top/bottom performers and grade distribution.</p>
+    </div>
+
+    <div class="sa-card">
+      <div class="sa-field">
+        <label>Select Subject</label>
+        <select class="sa-control" [(ngModel)]="selectedSubjectId" name="subjectId">
+          <option value="">-- Select a Subject --</option>
+          <option *ngFor="let s of subjects" [value]="s.id">{{ s.name }}</option>
+        </select>
+      </div>
+
+      <div class="sa-actions">
+        <button class="btn btn-primary" (click)="fetchSubjectAnalysis()" [disabled]="subjectLoading || !selectedSubjectId">
+          {{ subjectLoading ? 'Loading...' : 'Analyze Subject' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="alert alert-error" *ngIf="subjectError">{{ subjectError }}</div>
+
+    <div class="sa-panel" *ngIf="subjectAnalysis">
+      <div class="sa-panel-head">
+        <div class="sa-ico" aria-hidden="true">▮▮</div>
+        <div>
+          <div class="sa-title">Analysis for Selected Subject</div>
+          <div class="sa-sub">
+            {{ subjectAnalysis.subjectName }} · {{ subjectAnalysis.studentsWithMarks }} with marks ({{ subjectAnalysis.totalStudents }} total)
+          </div>
+        </div>
+      </div>
+
+      <div class="sa-grid">
+        <div class="sa-col">
+          <div class="sa-col-title">Top 5 Students</div>
+          <div class="sa-list">
+            <div class="sa-row" *ngFor="let st of subjectAnalysis.top5; let i = index">
+              <div class="sa-rank">{{ i + 1 }}</div>
+              <div class="sa-name">{{ st.studentName }}</div>
+              <div class="sa-pill">{{ st.percentage | number:'1.0-0' }}%</div>
+            </div>
+            <div class="sa-emptylist" *ngIf="!subjectAnalysis.top5 || subjectAnalysis.top5.length === 0">
+              No marks found.
+            </div>
+          </div>
+        </div>
+
+        <div class="sa-col">
+          <div class="sa-col-title">Bottom 5 Students</div>
+          <div class="sa-list">
+            <div class="sa-row" *ngFor="let st of subjectAnalysis.bottom5; let i = index">
+              <div class="sa-rank">{{ i + 1 }}</div>
+              <div class="sa-name">{{ st.studentName }}</div>
+              <div class="sa-pill alt">{{ st.percentage | number:'1.0-0' }}%</div>
+            </div>
+            <div class="sa-emptylist" *ngIf="!subjectAnalysis.bottom5 || subjectAnalysis.bottom5.length === 0">
+              No marks found.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gd-wrap">
+        <div class="gd-title">Grade Distribution</div>
+        <div class="gd-list">
+          <div class="gd-row" *ngFor="let g of subjectAnalysis.gradeDistribution">
+            <div class="gd-grade">{{ g.grade }}</div>
+            <div class="gd-count">{{ g.count }} students</div>
+          </div>
+          <div class="sa-emptylist" *ngIf="!subjectAnalysis.gradeDistribution || subjectAnalysis.gradeDistribution.length === 0">
+            No grade distribution available.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

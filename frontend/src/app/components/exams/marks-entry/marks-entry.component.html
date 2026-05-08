@@ -1,0 +1,119 @@
+<div class="container">
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div>
+        <h1>Enter Marks</h1>
+        <div *ngIf="exam" style="margin-top: 5px; color: #666;">
+          <strong>Exam:</strong> {{ exam.name }} | 
+          <strong>Class:</strong> {{ exam.class?.name || 'N/A' }} | 
+          <strong>Date:</strong> {{ exam.examDate | date:'shortDate' }}
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary" (click)="goToExamsList()">Back to Exams</button>
+    </div>
+    
+    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+    
+    <div *ngIf="loading" style="text-align: center; padding: 20px;">
+      Loading exam details...
+    </div>
+    
+    <div *ngIf="!loading && exam">
+      <div *ngIf="students.length === 0" class="alert alert-error">
+        No students found in class: {{ exam.class?.name || 'N/A' }}
+      </div>
+      
+      <div *ngIf="subjects.length === 0" class="alert alert-error">
+        No subjects assigned to this exam. Please edit the exam to assign subjects.
+      </div>
+      
+      <form (ngSubmit)="onSubmit()" *ngIf="students.length > 0 && subjects.length > 0">
+        <div style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+          <strong>Instructions:</strong> Enter marks and remarks for each student in sequence. Marks should be entered as score out of maximum score (e.g., 75/100).
+          <div style="margin-top: 5px; color: #666;">
+            Total Students: {{ students.length }} | Subjects: {{ subjects.length }}
+          </div>
+        </div>
+        
+        <!-- Sequential Student Entry Cards -->
+        <div *ngFor="let student of students; let i = index" class="student-marks-card" style="margin-bottom: 30px; padding: 20px; border: 2px solid #ddd; border-radius: 8px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Student Header -->
+          <div style="background: #4A90E2; color: white; padding: 12px; margin: -20px -20px 20px -20px; border-radius: 6px 6px 0 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="font-size: 16px;">Student {{ i + 1 }} of {{ students.length }}</strong>
+                <div style="font-size: 13px; margin-top: 3px;">{{ student.firstName }} {{ student.lastName }} - {{ student.studentNumber }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Subjects for this student -->
+          <div *ngFor="let subject of subjects" style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 4px; border-left: 4px solid #4A90E2;">
+            <div style="font-weight: 600; margin-bottom: 10px; color: #333; font-size: 14px;">
+              {{ subject.name }}
+            </div>
+            
+            <!-- Marks Input -->
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
+              <label style="font-size: 12px; color: #666; min-width: 60px;">Marks:</label>
+              <input type="number" 
+                     [(ngModel)]="marks[getMarkKey(student.id, subject.id)].score"
+                     [name]="'score_' + student.id + '_' + subject.id"
+                     placeholder="Score"
+                     min="0"
+                     step="0.01"
+                     style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+              <span style="font-weight: 600;">/</span>
+              <input type="number" 
+                     [(ngModel)]="marks[getMarkKey(student.id, subject.id)].maxScore"
+                     [name]="'max_' + student.id + '_' + subject.id"
+                     placeholder="Max"
+                     min="1"
+                     step="0.01"
+                     style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+            </div>
+            
+            <!-- Remarks Input -->
+            <div>
+              <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">Remarks:</label>
+              <textarea 
+                [(ngModel)]="marks[getMarkKey(student.id, subject.id)].comments"
+                [name]="'comments_' + student.id + '_' + subject.id"
+                placeholder="Enter remarks for this subject (optional)"
+                style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; min-height: 60px;"
+                rows="2"></textarea>
+            </div>
+          </div>
+          
+          <!-- Navigation hint -->
+          <div *ngIf="i < students.length - 1" style="margin-top: 15px; padding: 10px; background: #e8f4f8; border-left: 4px solid #4A90E2; border-radius: 4px;">
+            <p style="margin: 0; color: #666; font-size: 0.9em;">
+              ↓ Scroll down to enter marks for next student ({{ students.length - i - 1 }} more) ↓
+            </p>
+          </div>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 15px; background: #f0f8ff; border: 2px solid #4A90E2; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>Ready to save all marks?</strong>
+              <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                All marks and remarks for {{ students.length }} student(s) will be saved at once.
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button type="submit" class="btn btn-primary" [disabled]="loading" style="min-width: 120px;">
+                {{ loading ? 'Saving...' : '💾 Save All Marks' }}
+              </button>
+              <button type="button" class="btn btn-secondary" (click)="goToExamsList()">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

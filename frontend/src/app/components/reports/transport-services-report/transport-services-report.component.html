@@ -1,0 +1,104 @@
+<div class="report-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-title">
+        <h1>🚌 Transport Services Report</h1>
+        <p class="subtitle">Students using school transport services</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" (click)="downloadCSV()" [disabled]="loading || filteredStudents.length === 0">
+          <span>📥</span> Download CSV
+        </button>
+        <button class="btn btn-secondary" (click)="printReport()" [disabled]="loading || filteredStudents.length === 0">
+          <span>🖨️</span> Print
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <!-- Error Message -->
+    <div class="alert alert-error" *ngIf="error">
+      <span class="alert-icon">⚠️</span>
+      <span>{{ error }}</span>
+      <button class="alert-close" (click)="error = ''">&times;</button>
+    </div>
+
+    <!-- Search Box -->
+    <div class="search-section" *ngIf="!loading && students.length > 0">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="filterStudents()"
+          placeholder="Search by name, student number, or class..."
+          class="search-input">
+        <button *ngIf="searchTerm" class="clear-search" (click)="searchTerm = ''; filterStudents()">&times;</button>
+      </div>
+      <div class="report-summary">
+        <span class="summary-text">Total: <strong>{{ filteredStudents.length }}</strong> of {{ students.length }} students</span>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading report...</p>
+    </div>
+
+    <!-- Report Table -->
+    <div *ngIf="!loading && filteredStudents.length > 0" class="report-table-container">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student Number</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Gender</th>
+            <th>Class</th>
+            <th>Student Type</th>
+            <th>Contact Number</th>
+            <th>Staff Child</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let student of filteredStudents; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td><strong>{{ student.studentNumber }}</strong></td>
+            <td>{{ student.firstName }}</td>
+            <td>{{ student.lastName }}</td>
+            <td>{{ student.gender }}</td>
+            <td>{{ student.class }}</td>
+            <td>
+              <span class="badge" [class.boarder]="student.studentType === 'Boarder'" [class.day-scholar]="student.studentType === 'Day Scholar'">
+                {{ student.studentType }}
+              </span>
+            </td>
+            <td>{{ student.contactNumber }}</td>
+            <td>
+              <span class="badge" [class.staff-child]="student.isStaffChild" *ngIf="student.isStaffChild">Yes</span>
+              <span *ngIf="!student.isStaffChild">No</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && students.length === 0" class="empty-state">
+      <div class="empty-icon">🚌</div>
+      <h3>No Students Found</h3>
+      <p>No students are currently using school transport services.</p>
+    </div>
+
+    <!-- No Results -->
+    <div *ngIf="!loading && students.length > 0 && filteredStudents.length === 0" class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <h3>No Results Found</h3>
+      <p>No students match your search criteria.</p>
+    </div>
+  </div>
+</div>
+

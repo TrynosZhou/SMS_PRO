@@ -1,0 +1,52 @@
+<div class="cm-view">
+  <div class="cm-view-head">
+    <h2 class="cm-view-title">Messages from parents</h2>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="load()" [disabled]="loading">
+      {{ loading ? 'Loading…' : 'Refresh' }}
+    </button>
+  </div>
+  <p class="cm-view-lead">These are messages parents sent to the school from their portal.</p>
+
+  <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+  <label class="cm-search">
+    <span class="cm-search-label">Search</span>
+    <input
+      type="search"
+      class="cm-input"
+      [(ngModel)]="searchQuery"
+      (ngModelChange)="onSearchChange()"
+      placeholder="Subject, body, parent name or email…"
+      [disabled]="loading || messages.length === 0"
+    />
+  </label>
+
+  <div class="cm-view-empty" *ngIf="!loading && messages.length === 0">
+    <p>No messages from parents yet.</p>
+  </div>
+
+  <div class="cm-split" *ngIf="!loading && messages.length > 0">
+    <div class="cm-list">
+      <div class="cm-list-head">{{ filtered.length }} message(s)</div>
+      <ul>
+        <li *ngFor="let m of filtered">
+          <button type="button" class="cm-list-item" [class.cm-list-item-active]="selected?.id === m.id" (click)="select(m)">
+            <span class="cm-list-subj">{{ m.subject || '(No subject)' }}</span>
+            <span class="cm-list-meta">{{ parentLabel(m) }}</span>
+            <time>{{ formatDate(m.createdAt) }}</time>
+          </button>
+        </li>
+      </ul>
+      <p class="cm-muted" *ngIf="filtered.length === 0 && messages.length > 0">No matches.</p>
+    </div>
+    <div class="cm-detail" *ngIf="selected as s">
+      <h3>{{ s.subject || '(No subject)' }}</h3>
+      <p class="cm-detail-from">From <strong>{{ parentLabel(s) }}</strong></p>
+      <time class="cm-detail-time">{{ formatDate(s.createdAt) }}</time>
+      <div class="cm-detail-body">{{ s.message }}</div>
+    </div>
+    <div class="cm-detail cm-detail-placeholder" *ngIf="!selected && filtered.length > 0">
+      <p>Select a message to read.</p>
+    </div>
+  </div>
+</div>

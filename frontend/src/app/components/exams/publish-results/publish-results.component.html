@@ -1,0 +1,83 @@
+<div class="container">
+  <div class="card publish-results-card">
+    <div class="card-header">
+      <h2>
+        <span class="section-icon">📢</span>
+        Publish Results
+      </h2>
+      <p class="section-description">Publish exam results for all classes. Select exam type and term.</p>
+    </div>
+    
+    <!-- Alert Messages -->
+    <div class="alert alert-success" *ngIf="success">
+      <span class="alert-icon">✓</span>
+      <span>{{ success }}</span>
+    </div>
+    <div class="alert alert-error" *ngIf="error">
+      <span class="alert-icon">✕</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>
+          Exam Type <span class="required">*</span>
+        </label>
+        <select 
+          [(ngModel)]="publishExamType" 
+          class="form-control"
+          [disabled]="publishing">
+          <option value="">Select Exam Type</option>
+          <option *ngFor="let examType of examTypes" [value]="examType.value">
+            {{ examType.label }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          Term
+        </label>
+        <input 
+          type="text" 
+          [(ngModel)]="publishTerm" 
+          name="publishTerm"
+          class="form-control"
+          placeholder="e.g., Term 1 2024"
+          [disabled]="publishing || loadingTerm">
+        <small style="color: #666; font-style: italic; display: block; margin-top: 5px;">
+          Term for the exams to publish (defaults to active term)
+        </small>
+      </div>
+    </div>
+    <div class="form-actions-inline" style="margin-top: 15px;">
+      <button 
+        class="btn btn-success btn-load" 
+        (click)="publishResults()" 
+        [disabled]="publishing || !publishExamType || !publishTerm">
+        <span *ngIf="!publishing">
+          📢 Publish All Results
+        </span>
+        <span *ngIf="publishing" class="loading-content">
+          <span class="spinner-small"></span>
+          Publishing...
+        </span>
+      </button>
+
+      <button
+        *ngIf="isAdmin"
+        class="btn btn-danger btn-load"
+        (click)="unpublishResults()"
+        [disabled]="unpublishing || publishing || !publishExamType || !publishTerm"
+      >
+        <span *ngIf="!unpublishing">
+          🧹 Unpublish Results
+        </span>
+        <span *ngIf="unpublishing" class="loading-content">
+          <span class="spinner-small"></span>
+          Unpublishing...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+

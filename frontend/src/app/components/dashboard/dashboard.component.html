@@ -1,0 +1,471 @@
+<div class="dashboard-container db-page">
+  <main class="main-content">
+    <header class="db-hero">
+      <div class="db-hero-main">
+        <div class="db-hero-badges">
+          <span class="db-role-pill">{{ getRoleLabel() }}</span>
+          <span class="db-live-pill" *ngIf="(isAdmin() || isAccountant()) && !loadingStats" title="KPIs refreshed from live data">
+            <span class="db-live-dot" aria-hidden="true"></span>
+            Live overview
+          </span>
+        </div>
+        <h1 class="db-title">
+          <span class="db-title-ico" aria-hidden="true">📊</span>
+          Dashboard
+        </h1>
+        <p class="db-welcome">
+          <span class="db-wave" aria-hidden="true">👋</span>
+          Welcome back, <strong>{{ getDisplayName() }}</strong>
+        </p>
+        <div class="db-meta">
+          <span class="db-chip" *ngIf="academicYear">AY {{ academicYear }}</span>
+          <span class="db-chip" *ngIf="currentTerm">{{ currentTerm }}</span>
+          <span class="db-chip" *ngIf="currencySymbol && (isAdmin() || isAccountant())">{{ currencySymbol }} reporting</span>
+          <span class="db-chip db-chip-muted">{{ getCurrentDateTime() }}</span>
+        </div>
+      </div>
+      <div class="db-hero-aside" *ngIf="displayedHeadline">
+        <div class="school-name-container db-school-banner">
+          <span class="school-icon" aria-hidden="true">🏫</span>
+          <span class="school-banner-slide">{{ displayedHeadline }}</span>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Statistics Cards -->
+    <div class="stats-grid" *ngIf="(isAdmin() || isAccountant()) && !loadingStats">
+      <div class="stat-card primary modern-card">
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon modern-icon">👥</div>
+          <div class="icon-badge">+</div>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-value">{{ stats.totalStudents }}</div>
+          <div class="stat-label">Total Students</div>
+          <div class="stat-sublabel" *ngIf="stats.totalStudents > 0">
+            <span class="sublabel-item">📘 {{ stats.dayScholars }} Day Scholars</span>
+            <span class="sublabel-item">🏠 {{ stats.boarders }} Boarders</span>
+          </div>
+        </div>
+        <div class="stat-trend up">
+          <span class="trend-icon">📈</span>
+        </div>
+      </div>
+      
+      <div class="stat-card success modern-card">
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon modern-icon">👨‍🏫</div>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-value">{{ stats.totalTeachers }}</div>
+          <div class="stat-label">Teachers</div>
+          <div class="stat-sublabel">
+            <span class="sublabel-item">Active Staff</span>
+          </div>
+        </div>
+        <div class="stat-trend">
+          <span class="trend-icon">✨</span>
+        </div>
+      </div>
+      
+      <div class="stat-card info modern-card">
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon modern-icon">🏫</div>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-value">{{ stats.totalClasses }}</div>
+          <div class="stat-label">Active Classes</div>
+          <div class="stat-sublabel">
+            <span class="sublabel-item">Currently Running</span>
+          </div>
+        </div>
+        <div class="stat-trend">
+          <span class="trend-icon">🎓</span>
+        </div>
+      </div>
+      
+      <div class="stat-card warning modern-card">
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon modern-icon">📚</div>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-value">{{ stats.totalSubjects }}</div>
+          <div class="stat-label">Subjects</div>
+          <div class="stat-sublabel">
+            <span class="sublabel-item">Available Courses</span>
+          </div>
+        </div>
+        <div class="stat-trend">
+          <span class="trend-icon">📖</span>
+        </div>
+      </div>
+      
+      <div class="stat-card danger modern-card" *ngIf="isAdmin() || isAccountant()">
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon modern-icon">💰</div>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-value">{{ stats.totalInvoices }}</div>
+          <div class="stat-label">Total Invoices</div>
+          <div class="stat-sublabel" *ngIf="stats.totalBalance > 0">
+            <span class="sublabel-item warning-text">⚠️ Outstanding: {{ currencySymbol }} {{ stats.totalBalance | number:'1.2-2' }}</span>
+          </div>
+        </div>
+        <div class="stat-trend">
+          <span class="trend-icon">💳</span>
+        </div>
+      </div>
+      
+      <div class="stat-card secondary modern-card" *ngIf="isAdmin()">
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon modern-icon">👶</div>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-value">{{ stats.staffChildren }}</div>
+          <div class="stat-label">Staff Children</div>
+          <div class="stat-sublabel">
+            <span class="sublabel-item">Special Category</span>
+          </div>
+        </div>
+        <div class="stat-trend">
+          <span class="trend-icon">⭐</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="db-skeleton-stats" *ngIf="(isAdmin() || isAccountant()) && loadingStats" aria-busy="true">
+      <div class="db-sk-card" *ngFor="let _ of [1, 2, 3, 4, 5, 6]">
+        <div class="db-sk-icon"></div>
+        <div class="db-sk-lines">
+          <div class="db-sk-line db-sk-line-lg"></div>
+          <div class="db-sk-line db-sk-line-sm"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Financial Health Banner (admin / accountant only) -->
+    <div class="db-fh-banner" *ngIf="(isAdmin() || isAccountant()) && !loadingStats && stats.totalInvoices > 0">
+      <div class="db-fh-kpi">
+        <span class="db-fh-kpi-ico">💰</span>
+        <div>
+          <div class="db-fh-kpi-val">{{ currencySymbol }} {{ stats.totalBalance | number:'1.2-2' }}</div>
+          <div class="db-fh-kpi-lbl">Outstanding</div>
+        </div>
+      </div>
+      <div class="db-fh-center">
+        <div class="db-fh-bar-label">
+          <span>Collection Rate</span>
+          <strong>{{ collectionRatePercent }}%</strong>
+        </div>
+        <div class="db-fh-track">
+          <div class="db-fh-fill" [style.width.%]="collectionRatePercent" [class.db-fh-fill--high]="collectionRatePercent >= 75" [class.db-fh-fill--mid]="collectionRatePercent >= 40 && collectionRatePercent < 75"></div>
+        </div>
+        <div class="db-fh-sub">{{ stats.totalPaid | number:'1.2-2' }} paid of {{ stats.totalInvoiced | number:'1.2-2' }} invoiced</div>
+      </div>
+      <div class="db-fh-kpi db-fh-kpi--right">
+        <span class="db-fh-kpi-ico">🧾</span>
+        <div>
+          <div class="db-fh-kpi-val">{{ stats.totalInvoices }}</div>
+          <div class="db-fh-kpi-lbl">Total Invoices</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-cards">
+      <!-- Module Shortcuts -->
+      <div class="card modern-card db-modules-card">
+        <div class="card-header-modern">
+          <h2><span class="card-icon">🧩</span> Modules</h2>
+          <p class="db-card-lead">Navigate to the most-used areas of the system.</p>
+        </div>
+
+        <!-- Admin modules -->
+        <div class="db-modules-grid" *ngIf="isAdmin()">
+          <a routerLink="/students/manage/students" class="db-mod-tile" style="--mc:#6366f1">
+            <span class="db-mod-ico">👥</span><span class="db-mod-lbl">Students</span>
+          </a>
+          <a routerLink="/teachers/manage" class="db-mod-tile" style="--mc:#0ea5e9">
+            <span class="db-mod-ico">👨‍🏫</span><span class="db-mod-lbl">Teachers</span>
+          </a>
+          <a routerLink="/classes/manage" class="db-mod-tile" style="--mc:#10b981">
+            <span class="db-mod-ico">🏫</span><span class="db-mod-lbl">Classes</span>
+          </a>
+          <a routerLink="/finance/manage/billing" class="db-mod-tile" style="--mc:#ef4444">
+            <span class="db-mod-ico">💳</span><span class="db-mod-lbl">Billing</span>
+          </a>
+          <a routerLink="/reports/manage/attendance-reports" class="db-mod-tile" style="--mc:#f59e0b" *ngIf="canAccessModule('attendance')">
+            <span class="db-mod-ico">📋</span><span class="db-mod-lbl">Attendance</span>
+          </a>
+          <a routerLink="/reports/manage" class="db-mod-tile" style="--mc:#8b5cf6">
+            <span class="db-mod-ico">📊</span><span class="db-mod-lbl">Reports</span>
+          </a>
+          <a routerLink="/inventory/manage" class="db-mod-tile" style="--mc:#14b8a6" *ngIf="isInventoryStaff()">
+            <span class="db-mod-ico">📦</span><span class="db-mod-lbl">Inventory Manager</span>
+          </a>
+          <a routerLink="/timetable/manage" class="db-mod-tile" style="--mc:#06b6d4">
+            <span class="db-mod-ico">📅</span><span class="db-mod-lbl">Timetable</span>
+          </a>
+          <a routerLink="/communication_manage" class="db-mod-tile" style="--mc:#ec4899">
+            <span class="db-mod-ico">💬</span><span class="db-mod-lbl">Messages</span>
+          </a>
+          <a routerLink="/settings" class="db-mod-tile" style="--mc:#64748b">
+            <span class="db-mod-ico">⚙️</span><span class="db-mod-lbl">Settings</span>
+          </a>
+          <a routerLink="/elearning" class="db-mod-tile" style="--mc:#7c3aed">
+            <span class="db-mod-ico">💻</span><span class="db-mod-lbl">E-Learning</span>
+          </a>
+          <a routerLink="/general/manage/academic" class="db-mod-tile" style="--mc:#8b5cf6">
+            <span class="db-mod-ico">🎓</span><span class="db-mod-lbl">Academic Settings</span>
+          </a>
+        </div>
+
+        <div class="db-modules-grid" *ngIf="isInventoryStaff() && !isAdmin()">
+          <a routerLink="/inventory/manage" class="db-mod-tile" style="--mc:#14b8a6">
+            <span class="db-mod-ico">📦</span><span class="db-mod-lbl">Inventory Manager</span>
+          </a>
+          <a routerLink="/dashboard" class="db-mod-tile" style="--mc:#64748b">
+            <span class="db-mod-ico">🏠</span><span class="db-mod-lbl">Dashboard</span>
+          </a>
+        </div>
+
+        <!-- Accountant modules -->
+        <div class="db-modules-grid" *ngIf="isAccountant() && !isAdmin()">
+          <a routerLink="/students/manage/students" class="db-mod-tile" style="--mc:#6366f1">
+            <span class="db-mod-ico">👥</span><span class="db-mod-lbl">Students</span>
+          </a>
+          <a routerLink="/finance/manage/billing" class="db-mod-tile" style="--mc:#ef4444">
+            <span class="db-mod-ico">💳</span><span class="db-mod-lbl">Billing</span>
+          </a>
+          <a routerLink="/invoices/new" class="db-mod-tile" style="--mc:#10b981">
+            <span class="db-mod-ico">📝</span><span class="db-mod-lbl">New Invoice</span>
+          </a>
+          <a routerLink="/invoices/statements" class="db-mod-tile" style="--mc:#0ea5e9">
+            <span class="db-mod-ico">📋</span><span class="db-mod-lbl">Statements</span>
+          </a>
+        </div>
+
+        <!-- Parent modules -->
+        <div class="db-modules-grid" *ngIf="isParent()">
+          <a routerLink="/parent/dashboard" class="db-mod-tile" style="--mc:#6366f1">
+            <span class="db-mod-ico">🏠</span><span class="db-mod-lbl">My Dashboard</span>
+          </a>
+          <a routerLink="/parent/invoices" class="db-mod-tile" style="--mc:#ef4444">
+            <span class="db-mod-ico">💰</span><span class="db-mod-lbl">Invoices</span>
+          </a>
+          <a routerLink="/parent/reports" class="db-mod-tile" style="--mc:#10b981">
+            <span class="db-mod-ico">📊</span><span class="db-mod-lbl">Report Cards</span>
+          </a>
+          <a routerLink="/parent/inbox" class="db-mod-tile" style="--mc:#ec4899">
+            <span class="db-mod-ico">✉️</span><span class="db-mod-lbl">Inbox</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="card modern-card db-quick-card" *ngIf="isAdmin() || isAccountant()">
+        <div class="card-header-modern">
+          <h2>
+            <span class="card-icon">🚀</span>
+            Quick actions
+          </h2>
+          <p class="db-card-lead">Jump to the tasks you use most often. Modules still respect your access settings.</p>
+        </div>
+
+        <section class="db-action-group" *ngIf="isAdmin()">
+          <h3 class="db-action-group-title">People &amp; structure</h3>
+          <div class="quick-actions modern-actions">
+            <a routerLink="/students/manage/add-new" class="action-btn modern-action-btn primary-action">
+              <span class="action-icon">👤</span>
+              <span class="action-text">Add Student</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <a routerLink="/classes/manage/add-new" class="action-btn modern-action-btn info-action">
+              <span class="action-icon">🏫</span>
+              <span class="action-text">Add Class</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <a routerLink="/subjects/new" class="action-btn modern-action-btn warning-action">
+              <span class="action-icon">📚</span>
+              <span class="action-text">Add Subject</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <a routerLink="/teachers/manage/add-new" class="action-btn modern-action-btn success-action">
+              <span class="action-icon">👨‍🏫</span>
+              <span class="action-text">Add Teacher</span>
+              <span class="action-arrow">→</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="db-action-group" *ngIf="isAdmin() && canAccessModule('attendance')">
+          <h3 class="db-action-group-title">Attendance</h3>
+          <div class="quick-actions modern-actions">
+            <a routerLink="/classes/manage/mark-register" class="action-btn modern-action-btn success-action">
+              <span class="action-icon">✅</span>
+              <span class="action-text">Mark Register</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <a routerLink="/reports/manage/attendance-reports" class="action-btn modern-action-btn info-action">
+              <span class="action-icon">📊</span>
+              <span class="action-text">Attendance Reports</span>
+              <span class="action-arrow">→</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="db-action-group" *ngIf="isAdmin() || isAccountant()">
+          <h3 class="db-action-group-title">Finance</h3>
+          <div class="quick-actions modern-actions">
+            <a routerLink="/students/manage/students" class="action-btn modern-action-btn primary-action" *ngIf="isAccountant()">
+              <span class="action-icon">📋</span>
+              <span class="action-text">View Students</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <a routerLink="/finance/manage/billing" class="action-btn modern-action-btn danger-action">
+              <span class="action-icon">💳</span>
+              <span class="action-text">Billing</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <a routerLink="/invoices" class="action-btn modern-action-btn danger-action" *ngIf="isAccountant()">
+              <span class="action-icon">💰</span>
+              <span class="action-text">Finance Overview</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <a routerLink="/invoices/new" class="action-btn modern-action-btn danger-action">
+              <span class="action-icon">📝</span>
+              <span class="action-text">Create Invoice</span>
+              <span class="action-arrow">→</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="db-action-group" *ngIf="isAdmin()">
+          <h3 class="db-action-group-title">Communication</h3>
+          <div class="quick-actions modern-actions">
+            <a (click)="openBulkMessage()" class="action-btn modern-action-btn secondary-action" style="cursor: pointer;">
+              <span class="action-icon">📧</span>
+              <span class="action-text">Bulk Message</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <a routerLink="/communication_manage" class="action-btn modern-action-btn secondary-action">
+              <span class="action-icon">💬</span>
+              <span class="action-text">Communications</span>
+              <span class="action-arrow">→</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="db-action-group" *ngIf="isAdmin()">
+          <h3 class="db-action-group-title">Administration</h3>
+          <div class="quick-actions modern-actions">
+            <a routerLink="/admin/manage-accounts" class="action-btn modern-action-btn secondary-action">
+              <span class="action-icon">👥</span>
+              <span class="action-text">Manage Accounts</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <a routerLink="/admin/parent-management" class="action-btn modern-action-btn secondary-action">
+              <span class="action-icon">👨‍👩‍👧‍👦</span>
+              <span class="action-text">Parent Management</span>
+              <span class="action-arrow">→</span>
+            </a>
+            <div class="quick-actions-adjacent-pair">
+              <a routerLink="/admin/class-promotion" class="action-btn modern-action-btn warning-action adjacent-action-btn">
+                <span class="action-icon">⬆️</span>
+                <span class="action-text">Class Promotion</span>
+                <span class="action-arrow">→</span>
+              </a>
+              <a routerLink="/elearning" class="action-btn modern-action-btn elearning-quick-action adjacent-action-btn">
+                <span class="action-icon">💻</span>
+                <span class="action-text">E-learning</span>
+                <span class="action-arrow">→</span>
+              </a>
+            </div>
+          </div>
+        </section>
+      </div>
+      
+      <!-- Recent Activity Section -->
+      <div class="card recent-activity modern-card db-activity-card" *ngIf="(isAdmin() || isAccountant()) && !loadingStats">
+        <div class="card-header-flex db-activity-head">
+          <h2>
+            <span class="card-icon">🕒</span>
+            Recent Activity
+          </h2>
+          <div class="db-activity-links">
+            <a routerLink="/students/manage/students" class="view-all-link modern-link" title="Open full student directory">
+              All students <span class="link-arrow">→</span>
+            </a>
+            <a routerLink="/finance/manage/billing" class="view-all-link modern-link db-link-alt" title="Open billing">
+              All invoices <span class="link-arrow">→</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Tab bar -->
+        <div class="db-act-tabs">
+          <button class="db-act-tab" [class.db-act-tab--active]="activeActivityTab === 'students'" (click)="activeActivityTab = 'students'">
+            <span>👤</span> Students
+            <span class="db-act-tab-count" *ngIf="recentStudents.length > 0">{{ recentStudents.length }}</span>
+          </button>
+          <button class="db-act-tab" [class.db-act-tab--active]="activeActivityTab === 'invoices'" (click)="activeActivityTab = 'invoices'">
+            <span>💰</span> Invoices
+            <span class="db-act-tab-count" *ngIf="recentInvoices.length > 0">{{ recentInvoices.length }}</span>
+          </button>
+        </div>
+
+        <!-- Students panel -->
+        <div *ngIf="activeActivityTab === 'students'">
+          <div class="activity-list" *ngIf="recentStudents.length > 0; else noRecentStudents">
+            <div class="activity-item modern-activity-item" *ngFor="let student of recentStudents; trackBy: trackByStudentId">
+              <div class="db-act-avatar">{{ student.firstName?.charAt(0) }}{{ student.lastName?.charAt(0) }}</div>
+              <div class="activity-details">
+                <div class="activity-name">{{ student.firstName }} {{ student.lastName }}</div>
+                <div class="activity-meta">
+                  <span class="meta-badge">{{ student.studentNumber }}</span>
+                  <span class="meta-badge" *ngIf="student.class">{{ student.class.name }}</span>
+                  <span class="meta-badge db-type-badge" [class.db-badge-boarder]="student.studentType === 'Boarder'">{{ student.studentType || 'Day Scholar' }}</span>
+                </div>
+              </div>
+              <div class="activity-action">
+                <a [routerLink]="['/students/manage/edit', student.id]" class="btn-link modern-btn-link">Edit →</a>
+              </div>
+            </div>
+          </div>
+          <ng-template #noRecentStudents>
+            <div class="db-act-empty"><span>👥</span><p>No recent students</p></div>
+          </ng-template>
+        </div>
+
+        <!-- Invoices panel -->
+        <div *ngIf="activeActivityTab === 'invoices'">
+          <div class="activity-list" *ngIf="recentInvoices.length > 0; else noRecentInvoices">
+            <div class="activity-item modern-activity-item" *ngFor="let invoice of recentInvoices; trackBy: trackByInvoiceId">
+              <div class="db-act-avatar db-act-avatar--inv">💳</div>
+              <div class="activity-details">
+                <div class="activity-name">{{ invoice.invoiceNumber }}</div>
+                <div class="activity-meta">
+                  <span class="meta-badge" *ngIf="invoice.student">{{ invoice.student.firstName }} {{ invoice.student.lastName }}</span>
+                  <span class="meta-badge" [class.balance-warning]="invoice.balance > 0">
+                    Balance: {{ currencySymbol }} {{ invoice.balance | number:'1.2-2' }}
+                  </span>
+                  <span class="meta-badge db-inv-status" [class.db-inv-paid]="invoice.status === 'paid'" [class.db-inv-pending]="invoice.status === 'pending'">
+                    {{ invoice.status || 'pending' }}
+                  </span>
+                </div>
+              </div>
+              <div class="activity-action">
+                <a routerLink="/finance/manage/billing" class="btn-link modern-btn-link">View →</a>
+              </div>
+            </div>
+          </div>
+          <ng-template #noRecentInvoices>
+            <div class="db-act-empty"><span>💰</span><p>No recent invoices</p></div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bulk Message Modal -->
+  <app-bulk-message *ngIf="showBulkMessage" (close)="closeBulkMessage()"></app-bulk-message>
+</div>
+

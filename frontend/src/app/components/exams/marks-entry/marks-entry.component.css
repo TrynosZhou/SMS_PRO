@@ -1,0 +1,80 @@
+/* Marks entry component styles */
+.marks-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: white;
+}
+
+.marks-table thead {
+  background: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.marks-table th {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #dee2e6;
+  font-weight: 600;
+  background: #f8f9fa;
+}
+
+.marks-table td {
+  padding: 10px;
+  border: 1px solid #dee2e6;
+  vertical-align: top;
+}
+
+.marks-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.marks-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.marks-table tbody tr:nth-child(even):hover {
+  background: #f0f0f0;
+}
+
+input[type="number"] {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 14px;
+}
+
+input[type="number"]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+textarea {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Sequential student marks card styles */
+.student-marks-card {
+  position: relative;
+  page-break-inside: avoid;
+}
+
+/* Ensure proper spacing between sequential student cards */
+.student-marks-card + .student-marks-card {
+  margin-top: 40px;
+}
+

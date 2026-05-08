@@ -1,0 +1,200 @@
+<div class="esub-page esub-modern">
+  <!-- Hero -->
+  <section class="esub-hero" aria-labelledby="esub-title">
+    <div class="esub-hero-bg" aria-hidden="true"></div>
+    <div class="esub-hero-inner">
+      <div class="esub-hero-copy">
+        <p class="esub-kicker">E-learning</p>
+        <h1 id="esub-title" class="esub-title">
+          <span class="esub-title-icon" aria-hidden="true">📥</span>
+          Student submissions
+        </h1>
+        <p class="esub-lead">
+          Files students uploaded for <strong>your</strong> assignments and tests. Search, filter by task, and open each submission in a new tab.
+        </p>
+        <div class="esub-hero-actions">
+          <a routerLink="/teacher/elearning-manage/tasks" class="esub-btn esub-btn-primary">
+            <span aria-hidden="true">✏️</span> Create task
+          </a>
+          <button type="button" class="esub-btn esub-btn-ghost" (click)="load()" [disabled]="loading">
+            <span aria-hidden="true">🔄</span> Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="alert alert-error" *ngIf="error" role="alert">{{ error }}</div>
+
+  <!-- Skeleton loading -->
+  <div class="esub-skeleton-block" *ngIf="loading" aria-busy="true" aria-label="Loading submissions">
+    <div class="esub-stats esub-stats-skeleton">
+      <div class="esub-stat-card sk" *ngFor="let _ of [1,2,3]"></div>
+    </div>
+    <div class="esub-toolbar sk-toolbar"></div>
+    <div class="esub-sk-row" *ngFor="let _ of [1,2,3,4,5]">
+      <div class="esub-sk-cell sk"></div>
+      <div class="esub-sk-cell sk wide"></div>
+      <div class="esub-sk-cell sk"></div>
+      <div class="esub-sk-cell sk short"></div>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <!-- Summary stats -->
+    <div class="esub-stats" *ngIf="rows.length">
+      <div class="esub-stat-card">
+        <span class="esub-stat-icon" aria-hidden="true">📎</span>
+        <div class="esub-stat-text">
+          <span class="esub-stat-value">{{ totalCount }}</span>
+          <span class="esub-stat-label">Submissions</span>
+        </div>
+      </div>
+      <div class="esub-stat-card">
+        <span class="esub-stat-icon" aria-hidden="true">👤</span>
+        <div class="esub-stat-text">
+          <span class="esub-stat-value">{{ uniqueStudentCount }}</span>
+          <span class="esub-stat-label">Students</span>
+        </div>
+      </div>
+      <div class="esub-stat-card">
+        <span class="esub-stat-icon" aria-hidden="true">📋</span>
+        <div class="esub-stat-text">
+          <span class="esub-stat-value">{{ uniqueTaskCount }}</span>
+          <span class="esub-stat-label">Tasks</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="esub-toolbar" *ngIf="rows.length">
+      <div class="esub-search-wrap">
+        <label class="esub-sr-only" for="esub-search">Search submissions</label>
+        <span class="esub-search-icon" aria-hidden="true">🔍</span>
+        <input
+          id="esub-search"
+          type="search"
+          class="esub-search"
+          placeholder="Search by student, task, or note…"
+          [(ngModel)]="searchQuery"
+          autocomplete="off"
+        />
+      </div>
+      <div class="esub-filters">
+        <label class="esub-sr-only" for="esub-task-filter">Filter by task</label>
+        <select id="esub-task-filter" class="esub-select" [(ngModel)]="selectedTaskId">
+          <option value="">All tasks</option>
+          <option *ngFor="let o of taskOptions" [value]="o.id">{{ o.title }}</option>
+        </select>
+        <div class="esub-sort" role="group" aria-label="Sort by">
+          <button
+            type="button"
+            class="esub-sort-btn"
+            [class.active]="sortKey === 'submittedAt'"
+            (click)="toggleSort('submittedAt')"
+          >
+            Date
+          </button>
+          <button
+            type="button"
+            class="esub-sort-btn"
+            [class.active]="sortKey === 'student'"
+            (click)="toggleSort('student')"
+          >
+            Student
+          </button>
+          <button
+            type="button"
+            class="esub-sort-btn"
+            [class.active]="sortKey === 'task'"
+            (click)="toggleSort('task')"
+          >
+            Task
+          </button>
+        </div>
+        <button
+          type="button"
+          class="esub-clear"
+          *ngIf="hasActiveFilters()"
+          (click)="clearFilters()"
+        >
+          Clear filters
+        </button>
+      </div>
+      <p class="esub-meta" *ngIf="rows.length">
+        Showing <strong>{{ displayRows.length }}</strong> of {{ totalCount }}
+        <span *ngIf="hasActiveFilters()"> · {{ sortLabel() }}</span>
+      </p>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap esub-table-wrap" *ngIf="rows.length && displayRows.length">
+      <table class="esub-table">
+        <thead>
+          <tr>
+            <th scope="col">Student</th>
+            <th scope="col">Task</th>
+            <th scope="col">Type</th>
+            <th scope="col">Submitted</th>
+            <th scope="col">Note</th>
+            <th scope="col">File</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of displayRows; trackBy: trackById">
+            <td data-label="Student">
+              <div class="esub-student-cell">
+                <span class="esub-avatar" aria-hidden="true">{{ studentInitials(row) }}</span>
+                <span class="esub-student-name">{{ studentFullName(row) }}</span>
+              </div>
+            </td>
+            <td data-label="Task">
+              <span class="esub-task-title">{{ taskTitle(row) }}</span>
+            </td>
+            <td data-label="Type">
+              <span class="esub-badge esub-badge-test" *ngIf="taskTypeLabel(row) === 'test'">Test</span>
+              <span class="esub-badge esub-badge-asg" *ngIf="taskTypeLabel(row) === 'assignment'">Assignment</span>
+              <span class="esub-badge esub-badge-notes" *ngIf="taskTypeLabel(row) === 'notes'">Notes</span>
+              <span class="muted" *ngIf="!taskTypeLabel(row)">—</span>
+            </td>
+            <td data-label="Submitted">
+              <time class="esub-time" [attr.datetime]="row.submittedAt">{{ row.submittedAt | date:'medium' }}</time>
+            </td>
+            <td data-label="Note">
+              <span class="esub-note" *ngIf="row.note && row.note.trim()">{{ row.note.trim() }}</span>
+              <span class="muted" *ngIf="!row.note?.trim()">—</span>
+            </td>
+            <td data-label="File">
+              <a
+                *ngIf="openUrl(row) as href"
+                [href]="href"
+                target="_blank"
+                rel="noopener"
+                class="esub-open-btn"
+              >
+                <span aria-hidden="true">↗</span> Open
+              </a>
+              <span *ngIf="!openUrl(row)" class="muted">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- No results after filter -->
+    <div class="esub-empty-filter" *ngIf="rows.length && !displayRows.length">
+      <p>No submissions match your search or filters.</p>
+      <button type="button" class="esub-linkish" (click)="clearFilters()">Clear filters</button>
+    </div>
+
+    <!-- Empty state -->
+    <div class="esub-empty" *ngIf="!rows.length && !error">
+      <div class="esub-empty-visual" aria-hidden="true">📭</div>
+      <h2 class="esub-empty-title">No submissions yet</h2>
+      <p class="esub-empty-text">
+        When students upload work from <strong>E-learning Services</strong> on their dashboard, it will appear here with their name and a link to the file.
+      </p>
+      <a routerLink="/teacher/elearning-manage/tasks" class="esub-btn esub-btn-primary">Create a task</a>
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,159 @@
+<div class="sa-page">
+  <header class="sa-hero">
+    <div class="sa-hero-text">
+      <h1 class="sa-title">System audit</h1>
+      <p class="sa-lead">
+        Immutable log of payment events: who recorded what, when, and whether the row was flagged as an
+        <strong>anomaly</strong>. Filters query the server; column headers sort the current dataset.
+      </p>
+    </div>
+    <button type="button" class="sa-btn sa-btn-ghost sa-refresh" (click)="refresh()" [disabled]="loading">
+      <span class="sa-spinner" *ngIf="loading" aria-hidden="true"></span>
+      {{ loading ? 'Loading…' : '↻ Refresh' }}
+    </button>
+  </header>
+
+  <section class="sa-card sa-filters" aria-label="Filters">
+    <div class="sa-filter-grid">
+      <div class="sa-field">
+        <label class="sa-label" for="sa-from">From</label>
+        <input id="sa-from" type="date" class="sa-input" [(ngModel)]="fromDate" />
+      </div>
+      <div class="sa-field">
+        <label class="sa-label" for="sa-to">To</label>
+        <input id="sa-to" type="date" class="sa-input" [(ngModel)]="toDate" />
+      </div>
+      <div class="sa-field sa-field-wide">
+        <label class="sa-label" for="sa-student">Student</label>
+        <div class="sa-input-row">
+          <span class="sa-input-ico" aria-hidden="true">🔍</span>
+          <input
+            id="sa-student"
+            type="search"
+            class="sa-input sa-input-plain"
+            [(ngModel)]="studentSearch"
+            placeholder="ID, first name, or last name…"
+            (keyup.enter)="onSearch()"
+          />
+        </div>
+      </div>
+      <div class="sa-field">
+        <label class="sa-label" for="sa-method">Payment method</label>
+        <select id="sa-method" class="sa-input" [(ngModel)]="paymentMethod">
+          <option *ngFor="let m of paymentMethods" [value]="m.value">{{ m.label }}</option>
+        </select>
+      </div>
+      <div class="sa-field sa-field-toggle">
+        <span class="sa-label">Options</span>
+        <label class="sa-switch">
+          <input type="checkbox" [(ngModel)]="anomalyOnly" />
+          <span class="sa-switch-ui"></span>
+          <span class="sa-switch-text">Anomalies only</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="sa-filter-actions">
+      <button type="button" class="sa-btn sa-btn-primary" (click)="onSearch()" [disabled]="loading">
+        Apply filters
+      </button>
+      <button type="button" class="sa-btn sa-btn-ghost" (click)="clearFilters()" [disabled]="loading">
+        Clear all
+      </button>
+      <div class="sa-page-size">
+        <label class="sa-label-inline" for="sa-limit">Rows / page</label>
+        <select id="sa-limit" class="sa-select-narrow" [ngModel]="limit" (ngModelChange)="onLimitChange($event)">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="100">100</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <div class="sa-alert sa-alert-error" *ngIf="error" role="alert">
+    <span class="sa-alert-ico">!</span>
+    {{ error }}
+  </div>
+
+  <div class="sa-summary" *ngIf="!loading && total >= 0">
+    <span class="sa-summary-stat"
+      ><strong>{{ total }}</strong> event(s) match</span
+    >
+    <span class="sa-summary-range" *ngIf="total > 0">
+      Showing <strong>{{ getShowingRange().from }}</strong>–<strong>{{ getShowingRange().to }}</strong>
+    </span>
+  </div>
+
+  <div class="sa-table-card">
+    <div class="sa-skeleton" *ngIf="loading">
+      <div class="sa-sh-row" *ngFor="let _ of [1, 2, 3, 4, 5, 6, 7, 8]"></div>
+    </div>
+
+    <div class="sa-empty" *ngIf="!loading && logs.length === 0">
+      <span class="sa-empty-ico" aria-hidden="true">📋</span>
+      <p class="sa-empty-title">No rows</p>
+      <p class="sa-empty-text">Widen the date range or turn off &ldquo;Anomalies only&rdquo; to see more events.</p>
+    </div>
+
+    <div class="sa-scroll" *ngIf="!loading && logs.length > 0">
+      <table class="sa-table">
+        <thead>
+          <tr>
+            <th class="sa-th-sort" (click)="toggleSort('eventAt')" title="Sort by date">
+              Date <span class="sa-sort-ind">{{ sortChevron('eventAt') }}</span>
+            </th>
+            <th class="sa-th-sort" (click)="toggleSort('username')" title="Sort by user">
+              User <span class="sa-sort-ind">{{ sortChevron('username') }}</span>
+            </th>
+            <th>Student #</th>
+            <th class="sa-th-sort" (click)="toggleSort('firstName')">
+              First <span class="sa-sort-ind">{{ sortChevron('firstName') }}</span>
+            </th>
+            <th class="sa-th-sort" (click)="toggleSort('lastName')">
+              Last <span class="sa-sort-ind">{{ sortChevron('lastName') }}</span>
+            </th>
+            <th class="sa-th-num sa-th-sort" (click)="toggleSort('amountPaid')">
+              Amount <span class="sa-sort-ind">{{ sortChevron('amountPaid') }}</span>
+            </th>
+            <th class="sa-th-sort" (click)="toggleSort('paymentMethod')">
+              Method <span class="sa-sort-ind">{{ sortChevron('paymentMethod') }}</span>
+            </th>
+            <th>Reference</th>
+            <th class="sa-th-sort" (click)="toggleSort('anomaly')">
+              Flag <span class="sa-sort-ind">{{ sortChevron('anomaly') }}</span>
+            </th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of logs; trackBy: trackByLog" [ngClass]="highlightAnomaly(log.anomaly)">
+            <td class="sa-nowrap">{{ log.eventAt ? (log.eventAt | date : 'yyyy-MM-dd HH:mm') : '—' }}</td>
+            <td>{{ log.username || '—' }}</td>
+            <td class="sa-mono">{{ log.studentNumber || log.studentId || '—' }}</td>
+            <td>{{ log.firstName || '—' }}</td>
+            <td>{{ log.lastName || '—' }}</td>
+            <td class="sa-num">{{ formatAmount(log.amountPaid) }}</td>
+            <td>{{ log.paymentMethod || '—' }}</td>
+            <td class="sa-mono sa-muted">{{ log.referenceNumber || '—' }}</td>
+            <td>
+              <span class="sa-pill" [class.sa-pill-warn]="log.anomaly" [class.sa-pill-ok]="!log.anomaly">
+                {{ log.anomaly ? 'Flagged' : 'OK' }}
+              </span>
+            </td>
+            <td class="sa-msg">{{ log.anomalyMessage || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <nav class="sa-pagination" *ngIf="!loading && totalPages > 1" aria-label="Pagination">
+    <button type="button" class="sa-page-btn" (click)="prevPage()" [disabled]="page <= 1">← Previous</button>
+    <div class="sa-page-info">
+      <span>Page <strong>{{ page }}</strong> / {{ totalPages }}</span>
+    </div>
+    <button type="button" class="sa-page-btn" (click)="nextPage()" [disabled]="page >= totalPages">Next →</button>
+  </nav>
+</div>

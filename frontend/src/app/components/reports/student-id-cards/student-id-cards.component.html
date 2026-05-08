@@ -1,0 +1,189 @@
+<div class="report-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-title">
+        <h1>🪪 Student ID Cards</h1>
+        <p class="subtitle">Generate and print student identification cards by class</p>
+      </div>
+      <div class="header-actions" *ngIf="students.length > 0">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="printIdCards()"
+          [disabled]="loading || !!pdfBusy"
+          title="Opens the official ID card PDF in a new tab — use the browser or PDF viewer Print button">
+          <span *ngIf="pdfBusy !== 'print'">🖨️</span>
+          <span *ngIf="pdfBusy === 'print'" class="btn-spinner" aria-hidden="true"></span>
+          {{ pdfBusy === 'print' ? 'Preparing…' : 'Print preview' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="downloadPDF()"
+          [disabled]="loading || !!pdfBusy"
+          title="Download a multi-page PDF (one card per student)">
+          <span *ngIf="pdfBusy !== 'download'">📥</span>
+          <span *ngIf="pdfBusy === 'download'" class="btn-spinner" aria-hidden="true"></span>
+          {{ pdfBusy === 'download' ? 'Preparing…' : 'Download PDF' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <!-- PDF / API errors -->
+    <div class="alert alert-error" *ngIf="pdfError">
+      <span class="alert-icon">⚠️</span>
+      <span>{{ pdfError }}</span>
+      <button type="button" class="alert-close" (click)="pdfError = ''">&times;</button>
+    </div>
+
+    <!-- Error Message -->
+    <div class="alert alert-error" *ngIf="error">
+      <span class="alert-icon">⚠️</span>
+      <span>{{ error }}</span>
+      <button class="alert-close" (click)="error = ''">&times;</button>
+    </div>
+
+    <!-- Class Selection -->
+    <div class="selection-section">
+      <div class="form-group">
+        <label for="classSelect">Select Class/Form:</label>
+        <select 
+          id="classSelect"
+          [(ngModel)]="selectedClassId" 
+          (change)="onClassChange()"
+          class="form-control"
+          [disabled]="loading">
+          <option value="">-- Select a Class --</option>
+          <option *ngFor="let classItem of classes" [value]="classItem.id">
+            {{ classItem.name || classItem.form || classItem.id }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+
+    <!-- ID Cards Display -->
+    <div *ngIf="!loading && students.length > 0" class="id-cards-container">
+      <div class="id-cards-grid">
+        <div *ngFor="let student of students" class="id-card">
+          <!-- Top Header Band: Settings logo 1 left + right (matches PDF) -->
+          <div class="id-card-top-band">
+            <div class="top-band-inner">
+              <div class="top-band-logo" *ngIf="schoolLogo">
+                <img
+                  [src]="schoolLogo"
+                  alt="School logo"
+                  class="top-band-school-logo"
+                  (error)="schoolLogo = null"
+                />
+              </div>
+              <div class="top-band-center">
+                <div class="school-name-header">{{ schoolName }}</div>
+                <div class="school-contact-info">
+                  <div class="contact-line" *ngIf="schoolPhone">
+                    <span>Landline: {{ schoolPhone }}</span>
+                  </div>
+                  <div class="contact-line" *ngIf="schoolEmail && schoolEmail.includes('+')">
+                    <span>Cell: {{ schoolEmail }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="top-band-logo" *ngIf="schoolLogo">
+                <img
+                  [src]="schoolLogo"
+                  alt=""
+                  class="top-band-school-logo"
+                  aria-hidden="true"
+                  (error)="schoolLogo = null"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Middle Section -->
+          <div class="id-card-middle">
+            <!-- Left: Photo -->
+            <div class="photo-section">
+              <div class="photo-placeholder">
+                <img 
+                  *ngIf="student.photoUrl" 
+                  [src]="student.photoUrl" 
+                  [alt]="student.firstName + ' ' + student.lastName"
+                  class="student-photo-img"
+                  (error)="onPhotoError($event, student)"
+                  (load)="onPhotoLoad($event, student)">
+                <span class="photo-symbol" [style.display]="shouldShowPlaceholder(student) ? 'flex' : 'none'">Ø=</span>
+              </div>
+            </div>
+
+            <!-- Center: Student Details -->
+            <div class="student-details-section">
+              <div class="student-name">{{ (student.firstName + ' ' + student.lastName).toUpperCase() }}</div>
+              <div class="detail-row">
+                <span class="detail-label">Student No:</span>
+                <span class="detail-value">{{ student.studentNumber }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Class:</span>
+                <span class="detail-value">{{ selectedClassName || student.class?.name || student.class?.form || 'N/A' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Type:</span>
+                <span class="detail-value">{{ student.studentType || 'Day Scholar' }}</span>
+              </div>
+              <div class="detail-row" *ngIf="student.dateOfBirth">
+                <span class="detail-label">DOB:</span>
+                <span class="detail-value">{{ formatDate(student.dateOfBirth) }}</span>
+              </div>
+              <div class="detail-row" *ngIf="getStudentContact(student)">
+                <span class="detail-label">Contact:</span>
+                <span class="detail-value">{{ getStudentContact(student) }}</span>
+              </div>
+            </div>
+
+            <!-- Right: QR Code -->
+            <div class="qr-section">
+              <div class="qr-code-placeholder">
+                <img
+                  *ngIf="student.qrDataUrl"
+                  [src]="student.qrDataUrl"
+                  alt="Verification QR code"
+                  class="qr-code-img"
+                />
+                <span *ngIf="!student.qrDataUrl" class="qr-code-loading" aria-hidden="true">…</span>
+              </div>
+              <div class="qr-label">Scan QR for verification</div>
+            </div>
+          </div>
+
+          <!-- Bottom Footer Band -->
+          <div class="id-card-bottom-band">
+            <div class="validity-text">VALID STUDENT IDENTIFICATION CARD</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && !selectedClassId" class="empty-state">
+      <div class="empty-icon">🪪</div>
+      <h3>Select a Class</h3>
+      <p>Please select a class from the dropdown above to view student ID cards.</p>
+    </div>
+
+    <!-- No Students -->
+    <div *ngIf="!loading && selectedClassId && students.length === 0" class="empty-state">
+      <div class="empty-icon">👥</div>
+      <h3>No Students Found</h3>
+      <p>No active students found in the selected class.</p>
+    </div>
+  </div>
+</div>
+

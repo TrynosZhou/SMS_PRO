@@ -1,0 +1,195 @@
+<div class="classes-container">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-title">
+        <h1>📚 Class Manager</h1>
+        <p class="subtitle">Manage and organize all classes in your school</p>
+      </div>
+      <button type="button" class="btn btn-primary btn-add" (click)="goToNewClass()">
+        <span class="btn-icon">➕</span>
+        <span>Add New Class</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div class="alert alert-success" *ngIf="success" (click)="success = ''">
+    <span class="alert-icon">✅</span>
+    <span>{{ success }}</span>
+    <button class="alert-close" aria-label="Close">×</button>
+  </div>
+  <div class="alert alert-error" *ngIf="error" (click)="error = ''">
+    <span class="alert-icon">⚠️</span>
+    <span>{{ error }}</span>
+    <button class="alert-close" aria-label="Close">×</button>
+  </div>
+
+  <!-- Filters and Search Section -->
+  <div class="filters-section">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Search classes by name or description..."
+        [(ngModel)]="searchTerm"
+        (input)="onSearchInput()">
+      <button class="search-clear" *ngIf="searchTerm" (click)="clearSearch()" aria-label="Clear search">×</button>
+    </div>
+    <div class="filter-controls">
+      <select class="filter-select" [(ngModel)]="statusFilter" (change)="filterClasses()">
+        <option value="all">All Status</option>
+        <option value="active">Active Only</option>
+        <option value="inactive">Inactive Only</option>
+      </select>
+      <select class="filter-select" [(ngModel)]="sortBy" (change)="sortClasses()">
+        <option value="name">Sort by Name</option>
+        <option value="students">Sort by Students</option>
+        <option value="teachers">Sort by Teachers</option>
+        <option value="classTr">Sort by Class TR</option>
+      </select>
+      <button class="btn btn-secondary btn-refresh" (click)="loadClasses()" [disabled]="loading">
+        <span class="btn-icon">🔄</span>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-container" *ngIf="loading">
+    <div class="skeleton-loader" *ngFor="let i of [1,2,3,4,5]">
+      <div class="skeleton-row">
+        <div class="skeleton-cell skeleton-name"></div>
+        <div class="skeleton-cell skeleton-count"></div>
+        <div class="skeleton-cell skeleton-count"></div>
+        <div class="skeleton-cell skeleton-class-tr"></div>
+        <div class="skeleton-cell skeleton-status"></div>
+        <div class="skeleton-cell skeleton-actions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Classes Table -->
+  <div class="table-container" *ngIf="!loading">
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th (click)="sortByColumn('name')" class="sortable col-class-name">
+            <span>Class</span>
+            <span class="sort-icon" *ngIf="sortColumn === 'name'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+          </th>
+          <th (click)="sortByColumn('students')" class="sortable col-students">
+            <span>Students</span>
+            <span class="sort-icon" *ngIf="sortColumn === 'students'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+          </th>
+          <th (click)="sortByColumn('teachers')" class="sortable col-teachers">
+            <span>Teachers</span>
+            <span class="sort-icon" *ngIf="sortColumn === 'teachers'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+          </th>
+          <th (click)="sortByColumn('classTr')" class="sortable col-class-tr">
+            <span>Class TR</span>
+            <span class="sort-icon" *ngIf="sortColumn === 'classTr'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+          </th>
+          <th class="col-status">Status</th>
+          <th class="actions-header col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let classItem of filteredClasses" class="table-row">
+          <td class="class-name col-class-name">
+            <span class="name-text" [attr.title]="classItem.name">{{ classItem.name }}</span>
+          </td>
+          <td class="class-count col-students">
+            <span class="count-badge students">
+              <span class="count-icon">👨‍🎓</span>
+              {{ classItem.students?.length || 0 }}
+            </span>
+          </td>
+          <td class="class-count col-teachers">
+            <span class="count-badge teachers">
+              <span class="count-icon">👨‍🏫</span>
+              {{ classItem.teachers?.length || 0 }}
+            </span>
+          </td>
+          <td class="class-teacher-cell col-class-tr">
+            <span
+              class="class-teacher-name"
+              [attr.title]="getClassTeacherFullName(classItem)"
+            >{{ getClassTeacherFullName(classItem) }}</span>
+          </td>
+          <td class="status-cell col-status">
+            <span class="status-badge" [class.active]="classItem.isActive" [class.inactive]="!classItem.isActive">
+              <span class="status-dot"></span>
+              {{ classItem.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td class="actions-cell col-actions">
+            <div class="action-buttons">
+                <button 
+                  class="btn-action btn-edit" 
+                  (click)="editClass(classItem.id)" 
+                  title="Edit Class">
+                  <span class="action-icon">✏️</span>
+                  <span class="action-text">Edit</span>
+                </button>
+                <button 
+                  class="btn-action btn-delete" 
+                  (click)="deleteClass(classItem.id, classItem.name)" 
+                  [disabled]="loading"
+                  title="Delete Class">
+                  <span class="action-icon">🗑️</span>
+                  <span class="action-text">Delete</span>
+                </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredClasses.length === 0 && !loading">
+      <div class="empty-icon">📚</div>
+      <h3>{{ searchTerm || statusFilter !== 'all' ? 'No classes found' : 'No classes yet' }}</h3>
+      <p *ngIf="searchTerm || statusFilter !== 'all'">
+        Try adjusting your search or filter criteria.
+      </p>
+      <p *ngIf="!searchTerm && statusFilter === 'all'">
+        Get started by creating your first class.
+      </p>
+      <button type="button" class="btn btn-primary" (click)="goToNewClass()" *ngIf="!searchTerm && statusFilter === 'all'">
+        <span class="btn-icon">➕</span>
+        <span>Add Your First Class</span>
+      </button>
+      <button class="btn btn-secondary" (click)="clearFilters()" *ngIf="searchTerm || statusFilter !== 'all'">
+        <span>Clear Filters</span>
+      </button>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="results-summary" *ngIf="filteredClasses.length > 0">
+      <span class="summary-text">
+        Showing {{ filteredClasses.length }} of {{ pagination.total }} class{{ pagination.total !== 1 ? 'es' : '' }}
+      </span>
+    </div>
+  </div>
+
+  <div class="pagination-bar" *ngIf="!loading && (pagination.totalPages > 1 || pagination.total > pagination.limit)">
+    <button class="btn btn-secondary" (click)="changePage(pagination.page - 1)" [disabled]="pagination.page === 1">
+      ‹ Previous
+    </button>
+    <span class="page-info">
+      Page {{ pagination.page }} of {{ pagination.totalPages }} • {{ pagination.total }} records
+    </span>
+    <button class="btn btn-secondary" (click)="changePage(pagination.page + 1)" [disabled]="pagination.page === pagination.totalPages">
+      Next ›
+    </button>
+    <div class="page-size-selector">
+      <label for="classPageSize">Rows per page:</label>
+      <select id="classPageSize" (change)="changePageSize($event.target.value)" [value]="pagination.limit">
+        <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+      </select>
+    </div>
+  </div>
+</div>
+

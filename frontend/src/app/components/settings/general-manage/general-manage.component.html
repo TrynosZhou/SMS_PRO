@@ -1,0 +1,85 @@
+<div class="gm-wrap">
+  <header class="gm-header">
+    <h1 class="gm-title">General Settings</h1>
+    <p class="gm-sub">System settings, users, parents, and activity logs</p>
+  </header>
+
+  <nav class="gm-tabs" aria-label="General settings sections">
+    <a
+      *ngIf="showSchoolSettingsTab()"
+      routerLink="/general/manage/school-settings"
+      routerLinkActive="active"
+      class="gm-tab"
+    >
+      <span class="gm-tab-ico" aria-hidden="true">🏫</span>
+      School Settings
+    </a>
+    <a
+      *ngIf="showDepartmentsTab()"
+      routerLink="/general/manage/departments"
+      routerLinkActive="active"
+      class="gm-tab"
+    >
+      <span class="gm-tab-ico" aria-hidden="true">🏷️</span>
+      Departments
+    </a>
+    <a
+      *ngIf="showUserManagementTab()"
+      routerLink="/general/manage/user-management"
+      routerLinkActive="active"
+      class="gm-tab"
+    >
+      <span class="gm-tab-ico" aria-hidden="true">👤</span>
+      User Management
+    </a>
+    <a
+      *ngIf="showParentManagementTab()"
+      routerLink="/general/manage/parent-management"
+      routerLinkActive="active"
+      class="gm-tab"
+    >
+      <span class="gm-tab-ico" aria-hidden="true">👨‍👩‍👧‍👦</span>
+      Parent Management
+    </a>
+    <a
+      *ngIf="showActivityLogTab()"
+      routerLink="/general/manage/activity-log"
+      routerLinkActive="active"
+      class="gm-tab"
+    >
+      <span class="gm-tab-ico" aria-hidden="true">🕒</span>
+      Activity Log
+    </a>
+    <a
+      *ngIf="showAcademicSettingsTab()"
+      routerLink="/general/manage/academic"
+      routerLinkActive="active"
+      class="gm-tab"
+    >
+      <span class="gm-tab-ico" aria-hidden="true">🎓</span>
+      Academic Settings
+    </a>
+    <a
+      *ngIf="showSystemSettingsTab()"
+      routerLink="/general/manage/system-settings"
+      routerLinkActive="active"
+      class="gm-tab"
+    >
+      <span class="gm-tab-ico" aria-hidden="true">⚙️</span>
+      System Settings
+    </a>
+    <a
+      *ngIf="showRolesPermissionsTab()"
+      routerLink="/general/manage/roles-permissions"
+      routerLinkActive="active"
+      class="gm-tab"
+    >
+      <span class="gm-tab-ico" aria-hidden="true">🔐</span>
+      Roles &amp; Permissions
+    </a>
+  </nav>
+
+  <div class="gm-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>

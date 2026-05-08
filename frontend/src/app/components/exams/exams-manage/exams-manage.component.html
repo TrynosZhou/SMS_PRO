@@ -1,0 +1,76 @@
+<div class="em-wrap">
+  <header class="em-header">
+    <h1 class="em-title">Exam Manager</h1>
+    <p class="em-sub">Marks, sheets, moderation, rankings, and report cards</p>
+  </header>
+
+  <nav class="em-tabs" aria-label="Exam manager sections">
+    <a
+      *ngIf="showExamsTabs()"
+      routerLink="/exams/manage/marks-capturing"
+      [class.active]="isMarksCapturingSectionActive()"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">✅</span>
+      Marks Capturing
+    </a>
+    <a
+      *ngIf="showExamsTabs()"
+      routerLink="/exams/manage/mark-sheet"
+      routerLinkActive="active"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">📄</span>
+      Mark Sheets
+    </a>
+    <a
+      *ngIf="showAdminExamTabs()"
+      routerLink="/exams/manage/mark-input-progress"
+      routerLinkActive="active"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">⏳</span>
+      Mark Input Progress
+    </a>
+    <a
+      *ngIf="showRankingsTab()"
+      routerLink="/exams/manage/rankings"
+      routerLinkActive="active"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">🏆</span>
+      Rankings
+    </a>
+    <a
+      *ngIf="showReportCardsTab()"
+      routerLink="/exams/manage/report-cards"
+      routerLinkActive="active"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">📚</span>
+      Report Cards
+    </a>
+    <a
+      *ngIf="showResultsAnalysisTab()"
+      routerLink="/exams/manage/results-analysis"
+      routerLinkActive="active"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">📈</span>
+      Results analysis
+    </a>
+    <a
+      *ngIf="showAdminExamTabs()"
+      routerLink="/exams/manage/publish-results"
+      routerLinkActive="active"
+      class="em-tab"
+    >
+      <span class="em-tab-ico" aria-hidden="true">📣</span>
+      Publish Results
+    </a>
+  </nav>
+
+  <div class="em-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>

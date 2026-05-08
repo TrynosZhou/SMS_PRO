@@ -1,0 +1,151 @@
+<div class="sd-page">
+  <main class="sd-main">
+    <!-- Hero -->
+    <section class="sd-hero" aria-labelledby="sd-title">
+      <div class="sd-hero-bg" aria-hidden="true"></div>
+      <div class="sd-hero-inner">
+        <div class="sd-hero-copy">
+          <p class="sd-kicker">{{ daypartGreeting }}</p>
+          <h1 id="sd-title" class="sd-title">
+            <span class="sd-title-icon" aria-hidden="true">🎓</span>
+            Student dashboard
+          </h1>
+          <p class="sd-parent-note" *ngIf="isParentViewer">
+            <span class="sd-parent-pill">Parent view</span>
+            Showing services for your linked child. Switch below if you have more than one.
+          </p>
+          <p class="sd-welcome" *ngIf="!profileLoading && (!isParentViewer || contextStudentId)">
+            Hi <strong>{{ getDisplayName() }}</strong>
+            <span class="sd-dot" aria-hidden="true">·</span>
+            <span class="sd-sub">Here’s a quick path to your learning and school services.</span>
+          </p>
+          <div class="sd-parent-child-row" *ngIf="isParentViewer && linkedStudents.length > 1">
+            <label class="sd-parent-label" for="sd-parent-child">Student</label>
+            <select
+              id="sd-parent-child"
+              class="sd-parent-select"
+              [ngModel]="contextStudentId"
+              (ngModelChange)="onParentStudentChange($event)"
+            >
+              <option [ngValue]="null" disabled *ngIf="!contextStudentId">Choose a student</option>
+              <option *ngFor="let s of linkedStudents" [ngValue]="s.id">
+                {{ s.firstName }} {{ s.lastName }}
+              </option>
+            </select>
+          </div>
+          <div class="sd-chips">
+            <div class="sd-chip sd-chip-clock" role="status" aria-live="polite">
+              <span class="sd-chip-label">Local time</span>
+              <span class="sd-clock-value">{{ clockTime }}</span>
+              <span class="sd-chip-date">{{ clockDate }}</span>
+            </div>
+            <div class="sd-chip" *ngIf="schoolName">
+              <span aria-hidden="true">🏫</span> {{ schoolName }}
+            </div>
+            <div class="sd-chip sd-chip-id" *ngIf="studentNumber">
+              <span class="sd-chip-label">ID</span> {{ studentNumber }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="alert alert-error" *ngIf="error" role="alert">{{ error }}</div>
+
+    <div class="sd-layout" *ngIf="!isParentViewer || !profileLoading">
+      <div class="sd-col-main">
+        <h2 class="sd-section-title">Start here</h2>
+        <p class="sd-section-lead" *ngIf="!isParentViewer">
+          Jump to your report card, fees, or class tasks — same links are in the sidebar.
+        </p>
+        <p class="sd-section-lead" *ngIf="isParentViewer">
+          Open your child’s report card or return to the parent dashboard for invoices and payments.
+        </p>
+
+        <div class="sd-feature-grid">
+          <!-- Report card -->
+          <a *ngIf="!isParentViewer" routerLink="/student/report-card" class="sd-card sd-card-report">
+            <span class="sd-card-icon" aria-hidden="true">📄</span>
+            <span class="sd-card-title">My Report Card</span>
+            <span class="sd-card-desc">Grades and remarks for the active term.</span>
+            <span class="sd-card-go">Open →</span>
+          </a>
+          <a
+            *ngIf="isParentViewer && contextStudentId"
+            [routerLink]="['/report-cards']"
+            [queryParams]="{ studentId: contextStudentId }"
+            class="sd-card sd-card-report"
+          >
+            <span class="sd-card-icon" aria-hidden="true">📄</span>
+            <span class="sd-card-title">Report card</span>
+            <span class="sd-card-desc">View grades and remarks for this student.</span>
+            <span class="sd-card-go">Open →</span>
+          </a>
+
+          <!-- Invoice -->
+          <a *ngIf="!isParentViewer" routerLink="/student/invoice-statement" class="sd-card sd-card-invoice">
+            <span class="sd-card-icon" aria-hidden="true">🧾</span>
+            <span class="sd-card-title">My Invoice Statement</span>
+            <span class="sd-card-desc">Balance, charges, and payment history.</span>
+            <span class="sd-card-go">Open →</span>
+          </a>
+          <a *ngIf="isParentViewer" routerLink="/parent/dashboard" class="sd-card sd-card-invoice">
+            <span class="sd-card-icon" aria-hidden="true">🧾</span>
+            <span class="sd-card-title">Invoices &amp; fees</span>
+            <span class="sd-card-desc">Use the parent dashboard to view statements and download invoices.</span>
+            <span class="sd-card-go">Go to parent dashboard →</span>
+          </a>
+
+          <a *ngIf="!isParentViewer" routerLink="/student/inventory" class="sd-card sd-card-learn">
+            <span class="sd-card-icon" aria-hidden="true">📚</span>
+            <span class="sd-card-title">My books &amp; fines</span>
+            <span class="sd-card-desc">Textbooks on issue, library loans, and inventory fine balance.</span>
+            <span class="sd-card-go">Open →</span>
+          </a>
+
+          <!-- E-learning -->
+          <a *ngIf="!isParentViewer" routerLink="/student/elearning" class="sd-card sd-card-learn">
+            <span class="sd-card-icon" aria-hidden="true">💻</span>
+            <span class="sd-card-title">E-learning Services</span>
+            <span class="sd-card-desc">Assignments, tests, and uploads from teachers.</span>
+            <span class="sd-card-go">Open →</span>
+          </a>
+          <div *ngIf="isParentViewer" class="sd-card sd-card-learn sd-card-disabled" role="note">
+            <span class="sd-card-icon" aria-hidden="true">💻</span>
+            <span class="sd-card-title">E-learning Services</span>
+            <span class="sd-card-desc">Students sign in with their own account to upload work and take tasks.</span>
+          </div>
+        </div>
+
+        <section class="sd-hint-panel" aria-label="Tips">
+          <h3 class="sd-hint-title"><span aria-hidden="true">💡</span> Tips</h3>
+          <ul class="sd-hint-list" *ngIf="!isParentViewer">
+            <li>Use <strong>E-learning</strong> to download task attachments and upload your work.</li>
+            <li>Report cards and invoices open in the browser — you can print or save as PDF from your device.</li>
+          </ul>
+          <ul class="sd-hint-list" *ngIf="isParentViewer">
+            <li>Use <strong>Report card</strong> above for the selected child; balances and PDFs are under <strong>Parent dashboard</strong>.</li>
+            <li>Your child uses the student login for E-learning uploads and assignments.</li>
+          </ul>
+        </section>
+      </div>
+
+      <aside class="sd-aside" aria-label="Shortcuts">
+        <div class="sd-widget">
+          <h3 class="sd-widget-title">Sidebar</h3>
+          <p class="sd-widget-body" *ngIf="!isParentViewer">
+            <strong>My Report Card</strong> and <strong>My Invoice Statement</strong> are now top-level menu items — no extra submenu.
+          </p>
+          <p class="sd-widget-body" *ngIf="isParentViewer">
+            You’re viewing the student dashboard layout as a parent. Use the main menu on smaller screens or return to
+            <a routerLink="/parent/dashboard">Parent dashboard</a>.
+          </p>
+        </div>
+        <div class="sd-widget sd-widget-accent">
+          <h3 class="sd-widget-title">Need help?</h3>
+          <p class="sd-widget-body">Contact your class teacher or the school office if something doesn’t look right.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>

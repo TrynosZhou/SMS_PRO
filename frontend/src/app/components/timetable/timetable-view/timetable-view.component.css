@@ -1,0 +1,1312 @@
+.timetable-view-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  margin-bottom: 30px;
+}
+
+.header h2 {
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.card h3 {
+  color: #34495e;
+  margin-bottom: 20px;
+  font-size: 18px;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.generate-section {
+  background: #f8f9fa;
+}
+
+.generate-section-active {
+  background: #e8f4fc;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.35), 0 8px 24px rgba(41, 128, 185, 0.18);
+}
+
+.generation-progress {
+  margin-top: 20px;
+  padding: 18px 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #e3f2fd 100%);
+  border: 2px solid #1976d2;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.2);
+}
+
+.generation-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.generation-progress-title {
+  color: #0d47a1;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.generation-progress-pct {
+  flex-shrink: 0;
+  color: #1565c0 !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+.generation-progress-sub {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: #37474f;
+  line-height: 1.45;
+}
+
+.generation-progress-track {
+  height: 22px;
+  background: #bbdefb;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 2px solid #1976d2;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.generation-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #1565c0 0%, #42a5f5 45%, #00c853 100%);
+  background-size: 200% 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease-out;
+  animation: generation-progress-shimmer 1.2s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(0, 200, 83, 0.45);
+}
+
+@keyframes generation-progress-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  align-items: end;
+}
+
+.form-group {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #555;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.form-control-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.version-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.version-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.version-item:hover {
+  background: #f8f9fa;
+  border-color: #3498db;
+}
+
+.version-item.active {
+  background: #e8f4fd;
+  border-color: #3498db;
+}
+
+.version-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.version-info strong {
+  color: #2c3e50;
+}
+
+.version-date {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.badge-active {
+  background: #2ecc71;
+  color: #fff;
+}
+
+.badge-inactive {
+  background: #95a5a6;
+  color: #fff;
+}
+
+.version-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.version-actions .btn {
+  white-space: nowrap;
+}
+
+.version-actions .btn-primary {
+  min-width: 108px;
+}
+
+.timetable-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.view-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pdf-btn-group {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.view-controls .form-control {
+  min-width: 200px;
+}
+
+.timetable-grid-container {
+  overflow-x: auto;
+  /* Lets horizontal scroll feel anchored on wide admin desktops */
+  -webkit-overflow-scrolling: touch;
+}
+
+.timetable-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.timetable-table thead {
+  background: #34495e;
+  color: #fff;
+}
+
+.timetable-table th {
+  padding: 12px;
+  text-align: center;
+  font-weight: bold;
+  border: 1px solid #2c3e50;
+}
+
+.timetable-table--landscape .timetable-corner-th {
+  min-width: 7rem;
+  text-align: left;
+  padding-left: 14px;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background-color: #34495e;
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.25);
+}
+
+.timetable-table--landscape .day-cell {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.12);
+}
+
+.period-cell {
+  background: #ecf0f1;
+  padding: 10px;
+  text-align: center;
+  font-weight: bold;
+  border: 1px solid #ddd;
+  min-width: 80px;
+}
+
+/* Landscape grid: one row per day, periods across (matches printed teacher/class sheets). */
+.day-cell {
+  background: #ecf0f1;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: bold;
+  border: 1px solid #ddd;
+  min-width: 7rem;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.slot-cell {
+  padding: 5px;
+  border: 1px solid #ddd;
+  min-width: 150px;
+  min-height: 80px;
+  vertical-align: top;
+  position: relative;
+}
+
+.slot-cell.has-slot {
+  background: #e8f5e9;
+}
+
+.slot-cell.editing {
+  background: #fff3cd;
+}
+
+.slot-content {
+  margin-bottom: 5px;
+}
+
+.slot-info {
+  padding: 5px;
+  background: #fff;
+  border-radius: 4px;
+  border: 1px solid #c8e6c9;
+}
+
+.slot-teacher,
+.slot-class,
+.slot-subject {
+  font-size: 11px;
+  margin-bottom: 2px;
+  color: #2c3e50;
+}
+
+.slot-subject {
+  font-weight: bold;
+  color: #27ae60;
+}
+
+.slot-room {
+  font-size: 10px;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+.slot-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.btn-icon:hover {
+  background: #f0f0f0;
+}
+
+.slot-edit-form {
+  padding: 5px;
+  background: #fff;
+  border: 2px solid #ffc107;
+  border-radius: 4px;
+}
+
+.slot-edit-form .form-control-sm {
+  margin-bottom: 5px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #3498db;
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #2980b9;
+}
+
+.btn-primary:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #95a5a6;
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background: #7f8c8d;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+
+.alert-danger {
+  background: #fee;
+  color: #c33;
+  border: 1px solid #fcc;
+}
+
+.alert-danger .error-message {
+  margin: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.alert-success {
+  background: #efe;
+  color: #3c3;
+  border: 1px solid #cfc;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 40px;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+}
+
+.pdf-download-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.pdf-download-section h4 {
+  margin-bottom: 15px;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.download-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 10px;
+}
+
+.download-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.download-item span {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.download-item-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* —— Full timetable preview modal —— */
+.tt-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.tt-preview-dialog {
+  width: min(1100px, 100%);
+  max-height: min(92vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e2e8f0;
+  margin-top: 0;
+}
+
+.tt-preview-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+}
+
+.tt-preview-dialog-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #1e293b;
+}
+
+.tt-preview-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.tt-preview-close {
+  flex-shrink: 0;
+}
+
+.tt-preview-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f1f5f9;
+}
+
+.tt-preview-tab {
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+
+.tt-preview-tab:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.tt-preview-tab.active {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.tt-preview-body {
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.tt-preview-loading {
+  text-align: center;
+  padding: 32px;
+  color: #64748b;
+}
+
+.tt-preview-alert {
+  cursor: default;
+  margin-bottom: 0;
+}
+
+.tt-preview-hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.tt-preview-section {
+  margin-bottom: 8px;
+}
+
+.tt-preview-block {
+  margin-bottom: 28px;
+}
+
+.tt-preview-block-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: #0f172a;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #3498db;
+}
+
+.tt-preview-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.tt-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  min-width: 520px;
+}
+
+.tt-preview-table thead {
+  background: #334155;
+  color: #fff;
+}
+
+.tt-preview-table th,
+.tt-preview-table td {
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+  text-align: center;
+  vertical-align: top;
+}
+
+.tt-preview-period {
+  font-weight: 700;
+  background: #e2e8f0;
+  white-space: nowrap;
+}
+
+.tt-preview-cell {
+  background: #fff;
+  min-width: 88px;
+}
+
+.tt-preview-slot {
+  padding: 4px 2px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.tt-preview-slot:last-child {
+  margin-bottom: 0;
+}
+
+.tt-preview-slot strong {
+  display: block;
+  color: #065f46;
+  font-size: 11px;
+}
+
+.tt-preview-meta {
+  display: block;
+  font-size: 10px;
+  color: #334155;
+  margin-top: 2px;
+}
+
+.tt-preview-room {
+  display: block;
+  font-size: 9px;
+  color: #64748b;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* Consolidated / teacher summary preview — matches PDF grid (teachers × days × periods) */
+.tt-preview-summary-section .tt-teacher-sheet {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 2px;
+  margin-bottom: 28px;
+  padding: 14px 16px 12px;
+  max-width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Summary header: logo + titles grouped at top left (like class timetable sheets) */
+.tt-preview-summary-section .tt-sheet-head {
+  align-items: flex-start;
+}
+
+.tt-preview-summary-section .tt-sheet-head-main {
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.tt-consolidated-table {
+  /* auto layout + max-content width so period columns keep readable width (fixed + 100% squeezed headers) */
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.tt-consolidated-corner {
+  width: 62px;
+  min-width: 56px;
+  max-width: 76px;
+  vertical-align: middle;
+  font-size: 9px !important;
+  padding: 4px 2px !important;
+}
+
+.tt-consolidated-day-head {
+  background: #34495e !important;
+  color: #fff !important;
+  font-weight: 800;
+  font-size: 10px;
+  padding: 4px 2px !important;
+  text-align: center;
+  border: 1px solid #000 !important;
+}
+
+.tt-consolidated-table .tt-teacher-th-period {
+  /* Summary sheet: period numbers only in header (matches printed school summary). */
+  min-width: 18px;
+  max-width: none;
+  padding: 3px 2px !important;
+  vertical-align: middle;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.tt-consolidated-table .tt-teacher-th-period .tt-teacher-ptime {
+  display: none;
+}
+
+.tt-consolidated-table .tt-teacher-pnum {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.tt-consolidated-table .tt-teacher-ptime {
+  margin-top: 4px;
+}
+
+.tt-consolidated-table .tt-teacher-ptime .tt-ptime-line {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.tt-consolidated-table .tt-teacher-th-break {
+  width: 11px;
+  min-width: 9px;
+  max-width: 14px;
+  padding: 2px 1px !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.tt-consolidated-table .tt-break-th-times-only .tt-ptime-line {
+  font-size: 6px;
+  font-weight: 700;
+}
+
+.tt-consolidated-table .tt-break-banner-merged {
+  min-height: 70px;
+  font-size: clamp(7px, 1.2vmin, 10px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #111827;
+  padding: 6px 2px;
+}
+
+.tt-consolidated-table .tt-break-td-merged.tt-consolidated-break-merged {
+  width: 11px;
+  min-width: 9px;
+  max-width: 14px;
+  box-sizing: border-box;
+}
+
+.tt-consolidated-table .tt-teacher-break-v {
+  font-size: 8px;
+  max-height: 88px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.tt-consolidated-table .tt-teacher-break-time {
+  margin-top: 4px;
+}
+
+.tt-consolidated-table .tt-teacher-break-time .tt-ptime-line {
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.tt-consolidated-teacher-name {
+  background: #ecf0f1 !important;
+  font-weight: 800;
+  font-size: 9px;
+  color: #2c3e50 !important;
+  text-align: left !important;
+  padding: 3px 4px !important;
+  vertical-align: middle;
+  border: 1px solid #000 !important;
+}
+
+.tt-consolidated-period-cell {
+  min-height: 15px;
+  min-width: 20px;
+  padding: 1px 1px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box;
+}
+
+.tt-consolidated-class-code {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #2c3e50;
+  text-align: center;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 0;
+}
+
+.tt-consolidated-table .tt-teacher-td-break {
+  padding: 1px !important;
+}
+
+/* —— Teacher timetable preview (print-style: days = rows, periods = columns) —— */
+.tt-preview-teachers .tt-teacher-sheet {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 2px;
+  margin-bottom: 28px;
+  padding: 14px 16px 12px;
+  max-width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Print-style sheet header: logo | titles | download / class teacher */
+.tt-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #000;
+}
+
+.tt-sheet-logo {
+  flex-shrink: 0;
+  object-fit: contain;
+  border: 1px solid #000;
+}
+
+.tt-sheet-head-main {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.tt-sheet-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #000;
+  letter-spacing: 0.02em;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.tt-sheet-subtitle {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.tt-sheet-head-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 44px;
+}
+
+.tt-sheet-head-actions-class {
+  max-width: 200px;
+  text-align: right;
+}
+
+/* Teacher & class previews: logo + school lines side-by-side on the left (same as summary PDF/preview) */
+.tt-preview-teachers .tt-sheet-head,
+.tt-preview-classes .tt-sheet-head {
+  align-items: flex-start;
+}
+
+.tt-preview-teachers .tt-sheet-head-main,
+.tt-preview-classes .tt-sheet-head-main {
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.tt-class-teacher-line {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #000;
+  line-height: 1.25;
+}
+
+.tt-sheet-dl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid #000;
+  border-radius: 4px;
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tt-sheet-dl:hover {
+  background: #111;
+  color: #fff;
+}
+
+.tt-sheet-dl-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.tt-sheet-dl-label {
+  width: auto;
+  height: auto;
+  padding: 8px 14px;
+  gap: 8px;
+}
+
+.tt-sheet-dl-text {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tt-class-lesson {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  text-align: center;
+  gap: 2px;
+  padding: 2px 4px;
+}
+
+.tt-class-form-corner {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 8px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1;
+}
+
+.tt-class-subj {
+  font-size: 12px;
+  font-weight: 800;
+  color: #000;
+  line-height: 1.15;
+}
+
+.tt-class-tchr {
+  font-size: 9px;
+  font-weight: 500;
+  color: #222;
+  line-height: 1.2;
+}
+
+.tt-class-room-corner {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #333;
+  line-height: 1;
+}
+
+.tt-class-td-empty {
+  background: #fafafa !important;
+}
+
+.tt-teacher-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 10px;
+  max-width: 100%;
+}
+
+/* html2canvas: uncap width/scroll clipping so all period columns (e.g. after lunch) are captured */
+.tt-teacher-sheet.tt-exporting-pdf {
+  max-width: none !important;
+  width: max-content !important;
+}
+
+.tt-teacher-sheet.tt-exporting-pdf .tt-teacher-table-scroll {
+  overflow: visible !important;
+  max-width: none !important;
+}
+
+.tt-teacher-table {
+  /* Let columns grow to fit period times; scroll horizontally inside .tt-teacher-table-scroll */
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  color: #000;
+}
+
+.tt-teacher-table th,
+.tt-teacher-table td {
+  border: 1px solid #000;
+  padding: 4px 3px;
+  vertical-align: middle;
+  text-align: center;
+  background: #fff;
+}
+
+.tt-teacher-corner {
+  width: 44px;
+  min-width: 44px;
+  background: #f0f0f0 !important;
+  font-weight: 800;
+  font-size: 10px;
+}
+
+.tt-teacher-th-period {
+  background: #2c3e50 !important;
+  color: #fff !important;
+  font-weight: 700;
+  min-width: 74px;
+  max-width: none;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.tt-teacher-pnum {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.tt-teacher-ptime {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 5px;
+  font-weight: 600;
+  opacity: 0.98;
+  line-height: 1.2;
+  max-width: 100%;
+}
+
+.tt-teacher-ptime .tt-ptime-line {
+  display: block;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.tt-teacher-th-break {
+  width: 36px;
+  min-width: 32px;
+  max-width: 44px;
+  background: #6b7280 !important;
+  color: #fff !important;
+  padding: 4px 3px !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.tt-break-th-times-only {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 0 !important;
+  min-height: 40px;
+  width: 100%;
+}
+
+.tt-break-td-merged {
+  padding: 0 !important;
+  vertical-align: middle !important;
+  background: #f3f4f6 !important;
+  border: 1px solid #bdc3c7 !important;
+  overflow: visible;
+}
+
+.tt-break-banner-merged {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 180px;
+  height: 100%;
+  padding: 12px 5px;
+  font-size: clamp(12px, 2.4vmin, 17px);
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: 0.14em;
+  /* Horizontal text + rotation: html2canvas mangles writing-mode vertical-rl + rotate(180deg). */
+  writing-mode: horizontal-tb;
+  transform: rotate(-90deg);
+  transform-origin: center center;
+  white-space: nowrap;
+  text-transform: uppercase;
+  margin: 0 auto;
+  line-height: 1;
+}
+
+.tt-teacher-break-v {
+  writing-mode: horizontal-tb;
+  transform: rotate(-90deg);
+  transform-origin: center center;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 auto;
+  max-height: 120px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.tt-teacher-break-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 8px;
+  line-height: 1.25;
+}
+
+.tt-teacher-break-time .tt-ptime-line {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.tt-teacher-day {
+  background: #ececec !important;
+  font-weight: 800;
+  font-size: 11px;
+  width: 44px;
+}
+
+.tt-teacher-td-period {
+  min-height: 52px;
+  min-width: 56px;
+  vertical-align: top;
+  padding: 5px 4px !important;
+  box-sizing: border-box;
+}
+
+.tt-teacher-td-break {
+  background: #f3f4f6 !important;
+  vertical-align: middle;
+}
+
+.tt-teacher-break-cell {
+  font-size: 8px;
+  font-weight: 700;
+  color: #4b5563;
+  writing-mode: horizontal-tb;
+  transform: rotate(-90deg);
+  transform-origin: center center;
+  margin: 0 auto;
+  max-height: 100px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.tt-teacher-lesson {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  text-align: center;
+  gap: 2px;
+}
+
+.tt-teacher-subj {
+  align-self: flex-start;
+  font-size: 9px;
+  font-weight: 600;
+  color: #111;
+  line-height: 1.1;
+}
+
+.tt-teacher-class {
+  font-size: 12px;
+  font-weight: 800;
+  color: #000;
+  line-height: 1.15;
+}
+
+.tt-teacher-foot {
+  font-size: 9px;
+  font-weight: 600;
+  color: #333;
+}
+
+.tt-teacher-sheet-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid #000;
+  font-size: 10px;
+  color: #000;
+}
+
+.tt-teacher-sheet-foot-right {
+  font-weight: 700;
+  color: #374151;
+}
+

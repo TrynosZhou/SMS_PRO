@@ -1,0 +1,104 @@
+.vtv-page {
+  padding: 0.25rem 0 1.5rem;
+  max-width: 100%;
+}
+
+.vtv-head {
+  margin-bottom: 1rem;
+}
+
+.vtv-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1b5e20;
+}
+
+.vtv-desc {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #424242;
+  max-width: 900px;
+}
+
+.vtv-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.vtv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 220px;
+}
+
+.vtv-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #616161;
+}
+
+.vtv-select {
+  max-width: 360px;
+}
+
+.vtv-loading {
+  padding: 2rem;
+  text-align: center;
+  color: #616161;
+}
+
+.vtv-dialog {
+  margin-top: 0.5rem;
+  max-width: 100%;
+}
+
+.vtv-dialog-head {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Full-page preview: not inside overlay — drop fixed max-height from dialog if needed */
+.vtv-dialog.tt-preview-dialog {
+  position: static;
+  transform: none;
+  max-height: none;
+  overflow: visible;
+}
+
+/* Keep all three preview tabs in DOM so PDF capture works from any active tab */
+.tt-preview-section--offscreen {
+  position: fixed;
+  left: -16000px;
+  top: 0;
+  width: max-content;
+  max-width: none;
+  pointer-events: none;
+  z-index: -1000;
+  overflow: visible;
+}
+
+.tt-exporting-pdf .tt-sheet-dl {
+  visibility: hidden !important;
+}
+
+/* Tab row + Download all (adjacent to Teacher summary) */
+.vtv-preview-tabs {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vtv-preview-tabs .vtv-download-all-btn {
+  margin-left: 4px;
+  white-space: nowrap;
+  font-weight: 700;
+}

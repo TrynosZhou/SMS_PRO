@@ -1,0 +1,276 @@
+.user-log-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.user-log-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.user-log-card .card-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.user-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.user-log-table th,
+.user-log-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #eef2f7;
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.user-log-table th {
+  background: #f8f9fa;
+  color: #374151;
+  text-align: left;
+  font-weight: 700;
+}
+
+.menu-cell {
+  white-space: pre-wrap;
+}
+
+.menu-pre {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: #111827;
+}
+
+.empty-state {
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #475569;
+}
+
+.filter-bar {
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 14px;
+  margin: 16px 0;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+}
+
+.filter-group label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.filter-group input[type='date'],
+.filter-group input[type='text'],
+.filter-group select {
+  border: 2px solid #eef2f7;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  outline: none;
+  background: white;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+
+.checkbox-group {
+  min-width: 220px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.filter-actions {
+  min-width: 120px;
+}
+
+.loading-skeleton {
+  padding: 16px 6px;
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 0.8fr 0.8fr 1.4fr;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.skel {
+  height: 14px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #eef2f7 25%, #f8fafc 50%, #eef2f7 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+.skeleton-row .skel-username {
+  width: 80%;
+}
+
+.skel-username { width: 80%; }
+.skel-date { width: 70%; }
+.skel-time { width: 65%; }
+.skel-menu { width: 85%; }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.table-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+
+.page-summary {
+  font-weight: 700;
+  color: #111827;
+  font-size: 13px;
+}
+
+.page-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 700;
+}
+
+.page-size select {
+  border: 2px solid #eef2f7;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: white;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sort-indicator {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #2563eb;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #0f172a;
+}
+
+.role-pill { background: #e5e7eb; }
+.role-pill-admin { background: #dbeafe; color: #1d4ed8; }
+.role-pill-accountant { background: #dcfce7; color: #166534; }
+.role-pill-superadmin { background: #fef3c7; color: #92400e; }
+
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: #111827;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.menu-last {
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.menu-pre {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+}
+
+details > summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: #1d4ed8;
+  font-size: 12px;
+}
+
+.menu-count {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.pagination-meta {
+  font-weight: 800;
+  color: #374151;
+  font-size: 13px;
+}
+

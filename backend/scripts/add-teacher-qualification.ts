@@ -1,0 +1,42 @@
+import { AppDataSource } from '../src/config/database';
+
+async function addTeacherQualification() {
+  try {
+    console.log('🔧 Connecting to database...');
+    await AppDataSource.initialize();
+    console.log('✓ Connected');
+
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+
+    // Check if column already exists
+    const table = await queryRunner.getTable('teachers');
+    const hasColumn = table?.columns.find(col => col.name === 'qualification');
+
+    if (hasColumn) {
+      console.log('ℹ️ qualification column already exists. Skipping...');
+      await queryRunner.release();
+      await AppDataSource.destroy();
+      return;
+    }
+
+    console.log('📋 Adding qualification column to teachers table...');
+    
+    await queryRunner.query(`
+      ALTER TABLE teachers 
+      ADD COLUMN IF NOT EXISTS "qualification" VARCHAR(255)
+    `);
+
+    console.log('✅ qualification column added successfully!');
+    
+    await queryRunner.release();
+    await AppDataSource.destroy();
+    console.log('✓ Connection closed');
+  } catch (error: any) {
+    console.error('❌ Error adding qualification column:', error);
+    process.exit(1);
+  }
+}
+
+addTeacherQualification();
+

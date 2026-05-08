@@ -1,0 +1,384 @@
+/* Student invoice statement — modern layout */
+
+.sis-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem 1rem 2.5rem;
+  min-height: calc(100vh - 80px);
+  background: linear-gradient(180deg, #f1f5f9 0%, #f8fafc 45%);
+}
+
+/* Hero */
+.sis-hero {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  padding: 1.35rem 1.35rem 1.25rem;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+}
+
+.sis-hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(900px 280px at 0% 0%, rgba(59, 130, 246, 0.2), transparent 55%),
+    radial-gradient(600px 240px at 100% 0%, rgba(16, 185, 129, 0.15), transparent 50%),
+    linear-gradient(135deg, #eff6ff 0%, #ecfdf5 50%, #f8fafc 100%);
+  z-index: 0;
+}
+
+.sis-hero-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.sis-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sis-back:hover {
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+.sis-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.sis-title {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.5rem, 3vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sis-lead {
+  margin: 0 0 0.85rem;
+  max-width: 52ch;
+  line-height: 1.55;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.sis-lead strong {
+  color: #0f172a;
+}
+
+.sis-hero-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sis-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 11px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sis-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sis-btn-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.sis-btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+}
+
+.sis-btn-ghost {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #e2e8f0;
+  color: #334155;
+}
+
+.sis-btn-ghost:hover:not(:disabled) {
+  background: #fff;
+}
+
+/* Alerts */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.alert-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* Loading */
+.sis-loading {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #64748b;
+}
+
+.sis-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 0.75rem;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: sis-spin 0.85s linear infinite;
+}
+
+@keyframes sis-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sis-inline-loading {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* Cards */
+.sis-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sis-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+}
+
+.sis-student-strip {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sis-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #1d4ed8;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border: 1px solid #bfdbfe;
+  flex-shrink: 0;
+}
+
+.sis-student-name {
+  margin: 0 0 0.2rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.sis-student-id {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+/* Balance */
+.sis-balance-card {
+  border-radius: 18px;
+  overflow: hidden;
+  border: none;
+  box-shadow: 0 8px 28px rgba(37, 99, 235, 0.18);
+}
+
+.sis-balance-inner {
+  padding: 1.5rem 1.5rem 1.35rem;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 45%, #2563eb 100%);
+  color: #fff;
+  text-align: center;
+}
+
+.sis-balance-card[data-state='clear'] .sis-balance-inner {
+  background: linear-gradient(135deg, #065f46 0%, #059669 50%, #10b981 100%);
+  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.2);
+}
+
+.sis-balance-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.9;
+}
+
+.sis-balance-value {
+  margin: 0.65rem 0 0.5rem;
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.sis-balance-value.sis-due {
+  color: #fef08a;
+}
+
+.sis-balance-value.sis-clear {
+  color: #ecfdf5;
+}
+
+.sis-balance-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.92;
+  line-height: 1.45;
+}
+
+.sis-prepaid {
+  margin: 1rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.sis-prepaid-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  margin-bottom: 0.25rem;
+}
+
+/* Details */
+.sis-section-title {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.sis-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.65rem;
+}
+
+.sis-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0.85rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+}
+
+.sis-detail-wide {
+  grid-column: 1 / -1;
+}
+
+.sis-dt-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.sis-dt-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.sis-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+.sis-actions {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.sis-actions .sis-btn-primary {
+  min-width: 240px;
+}
+
+/* Empty */
+.sis-empty {
+  text-align: center;
+  padding: 2rem 1.5rem;
+}
+
+.sis-empty-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.sis-empty-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.sis-empty p {
+  margin: 0 0 1rem;
+  color: #64748b;
+  line-height: 1.5;
+  max-width: 40ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 520px) {
+  .sis-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

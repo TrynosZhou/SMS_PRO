@@ -1,0 +1,75 @@
+<div class="elearning-page">
+  <div class="page-header">
+    <div class="header-content">
+      <button type="button" class="btn-back" (click)="goToDashboard()">← Dashboard</button>
+      <h1>
+        <span class="header-icon">💻</span>
+        E-learning
+      </h1>
+      <p class="subtitle">Select a class to view assignments and quizzes assigned to students.</p>
+    </div>
+  </div>
+
+  <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+  <div class="elearning-loading" *ngIf="loading && step === 'classes'">
+    <span class="elearning-spinner"></span>
+    <span>Loading classes…</span>
+  </div>
+
+  <!-- Class list -->
+  <section class="elearning-panel" *ngIf="step === 'classes' && !loading">
+    <h2 class="panel-title">Registered classes</h2>
+    <p class="panel-intro">Click a class to see all assignments and quizzes (student work) for that class.</p>
+    <ul class="class-list" *ngIf="classes.length > 0; else noClasses">
+      <li *ngFor="let cls of classes">
+        <button type="button" class="class-row" (click)="selectClass(cls)">
+          <span class="class-name">{{ cls.name }}</span>
+          <span class="class-meta" *ngIf="cls.form">Form {{ cls.form }}</span>
+          <span class="class-arrow">→</span>
+        </button>
+      </li>
+    </ul>
+    <ng-template #noClasses>
+      <p class="empty-msg">No active classes registered.</p>
+    </ng-template>
+  </section>
+
+  <!-- Work list -->
+  <section class="elearning-panel" *ngIf="step === 'work'">
+    <div class="work-toolbar">
+      <button type="button" class="btn-back-inline" (click)="backToClasses()">← All classes</button>
+      <h2 class="selected-class-title">{{ selectedClass?.name }}</h2>
+    </div>
+
+    <div class="elearning-loading" *ngIf="loading">
+      <span class="elearning-spinner"></span>
+      <span>Loading assigned work…</span>
+    </div>
+
+    <ng-container *ngIf="!loading">
+      <p class="work-caption">Assigned work (assignments &amp; quizzes) for this class:</p>
+      <div class="work-cards" *ngIf="work.length > 0; else noWork">
+        <div class="work-card" *ngFor="let exam of work">
+          <div class="work-head">
+            <span class="work-type">{{ getExamTypeLabel(exam.type) }}</span>
+            <span class="work-status" [class.published]="exam.status === 'published'">{{ exam.status === 'published' ? 'Published' : 'Draft' }}</span>
+          </div>
+          <div class="work-title">{{ exam.name }}</div>
+          <div class="work-meta">
+            <span *ngIf="exam.examDate">📅 {{ exam.examDate | date:'mediumDate' }}</span>
+            <span *ngIf="exam.term"> · {{ exam.term }}</span>
+          </div>
+          <div class="work-subjects"><strong>Subjects:</strong> {{ formatSubjects(exam) }}</div>
+          <p class="work-desc" *ngIf="exam.description">{{ exam.description }}</p>
+        </div>
+      </div>
+      <ng-template #noWork>
+        <p class="empty-msg">No assignments or quizzes found for this class yet.</p>
+      </ng-template>
+      <div class="footer-actions">
+        <button type="button" class="btn-open-exams" (click)="goToExams()">Open Exams &amp; marks</button>
+      </div>
+    </ng-container>
+  </section>
+</div>

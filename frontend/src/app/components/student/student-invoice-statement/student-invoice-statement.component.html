@@ -1,0 +1,123 @@
+<div class="sis-page">
+  <!-- Hero -->
+  <section class="sis-hero" aria-labelledby="sis-title">
+    <div class="sis-hero-bg" aria-hidden="true"></div>
+    <div class="sis-hero-inner">
+      <button type="button" class="sis-back" (click)="goBack()">
+        <span aria-hidden="true">←</span> Dashboard
+      </button>
+      <p class="sis-kicker">Finance</p>
+      <h1 id="sis-title" class="sis-title">
+        <span class="sis-title-icon" aria-hidden="true">🧾</span>
+        My invoice statement
+      </h1>
+      <p class="sis-lead">
+        View your balance, last invoice summary, and download a PDF. Amounts are shown in
+        <strong>{{ currencySymbol || '$' }}</strong> (from school settings).
+      </p>
+      <div class="sis-hero-actions">
+        <button type="button" class="sis-btn sis-btn-ghost" (click)="refresh()" [disabled]="loading">
+          <span aria-hidden="true">🔄</span> Refresh
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <div class="alert alert-error" *ngIf="error" role="alert">{{ error }}</div>
+
+  <!-- Loading -->
+  <div class="sis-loading" *ngIf="loading && !invoiceBalance" aria-busy="true">
+    <div class="sis-spinner"></div>
+    <p>Loading invoice information…</p>
+  </div>
+
+  <!-- Skeleton when loading overlay -->
+  <div class="sis-skeleton-block" *ngIf="loading && invoiceBalance">
+    <p class="sis-inline-loading">Updating balances…</p>
+  </div>
+
+  <div *ngIf="!loading && invoiceBalance" class="sis-content">
+    <!-- Student strip -->
+    <section class="sis-card sis-student-strip">
+      <div class="sis-avatar" aria-hidden="true">{{ (invoiceBalance.firstName || studentName || '?').charAt(0) }}</div>
+      <div class="sis-student-meta">
+        <h2 class="sis-student-name">{{ invoiceBalance.fullName || (invoiceBalance.firstName + ' ' + invoiceBalance.lastName) }}</h2>
+        <p class="sis-student-id">Student ID · {{ invoiceBalance.studentNumber }}</p>
+      </div>
+    </section>
+
+    <!-- Balance hero card -->
+    <section class="sis-balance-card" [attr.data-state]="invoiceBalance.balance > 0 ? 'due' : 'clear'">
+      <div class="sis-balance-inner">
+        <p class="sis-balance-label">Outstanding balance</p>
+        <p class="sis-balance-value" [class.sis-due]="invoiceBalance.balance > 0" [class.sis-clear]="invoiceBalance.balance === 0">
+          {{ formatCurrency(invoiceBalance.balance || 0) }}
+        </p>
+        <p class="sis-balance-hint" *ngIf="invoiceBalance.balance > 0">
+          Please clear this balance as required by your school.
+        </p>
+        <p class="sis-balance-hint" *ngIf="invoiceBalance.balance === 0">
+          You’re up to date — no outstanding balance.
+        </p>
+        <p class="sis-prepaid" *ngIf="invoiceBalance.prepaidAmount > 0">
+          <span class="sis-prepaid-label">Prepaid</span>
+          {{ formatCurrency(invoiceBalance.prepaidAmount) }}
+        </p>
+      </div>
+    </section>
+
+    <!-- Last invoice -->
+    <section class="sis-card" *ngIf="invoiceBalance.lastInvoiceId">
+      <h3 class="sis-section-title">Last invoice</h3>
+      <div class="sis-detail-grid">
+        <div class="sis-detail">
+          <span class="sis-dt-label">Invoice #</span>
+          <span class="sis-dt-val">{{ invoiceBalance.lastInvoiceNumber || '—' }}</span>
+        </div>
+        <div class="sis-detail">
+          <span class="sis-dt-label">Term</span>
+          <span class="sis-dt-val">{{ invoiceBalance.lastInvoiceTerm || '—' }}</span>
+        </div>
+        <div class="sis-detail">
+          <span class="sis-dt-label">Date</span>
+          <span class="sis-dt-val">{{ formatDate(invoiceBalance.lastInvoiceDate) }}</span>
+        </div>
+        <div class="sis-detail">
+          <span class="sis-dt-label">Invoice amount</span>
+          <span class="sis-dt-val sis-mono">{{ formatCurrency(invoiceBalance.lastInvoiceAmount || 0) }}</span>
+        </div>
+        <div class="sis-detail">
+          <span class="sis-dt-label">Previous balance</span>
+          <span class="sis-dt-val sis-mono">{{ formatCurrency(invoiceBalance.lastInvoicePreviousBalance || 0) }}</span>
+        </div>
+        <div class="sis-detail">
+          <span class="sis-dt-label">Amount paid</span>
+          <span class="sis-dt-val sis-mono">{{ formatCurrency(invoiceBalance.lastInvoicePaidAmount || 0) }}</span>
+        </div>
+        <div class="sis-detail sis-detail-wide">
+          <span class="sis-dt-label">Balance after invoice</span>
+          <span class="sis-dt-val sis-mono">{{ formatCurrency(invoiceBalance.lastInvoiceBalance || 0) }}</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="sis-actions">
+      <button
+        type="button"
+        class="sis-btn sis-btn-primary"
+        (click)="downloadPDF()"
+        [disabled]="pdfLoading || !invoiceBalance.lastInvoiceId"
+      >
+        <span aria-hidden="true">📥</span>
+        {{ pdfLoading ? 'Preparing…' : 'Download invoice PDF' }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && !invoiceBalance && !error" class="sis-empty sis-card">
+    <span class="sis-empty-icon" aria-hidden="true">📭</span>
+    <h2 class="sis-empty-title">No invoice on file</h2>
+    <p>There’s no invoice information to show yet. Check back later or contact the school office.</p>
+    <button type="button" class="sis-btn sis-btn-ghost" (click)="goBack()">Back to dashboard</button>
+  </div>
+</div>

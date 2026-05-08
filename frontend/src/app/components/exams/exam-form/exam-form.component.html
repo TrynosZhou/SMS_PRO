@@ -1,0 +1,296 @@
+<div class="exam-form-page">
+  <header class="page-header">
+    <div>
+      <h1>Create Exam</h1>
+      <p class="subtitle">
+        Plan assessments faster with templates, live validation, and a preview before publishing.
+      </p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="ghost-btn" (click)="goToExamsList()">
+        ← Back to Exams
+      </button>
+      <button type="button" class="ghost-btn" (click)="showRecentExams = !showRecentExams">
+        {{ showRecentExams ? 'Hide' : 'Show' }} Recent Exams
+      </button>
+    </div>
+  </header>
+
+  <section class="recent-exams" *ngIf="showRecentExams && recentExams.length">
+    <h3>Recent Exams</h3>
+    <div class="recent-list">
+      <div class="recent-card" *ngFor="let item of recentExams">
+        <div class="recent-card-header">
+          <span class="badge">{{ item.type === 'mid_term' ? 'Mid Term' : 'End Term' }}</span>
+          <span class="recent-date">{{ item.examDate | date: 'mediumDate' }}</span>
+        </div>
+        <h4>{{ item.name }}</h4>
+        <p>{{ item.className || 'Unassigned class' }}</p>
+        <small>{{ item.term }}</small>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid-layout">
+    <section class="main-card">
+      <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+      <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+      <form (ngSubmit)="onSubmit()" autocomplete="off">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Exam Name *</label>
+            <input
+              type="text"
+              [(ngModel)]="exam.name"
+              name="name"
+              required
+              placeholder="e.g. End of Term Assessment"
+            >
+          </div>
+
+          <div class="form-group">
+            <label>Term *</label>
+            <div class="select-wrapper">
+              <select
+                [(ngModel)]="exam.term"
+                name="term"
+                required
+                [disabled]="loadingTerm"
+              >
+                <option value="" *ngIf="loadingTerm">Loading...</option>
+                <option value="" *ngIf="!loadingTerm && !exam.term">Select Term</option>
+                <option *ngFor="let term of availableTerms" [value]="term">
+                  {{ term }}
+                </option>
+              </select>
+            </div>
+            <small class="helper-text">
+              {{ loadingTerm ? 'Loading active term from settings...' : (exam.term ? 'Active term is pre-selected. You can update it if needed.' : 'Select the term for this exam.') }}
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label>Exam Type *</label>
+            <div class="pill-toggle">
+              <button type="button" class="pill" [class.active]="exam.type === 'mid_term'" (click)="exam.type = 'mid_term'">
+                Mid Term
+              </button>
+              <button type="button" class="pill" [class.active]="exam.type === 'end_term'" (click)="exam.type = 'end_term'">
+                End of Term
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Exam Date *</label>
+            <input
+              type="date"
+              [(ngModel)]="exam.examDate"
+              name="examDate"
+              required
+              (change)="checkExamDate()"
+              (blur)="checkExamDate()"
+            >
+            <small class="warning" *ngIf="dateWarning">{{ dateWarning }}</small>
+            <small class="helper-text" *ngIf="!dateWarning && getDaysUntilExam() !== null">
+              {{ getDaysUntilExam() === 0 ? 'Exam is scheduled for today.' : (getDaysUntilExam() > 0 ? getDaysUntilExam() + ' day(s) to go.' : Math.abs(getDaysUntilExam() || 0) + ' day(s) overdue.') }}
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label>Class *</label>
+            <div class="select-wrapper">
+              <select [(ngModel)]="exam.classId" name="classId" required>
+                <option value="">Select Class</option>
+                <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group subject-selector full-width">
+            <div class="section-header">
+              <div>
+                <label>Subject Selection</label>
+                <p class="section-subtitle">Search or pick subjects that will be assessed.</p>
+              </div>
+              <div class="section-actions">
+                <button type="button" class="text-btn" (click)="selectAllSubjects()" [disabled]="!subjects.length">
+                  Select All
+                </button>
+                <button type="button" class="text-btn" (click)="clearSelectedSubjects()" [disabled]="!exam.subjectIds.length">
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div class="subject-tools">
+              <div class="search-wrapper">
+                <span class="icon">🔍</span>
+                <input
+                  type="search"
+                  placeholder="Search subjects..."
+                  [(ngModel)]="subjectSearchQuery"
+                  name="subjectSearchQuery"
+                  (ngModelChange)="filterSubjects()"
+                >
+              </div>
+              <button
+                type="button"
+                class="text-btn"
+                (click)="toggleChipsExpanded()"
+                *ngIf="exam.subjectIds.length > 5"
+              >
+                {{ chipsExpanded ? 'Collapse' : 'Show all' }} selected ({{ exam.subjectIds.length }})
+              </button>
+            </div>
+
+            <div class="selected-chips" *ngIf="exam.subjectIds.length">
+              <span class="chip" *ngFor="let subjectName of getSelectedSubjectNames(); let i = index" [class.hidden]="!chipsExpanded && i >= 5">
+                {{ subjectName }}
+              </span>
+              <span class="chip muted" *ngIf="!chipsExpanded && exam.subjectIds.length > 5">
+                +{{ exam.subjectIds.length - 5 }} more
+              </span>
+            </div>
+
+            <div class="subject-list">
+              <label class="subject-item" *ngFor="let subject of filteredSubjects">
+                <input
+                  type="checkbox"
+                  [checked]="exam.subjectIds.includes(subject.id)"
+                  (change)="toggleSubject(subject.id)"
+                >
+                <div class="subject-meta">
+                  <span class="subject-name">{{ subject.name }}</span>
+                  <span class="subject-tag" *ngIf="subject.category">{{ subject.category }}</span>
+                  <span class="subject-tag outline" *ngIf="subject.type && subject.type !== subject.category">{{ subject.type }}</span>
+                </div>
+              </label>
+              <p class="empty-state" *ngIf="filteredSubjects.length === 0">
+                No subjects match your search.
+              </p>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>Description</label>
+            <textarea
+              [(ngModel)]="exam.description"
+              name="description"
+              rows="4"
+              placeholder="Add extra context or instructions for teachers and students..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn secondary" (click)="openPreview()" [disabled]="submitting">
+            Preview Exam Summary
+          </button>
+          <div class="spacer"></div>
+          <button type="submit" class="btn primary" [disabled]="submitting">
+            <span *ngIf="submitting" class="spinner"></span>
+            {{ submitting ? 'Creating...' : 'Create Exam' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="sidebar">
+      <section class="sidebar-card">
+        <h3>Quick Start Templates</h3>
+        <p>Use a preset to fill in details instantly, then customize as needed.</p>
+        <div class="template-list">
+          <button
+            type="button"
+            class="template-card"
+            *ngFor="let template of examTemplates"
+            (click)="applyTemplate(template)"
+          >
+            <h4>{{ template.label }}</h4>
+            <p>{{ template.value.description }}</p>
+            <span class="pill tiny">
+              {{ template.value.type === 'mid_term' ? 'Mid Term' : 'End Term' }}
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section class="sidebar-card secondary">
+        <h3>Smart Checks</h3>
+        <ul class="checklist">
+          <li [class.done]="!!exam.examDate && !(dateWarning.startsWith('⚠️') && dateWarning.includes('past'))">
+            {{ !exam.examDate ? 'Pick a date for the exam.' : (dateWarning ? dateWarning.replace('⚠️', '').trim() : 'Exam date looks good.') }}
+          </li>
+          <li [class.done]="!!exam.term">
+            Term selected
+          </li>
+          <li [class.done]="!!exam.classId">
+            Class assigned
+          </li>
+          <li [class.done]="exam.subjectIds.length > 0">
+            {{ exam.subjectIds.length ? exam.subjectIds.length + ' subject(s) selected' : 'Add at least one subject' }}
+          </li>
+        </ul>
+      </section>
+
+      <section class="sidebar-card tertiary">
+        <h3>Need Ideas?</h3>
+        <p class="tips">
+          • Keep exam names consistent, e.g. "Mid Term - Grade 5".<br>
+          • Add instructions in the description for invigilators.<br>
+          • Use the preview to confirm all details before saving.
+        </p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="preview-overlay" *ngIf="previewMode && previewData">
+  <div class="preview-card">
+    <div class="preview-header">
+      <h2>Exam Summary Preview</h2>
+      <button type="button" class="icon-btn" (click)="closePreview()">✕</button>
+    </div>
+    <div class="preview-body">
+      <div class="preview-row">
+        <span class="preview-label">Exam Name</span>
+        <span class="preview-value">{{ previewData.name }}</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-label">Term</span>
+        <span class="preview-value">{{ previewData.term }}</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-label">Type</span>
+        <span class="preview-value">{{ previewData.type === 'mid_term' ? 'Mid Term' : 'End Term' }}</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-label">Class</span>
+        <span class="preview-value">{{ previewData.className }}</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-label">Date</span>
+        <span class="preview-value">{{ previewData.examDate | date: 'fullDate' }}</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-label">Subjects</span>
+        <span class="preview-value">
+          <span *ngIf="previewData.subjects?.length; else noSubjects">
+            <span class="preview-chip" *ngFor="let subject of previewData.subjects">{{ subject.name }}</span>
+          </span>
+          <ng-template #noSubjects>Not specified</ng-template>
+        </span>
+      </div>
+      <div class="preview-row" *ngIf="previewData.description">
+        <span class="preview-label">Description</span>
+        <span class="preview-value">{{ previewData.description }}</span>
+      </div>
+    </div>
+    <div class="preview-actions">
+      <button type="button" class="btn secondary" (click)="closePreview()">Close</button>
+      <button type="button" class="btn primary" (click)="onSubmit()">Looks Good — Create Exam</button>
+    </div>
+  </div>
+</div>

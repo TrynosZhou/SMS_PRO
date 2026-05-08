@@ -1,0 +1,41 @@
+<div class="pc-wrap">
+  <header class="pc-header">
+    <a routerLink="/parent/dashboard" class="pc-back">← Dashboard</a>
+    <h1 class="pc-title">Communications</h1>
+    <p class="pc-sub">Read messages from the school, send messages to the school, and view what you have sent.</p>
+  </header>
+
+  <nav class="pc-tabs" aria-label="Communications sections">
+    <a
+      routerLink="/parent/communications/view"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="pc-tab"
+    >
+      <span class="pc-tab-ico" aria-hidden="true">📥</span>
+      View Messages
+    </a>
+    <a
+      routerLink="/parent/communications/send"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="pc-tab"
+    >
+      <span class="pc-tab-ico" aria-hidden="true">✉️</span>
+      Send Message
+    </a>
+    <a
+      routerLink="/parent/communications/sent"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="pc-tab"
+    >
+      <span class="pc-tab-ico" aria-hidden="true">📤</span>
+      Sent
+    </a>
+  </nav>
+
+  <div class="pc-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>

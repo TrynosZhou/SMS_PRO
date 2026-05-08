@@ -1,0 +1,81 @@
+<section id="teaching_load" class="tl-wrap teaching-load" aria-labelledby="teaching-load-title">
+  <header class="tl-header">
+    <h2 id="teaching-load-title">Teaching load</h2>
+    <p class="tl-lead">
+      Set how many periods per week each subject should receive when the timetable is generated.
+      Defaults apply until you save.
+    </p>
+  </header>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+
+  <div class="tl-loading" *ngIf="loading">
+    <span class="tl-spinner"></span>
+    Loading subjects and timetable settings…
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <div class="tl-actions">
+      <button
+        type="button"
+        class="btn btn-primary tl-save"
+        (click)="saveTeachingLoad()"
+        [disabled]="saving"
+      >
+        {{ saving ? 'Saving…' : 'Save teaching load' }}
+      </button>
+    </div>
+
+    <div class="tl-table-scroll">
+      <table class="tl-table">
+        <thead>
+          <tr>
+            <th scope="col" class="tl-th-num">#</th>
+            <th scope="col">Subject name</th>
+            <th scope="col">Subject code</th>
+            <th scope="col" class="tl-th-allocate">Allocate load</th>
+            <th scope="col" class="tl-th-periods">Teaching periods</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of subjects; let i = index; trackBy: trackBySubjectId">
+            <td class="tl-td-num">{{ i + 1 }}</td>
+            <td class="tl-td-name"><strong>{{ s.name }}</strong></td>
+            <td class="tl-td-code">{{ s.code || '—' }}</td>
+            <td class="tl-td-allocate">
+              <div class="tl-stepper" role="group" [attr.aria-label]="'Periods per week for ' + s.name">
+                <button
+                  type="button"
+                  class="tl-step tl-step-minus"
+                  (click)="decrement(s.id)"
+                  [disabled]="loadFor(s.id) <= 0"
+                  aria-label="Decrease periods"
+                >
+                  −
+                </button>
+                <span class="tl-step-value">{{ loadFor(s.id) }}</span>
+                <button
+                  type="button"
+                  class="tl-step tl-step-plus"
+                  (click)="increment(s.id)"
+                  [disabled]="loadFor(s.id) >= maxLessonsForRow()"
+                  aria-label="Increase periods"
+                >
+                  +
+                </button>
+              </div>
+            </td>
+            <td class="tl-td-badge">
+              <span class="tl-badge" aria-hidden="true">{{ loadFor(s.id) }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="tl-footnote" *ngIf="subjects.length === 0">
+      No active subjects found. Add subjects under Manage Subject first.
+    </p>
+  </ng-container>
+</section>

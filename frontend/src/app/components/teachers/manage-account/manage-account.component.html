@@ -1,0 +1,262 @@
+<!-- Parent: full portal layout -->
+<div class="ma-parent-page" *ngIf="isParentViewer">
+  <div class="ma-mobile-overlay" *ngIf="mobileMenuOpen && isMobile" (click)="closeMobileMenu()" aria-hidden="true"></div>
+  <div class="ma-parent-layout">
+    <aside class="ma-sidebar" [class.ma-sidebar--open]="mobileMenuOpen">
+      <div class="ma-sidebar-brand">
+        <span class="ma-logo" aria-hidden="true">📚</span>
+        <div>
+          <h2>Parent Portal</h2>
+          <p class="ma-sidebar-user">{{ getParentDisplayName() }}</p>
+        </div>
+      </div>
+      <nav class="ma-sidebar-nav" aria-label="Parent navigation">
+        <a routerLink="/parent/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">
+          <span class="ma-nav-ico" aria-hidden="true">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a
+          [routerLink]="['/parent/communications/view']"
+          [class.active]="isCommunicationsActive()"
+          (click)="closeMobileMenu()"
+        >
+          <span class="ma-nav-ico" aria-hidden="true">💬</span>
+          <span>Communications</span>
+        </a>
+        <a routerLink="/parent/link-students" routerLinkActive="active" (click)="closeMobileMenu()">
+          <span class="ma-nav-ico" aria-hidden="true">🔗</span>
+          <span>Link Students</span>
+        </a>
+        <a routerLink="/parent/manage-account" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">
+          <span class="ma-nav-ico" aria-hidden="true">👤</span>
+          <span>My Account</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="ma-main">
+      <header class="ma-mobile-topbar">
+        <button type="button" class="ma-icon-btn" (click)="toggleMobileMenu()" [attr.aria-expanded]="mobileMenuOpen" aria-label="Open menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <span class="ma-mobile-title">My account</span>
+        <span class="ma-mobile-spacer"></span>
+      </header>
+
+      <header class="ma-hero">
+        <div class="ma-hero-copy">
+          <p class="ma-kicker">Account &amp; security</p>
+          <h1>My account</h1>
+          <p class="ma-hero-lead">Update your email and password. Your username is the login ID the school gave you.</p>
+        </div>
+      </header>
+
+      <div class="alert alert-success ma-alert" *ngIf="success" role="status">{{ success }}</div>
+      <div class="alert alert-error ma-alert" *ngIf="error" role="alert">{{ error }}</div>
+
+      <!-- Skeleton -->
+      <div class="ma-panel ma-skeleton" *ngIf="loading && !accountInfo" aria-hidden="true">
+        <div class="ma-sk-line ma-sk-line--title"></div>
+        <div class="ma-sk-line ma-sk-line--row"></div>
+        <div class="ma-sk-line ma-sk-line--row"></div>
+        <div class="ma-sk-line ma-sk-line--row"></div>
+      </div>
+
+      <form *ngIf="accountInfo" (ngSubmit)="updateAccount()" class="ma-form-stack" novalidate>
+        <section class="ma-panel">
+          <h2 class="ma-panel-title">
+            <span class="ma-panel-ico" aria-hidden="true">🔐</span>
+            Sign-in details
+          </h2>
+          <p class="ma-panel-desc">Read-only identifiers. Contact the school if your login ID is wrong.</p>
+
+          <div class="ma-field">
+            <label for="ma-username">{{ isTeacher ? 'Username (Teacher ID)' : 'Username (login ID)' }}</label>
+            <input id="ma-username" type="text" [value]="currentUsername || 'N/A'" [disabled]="true" class="input-disabled" readonly />
+            <p class="ma-hint" *ngIf="isTeacher">Your username is your Teacher ID and cannot be changed.</p>
+            <p class="ma-hint" *ngIf="!isTeacher">This is your current username for signing in.</p>
+          </div>
+
+          <ng-container *ngIf="!isTeacher">
+            <div class="ma-field">
+              <label for="ma-email-current">Current email</label>
+              <input id="ma-email-current" type="email" [value]="currentEmail || 'N/A'" disabled class="input-disabled" readonly />
+            </div>
+            <div class="ma-field">
+              <label for="ma-email-new">New email <span class="ma-optional">(optional)</span></label>
+              <input
+                id="ma-email-new"
+                type="email"
+                [(ngModel)]="newEmail"
+                name="newEmail"
+                placeholder="name@example.com"
+                autocomplete="email"
+                inputmode="email"
+              />
+              <p class="ma-hint">Leave blank to keep your current email.</p>
+            </div>
+          </ng-container>
+        </section>
+
+        <div class="ma-callout" *ngIf="isTeacher && mustChangePassword" role="status">
+          <span class="ma-callout-ico" aria-hidden="true">⚠️</span>
+          <p><strong>First login:</strong> Change your temporary password. Your Teacher ID cannot be changed.</p>
+        </div>
+
+        <section class="ma-panel">
+          <h2 class="ma-panel-title">
+            <span class="ma-panel-ico" aria-hidden="true">🔑</span>
+            Change password
+          </h2>
+          <p class="ma-panel-desc">Use at least 8 characters. Mixing letters, numbers, and symbols is recommended.</p>
+
+          <div class="ma-field">
+            <label for="ma-pw-current">Current password</label>
+            <div class="ma-password-wrap">
+              <input
+                id="ma-pw-current"
+                [type]="showCurrentPassword ? 'text' : 'password'"
+                [(ngModel)]="currentPassword"
+                name="currentPassword"
+                placeholder="Enter current password"
+                required
+                autocomplete="current-password"
+              />
+              <button type="button" class="ma-toggle-pw" (click)="toggleCurrentPasswordVisibility()" [attr.aria-label]="showCurrentPassword ? 'Hide password' : 'Show password'">
+                {{ showCurrentPassword ? 'Hide' : 'Show' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="ma-field">
+            <label for="ma-pw-new">New password</label>
+            <div class="ma-password-wrap">
+              <input
+                id="ma-pw-new"
+                [type]="showNewPassword ? 'text' : 'password'"
+                [(ngModel)]="newPassword"
+                name="newPassword"
+                placeholder="At least 8 characters"
+                required
+                minlength="8"
+                autocomplete="new-password"
+              />
+              <button type="button" class="ma-toggle-pw" (click)="toggleNewPasswordVisibility()" [attr.aria-label]="showNewPassword ? 'Hide password' : 'Show password'">
+                {{ showNewPassword ? 'Hide' : 'Show' }}
+              </button>
+            </div>
+            <div class="ma-strength" *ngIf="newPassword?.length">
+              <div class="ma-strength-bars" aria-hidden="true">
+                <span class="ma-bar" [class.ma-bar--on]="passwordStrengthScore >= 1"></span>
+                <span class="ma-bar" [class.ma-bar--on]="passwordStrengthScore >= 2"></span>
+                <span class="ma-bar" [class.ma-bar--on]="passwordStrengthScore >= 3"></span>
+                <span class="ma-bar" [class.ma-bar--on]="passwordStrengthScore >= 4"></span>
+              </div>
+              <span class="ma-strength-label">{{ passwordStrengthLabel }}</span>
+            </div>
+          </div>
+
+          <div class="ma-field">
+            <label for="ma-pw-confirm">Confirm new password</label>
+            <div class="ma-password-wrap">
+              <input
+                id="ma-pw-confirm"
+                [type]="showConfirmPassword ? 'text' : 'password'"
+                [(ngModel)]="confirmPassword"
+                name="confirmPassword"
+                placeholder="Enter new password again"
+                required
+                autocomplete="new-password"
+              />
+              <button type="button" class="ma-toggle-pw" (click)="toggleConfirmPasswordVisibility()" [attr.aria-label]="showConfirmPassword ? 'Hide password' : 'Show password'">
+                {{ showConfirmPassword ? 'Hide' : 'Show' }}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div class="ma-actions">
+          <button type="submit" class="ma-btn ma-btn-primary" [disabled]="loading">
+            {{ loading ? 'Saving…' : 'Save changes' }}
+          </button>
+          <button type="button" class="ma-btn ma-btn-ghost" (click)="goToDashboard()" [disabled]="loading">Back to dashboard</button>
+        </div>
+      </form>
+    </main>
+  </div>
+</div>
+
+<!-- Teacher / admin: compact layout -->
+<div class="ma-legacy" *ngIf="!isParentViewer">
+  <div class="container">
+    <div class="manage-account-card">
+      <div class="card-header">
+        <h2>Manage Account</h2>
+        <p class="subtitle">Update your username and password</p>
+      </div>
+
+      <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+      <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+      <div *ngIf="loading && !accountInfo" class="loading-message">Loading account information...</div>
+
+      <form *ngIf="accountInfo" (ngSubmit)="updateAccount()">
+        <div class="form-group">
+          <label>{{ isTeacher ? 'Username (TeacherID)' : 'Username' }}</label>
+          <input type="text" [value]="currentUsername || 'N/A'" [disabled]="true" class="disabled-input" />
+          <small class="form-text" *ngIf="isTeacher">Your username is your TeacherID and cannot be changed.</small>
+          <small class="form-text" *ngIf="!isTeacher">This is your current username</small>
+        </div>
+
+        <div class="form-group" *ngIf="!isTeacher">
+          <label>Current Email</label>
+          <input type="email" [value]="currentEmail || 'N/A'" disabled class="disabled-input" />
+          <small class="form-text">This is your current email address</small>
+        </div>
+
+        <div class="form-group" *ngIf="!isTeacher">
+          <label>New Email</label>
+          <input type="email" [(ngModel)]="newEmail" name="newEmail" placeholder="Enter new email (optional)" autocomplete="email" />
+          <small class="form-text">Enter a new email address (leave blank to keep current)</small>
+        </div>
+
+        <div class="info-box" *ngIf="isTeacher && mustChangePassword">
+          <span class="info-icon">⚠️</span>
+          <p><strong>First Login:</strong> You must change your temporary password. Your username (TeacherID) cannot be changed.</p>
+        </div>
+
+        <div class="form-group">
+          <label>Current Password *</label>
+          <div class="password-input-wrapper">
+            <input [type]="showCurrentPassword ? 'text' : 'password'" [(ngModel)]="currentPassword" name="currentPassword" placeholder="Enter current password" required autocomplete="current-password" />
+            <span class="password-toggle" (click)="toggleCurrentPasswordVisibility()">{{ showCurrentPassword ? '👁️' : '👁️‍🗨️' }}</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>New Password *</label>
+          <div class="password-input-wrapper">
+            <input [type]="showNewPassword ? 'text' : 'password'" [(ngModel)]="newPassword" name="newPassword" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password" />
+            <span class="password-toggle" (click)="toggleNewPasswordVisibility()">{{ showNewPassword ? '👁️' : '👁️‍🗨️' }}</span>
+          </div>
+          <small class="form-text">Password must be at least 8 characters long</small>
+        </div>
+
+        <div class="form-group">
+          <label>Confirm New Password *</label>
+          <div class="password-input-wrapper">
+            <input [type]="showConfirmPassword ? 'text' : 'password'" [(ngModel)]="confirmPassword" name="confirmPassword" placeholder="Confirm new password" required autocomplete="new-password" />
+            <span class="password-toggle" (click)="toggleConfirmPasswordVisibility()">{{ showConfirmPassword ? '👁️' : '👁️‍🗨️' }}</span>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="loading">{{ loading ? 'Updating...' : '💾 Update Account' }}</button>
+          <button type="button" class="btn btn-secondary" (click)="goToDashboard()" [disabled]="loading">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

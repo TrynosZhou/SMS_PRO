@@ -1,0 +1,155 @@
+<div class="student-report-card-container">
+  <div class="page-header">
+    <div class="header-content">
+      <button class="btn btn-secondary" (click)="goBack()">← Back to Dashboard</button>
+      <h1>My Report Card</h1>
+      <p class="subtitle">Academic Performance Report for {{ activeTerm }}</p>
+    </div>
+  </div>
+
+  <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+  <div *ngIf="loading" class="loading-container">
+    <p>Loading report card...</p>
+  </div>
+
+  <div *ngIf="!loading && reportCard" class="report-card-content">
+    <!-- School header: banner (Logo 1 only) + details -->
+    <div *ngIf="schoolName || schoolLogo" class="school-header-block">
+      <div class="report-card-school-banner" *ngIf="schoolLogo">
+        <img [src]="schoolLogo" alt="School banner" class="banner-logo-img" (error)="schoolLogo = null">
+      </div>
+      <div class="report-card-school-banner banner-fallback" *ngIf="!schoolLogo && schoolName">
+        <span class="banner-school-name">{{ schoolName }}</span>
+      </div>
+      <div class="school-header-details">
+        <div class="school-text">
+          <h3 *ngIf="schoolName">{{ schoolName }}</h3>
+          <p *ngIf="schoolAddress" class="school-address">{{ schoolAddress }}</p>
+          <p *ngIf="schoolPhone" class="school-phone">Phone: {{ schoolPhone }}</p>
+          <p *ngIf="academicYear" class="academic-year">Academic Year: {{ academicYear }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Student Information -->
+    <div class="info-section">
+      <h2>Student Information</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Name:</span>
+          <span class="value">{{ reportCard.student.firstName }} {{ reportCard.student.lastName }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Student ID:</span>
+          <span class="value">{{ reportCard.student.studentNumber }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Class:</span>
+          <span class="value">{{ reportCard.student.class }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Term:</span>
+          <span class="value">{{ activeTerm }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Exam Type:</span>
+          <span class="value">{{ reportCard.examType }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subjects and Grades -->
+    <div class="subjects-section">
+      <h2>Subject Performance</h2>
+      
+      <!-- Message when no subjects are found -->
+      <div *ngIf="!reportCard.subjects || reportCard.subjects.length === 0" class="alert alert-info">
+        <p><strong>No subjects found for this class.</strong></p>
+        <p>This may occur if:</p>
+        <ul>
+          <li>No subjects have been assigned to your class yet</li>
+          <li>No End of Term exams have been created for {{ activeTerm }}</li>
+          <li>No marks have been entered for your class</li>
+        </ul>
+        <p>Please contact your administrator or class teacher for assistance.</p>
+      </div>
+      
+      <table class="subjects-table" *ngIf="reportCard.subjects && reportCard.subjects.length > 0">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Subject Code</th>
+            <th>Mark Obtained</th>
+            <th>Possible Mark</th>
+            <th>Class Average</th>
+            <th>Grade</th>
+            <th>Comments</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let subject of reportCard.subjects; let i = index">
+            <td>{{ subject.name || 'N/A' }}</td>
+            <td>{{ subject.code || '-' }}</td>
+            <td>{{ subject.score !== null && subject.score !== undefined ? subject.score : 'N/A' }}</td>
+            <td>{{ subject.maxScore !== null && subject.maxScore !== undefined ? subject.maxScore : '-' }}</td>
+            <td>{{ subject.classAverage !== null && subject.classAverage !== undefined ? subject.classAverage : '-' }}</td>
+            <td>
+              <span class="grade-badge" [class]="getGradeClass(subject.grade)">
+                {{ subject.grade || 'N/A' }}
+              </span>
+            </td>
+            <td>{{ subject.comment || subject.comments || '-' }}</td>
+          </tr>
+          <tr *ngIf="!reportCard.subjects || reportCard.subjects.length === 0">
+            <td colspan="7" style="text-align: center; padding: 20px; color: #999;">
+              No subjects found. Please contact the administrator.
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="2"><strong>Total</strong></td>
+            <td><strong>{{ roundValue(reportCard.totalScore) }}</strong></td>
+            <td><strong>{{ roundValue(reportCard.totalMaxScore) }}</strong></td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Remarks -->
+    <div class="remarks-section" *ngIf="reportCard.remarks">
+      <h2>Remarks</h2>
+      <div class="remarks-content">
+        <div class="remark-item" *ngIf="reportCard.remarks.classTeacherRemarks">
+          <strong>Class Teacher's Remarks:</strong>
+          <p>{{ reportCard.remarks.classTeacherRemarks }}</p>
+        </div>
+        <div class="remark-item" *ngIf="!reportCard.remarks.classTeacherRemarks">
+          <strong>Class Teacher's Remarks:</strong>
+          <p class="no-remarks">No remarks available</p>
+        </div>
+        <div class="remark-item" *ngIf="reportCard.remarks.headmasterRemarks">
+          <strong>Headmaster's Remarks:</strong>
+          <p>{{ reportCard.remarks.headmasterRemarks }}</p>
+        </div>
+        <div class="remark-item" *ngIf="!reportCard.remarks.headmasterRemarks">
+          <strong>Headmaster's Remarks:</strong>
+          <p class="no-remarks">No remarks available</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download Button -->
+    <div class="actions-section">
+      <button class="btn btn-primary btn-large" (click)="downloadPDF()" [disabled]="loading">
+        {{ loading ? 'Downloading...' : '📥 Download PDF' }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && !reportCard && !error" class="empty-state">
+    <p>No report card available for the active term.</p>
+  </div>
+</div>

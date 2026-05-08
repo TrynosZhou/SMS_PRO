@@ -1,0 +1,1158 @@
+<div class="inv-page">
+  <header class="inv-hero">
+    <div class="inv-hero-text">
+      <p class="inv-kicker">Operations</p>
+      <h1>Inventory Manager</h1>
+      <p class="inv-lead">
+        Stock, textbook custody, furniture, reports, and audit — in one place.
+      </p>
+    </div>
+    <div class="inv-hero-meta" *ngIf="auth.getCurrentUser() as u">
+      <span class="inv-pill inv-pill--muted">{{ u.username }}</span>
+      <span class="inv-pill inv-pill--info">{{ u.role }}</span>
+    </div>
+  </header>
+
+  <div class="inv-toast-stack" *ngIf="error || success">
+    <div class="inv-toast inv-toast--error" *ngIf="error" role="alert">
+      <span class="inv-toast-msg">{{ error }}</span>
+      <button type="button" class="inv-toast-close" (click)="dismissAlert()" aria-label="Dismiss">×</button>
+    </div>
+    <div class="inv-toast inv-toast--ok" *ngIf="success" role="status">
+      <span class="inv-toast-msg">{{ success }}</span>
+      <button type="button" class="inv-toast-close" (click)="dismissAlert()" aria-label="Dismiss">×</button>
+    </div>
+  </div>
+
+  <nav class="inv-tabs" role="tablist" aria-label="Inventory sections">
+    <button
+      type="button"
+      role="tab"
+      *ngIf="!isTeacher()"
+      [attr.aria-selected]="activeTab === 'stock'"
+      [class.active]="activeTab === 'stock'"
+      (click)="setTab('stock')"
+    >
+      <span class="inv-tab-ico" aria-hidden="true">📚</span> Stock
+    </button>
+    <button
+      type="button"
+      role="tab"
+      *ngIf="isAdmin() || isHod() || isTeacher()"
+      [attr.aria-selected]="activeTab === 'custody'"
+      [class.active]="activeTab === 'custody'"
+      (click)="setTab('custody')"
+    >
+      <span class="inv-tab-ico" aria-hidden="true">📘</span> Textbook Allocation
+    </button>
+    <button
+      type="button"
+      role="tab"
+      *ngIf="isAdmin() || isHod() || isTeacher()"
+      [attr.aria-selected]="activeTab === 'furnitureAllocation'"
+      [class.active]="activeTab === 'furnitureAllocation'"
+      (click)="setTab('furnitureAllocation')"
+    >
+      <span class="inv-tab-ico" aria-hidden="true">🪑</span> Furniture Allocation
+    </button>
+    <button
+      type="button"
+      role="tab"
+      *ngIf="isTeacher()"
+      [attr.aria-selected]="activeTab === 'tx'"
+      [class.active]="activeTab === 'tx'"
+      (click)="setTab('tx')"
+    >
+      <span class="inv-tab-ico" aria-hidden="true">🔁</span> Term end process
+    </button>
+    <button
+      type="button"
+      role="tab"
+      *ngIf="isTeacher()"
+      [attr.aria-selected]="activeTab === 'textbookReport'"
+      [class.active]="activeTab === 'textbookReport'"
+      (click)="setTab('textbookReport')"
+    >
+      <span class="inv-tab-ico" aria-hidden="true">📚</span> Textbook Report
+    </button>
+    <button
+      type="button"
+      role="tab"
+      *ngIf="isTeacher()"
+      [attr.aria-selected]="activeTab === 'furnitureReport'"
+      [class.active]="activeTab === 'furnitureReport'"
+      (click)="setTab('furnitureReport')"
+    >
+      <span class="inv-tab-ico" aria-hidden="true">🪑</span> Furniture Report
+    </button>
+    <button
+      type="button"
+      role="tab"
+      *ngIf="!isTeacher()"
+      [attr.aria-selected]="activeTab === 'reportsFurniture'"
+      [class.active]="activeTab === 'reportsFurniture'"
+      (click)="setTab('reportsFurniture')"
+    >
+      <span class="inv-tab-ico" aria-hidden="true">🪑</span> Report Furniture
+    </button>
+    <button
+      type="button"
+      role="tab"
+      *ngIf="!isTeacher()"
+      [attr.aria-selected]="activeTab === 'reportsTextbooksHod'"
+      [class.active]="activeTab === 'reportsTextbooksHod'"
+      (click)="setTab('reportsTextbooksHod')"
+    >
+      <span class="inv-tab-ico" aria-hidden="true">📚</span> Report Textbook
+    </button>
+    <button
+      type="button"
+      role="tab"
+      *ngIf="!isTeacher()"
+      [attr.aria-selected]="activeTab === 'audit'"
+      [class.active]="activeTab === 'audit'"
+      (click)="setTab('audit')"
+    >
+      <span class="inv-tab-ico" aria-hidden="true">📋</span> Audit
+    </button>
+  </nav>
+
+  <!-- Stock -->
+  <section *ngIf="activeTab === 'stock' && !isTeacher()" class="inv-stock">
+    <div class="inv-loading-bar" *ngIf="loading" aria-busy="true">
+      <div class="inv-loading-bar-fill"></div>
+    </div>
+
+    <div class="inv-kpi-grid" *ngIf="stockOverview && !loading">
+      <div class="inv-kpi">
+        <span class="inv-kpi-value">{{ kpiBooksInStock }}</span>
+        <span class="inv-kpi-label">Textbooks in library</span>
+      </div>
+      <div class="inv-kpi">
+        <span class="inv-kpi-value">{{ kpiBooksIssuedLoaned }}</span>
+        <span class="inv-kpi-label">Issued / on loan</span>
+      </div>
+      <div class="inv-kpi">
+        <span class="inv-kpi-value">{{ kpiBooksLost }}</span>
+        <span class="inv-kpi-label">Lost copies</span>
+      </div>
+      <div class="inv-kpi">
+        <span class="inv-kpi-value">{{ kpiFurnitureUnits }}</span>
+        <span class="inv-kpi-label">Furniture units</span>
+      </div>
+    </div>
+
+    <div class="inv-panel inv-panel--elevated">
+      <div class="inv-panel-head">
+        <h2>Textbook catalog</h2>
+        <p class="inv-panel-desc">Titles and metadata; add physical copies below.</p>
+      </div>
+      <div class="inv-toolbar">
+        <input
+          class="inv-input inv-input--grow"
+          [(ngModel)]="catalogSearch"
+          name="catSearch"
+          placeholder="Search titles, ISBN, subject…"
+          type="search"
+        />
+      </div>
+      <div class="inv-form-compact">
+        <input [(ngModel)]="newCatalog.title" name="ct" placeholder="Title *" />
+        <input [(ngModel)]="newCatalog.isbn" name="isbn" placeholder="ISBN" />
+        <input [(ngModel)]="newCatalog.subject" name="sub" placeholder="Subject" />
+        <input [(ngModel)]="newCatalog.gradeLevel" name="gr" placeholder="Grade level" />
+        <button type="button" class="inv-btn inv-btn--primary" (click)="createCatalog()">Add title</button>
+      </div>
+
+      <div class="inv-table-wrap inv-textbook-catalog" *ngIf="filteredCatalog.length">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">ISBN</th>
+              <th scope="col" class="inv-col-num">Available</th>
+              <th scope="col" class="inv-col-num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of filteredCatalog; trackBy: trackById">
+              <td><strong>{{ c.title }}</strong></td>
+              <td class="inv-td-muted">{{ c.isbn || '—' }}</td>
+              <td><span class="inv-num">{{ catalogAvailableCount(c) }}</span></td>
+              <td><span class="inv-num">{{ catalogTotalCount(c) }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inv-empty" *ngIf="catalog.length && !filteredCatalog.length">No catalog rows match your search.</div>
+      <div class="inv-empty" *ngIf="!catalog.length && !loading">No catalog titles yet — add one above.</div>
+
+      <h3 class="inv-subhead">Add physical copies</h3>
+      <div class="inv-form-compact">
+        <select [(ngModel)]="addCopyCatalogId" name="pickCat">
+          <option *ngFor="let c of catalog" [ngValue]="c.id">{{ c.title }}</option>
+        </select>
+        <input type="number" min="1" max="500" [(ngModel)]="addCopyCount" name="cnt" title="Quantity" />
+        <select [(ngModel)]="addCopyCondition" name="cond">
+          <option value="new">new</option>
+          <option value="good">good</option>
+          <option value="fair">fair</option>
+          <option value="poor">poor</option>
+          <option value="damaged">damaged</option>
+        </select>
+        <button type="button" class="inv-btn inv-btn--secondary" (click)="bulkCopies()">Add copies</button>
+      </div>
+
+      <h3 class="inv-subhead">Textbook copies</h3>
+      <div class="inv-toolbar">
+        <button
+          type="button"
+          class="inv-btn inv-btn--danger-outline"
+          *ngIf="isAdmin()"
+          [disabled]="!selectedCopyCount"
+          (click)="deleteSelectedCopies()"
+        >
+          Delete selected ({{ selectedCopyCount }})
+        </button>
+        <div class="inv-chip-actions inv-chip-actions--tight">
+          <button type="button" class="inv-chip-btn" (click)="quickFilterCopies('')">All ({{ copies.length }})</button>
+          <button type="button" class="inv-chip-btn" (click)="quickFilterCopies('in_stock')">In stock ({{ copyStatusCounts.in_stock || 0 }})</button>
+          <button type="button" class="inv-chip-btn" (click)="quickFilterCopies('on_loan')">On loan ({{ copyStatusCounts.on_loan || 0 }})</button>
+          <button type="button" class="inv-chip-btn" (click)="quickFilterCopies('permanent_out')">
+            Issued ({{ copyStatusCounts.permanent_out || 0 }})
+          </button>
+          <button type="button" class="inv-chip-btn" (click)="quickFilterCopies('lost')">Lost ({{ copyStatusCounts.lost || 0 }})</button>
+        </div>
+        <select [(ngModel)]="copyFilterCatalog" (ngModelChange)="loadCopies()" name="fcat">
+          <option value="">All catalogs</option>
+          <option *ngFor="let c of catalog" [ngValue]="c.id">{{ c.title }}</option>
+        </select>
+        <select [(ngModel)]="copyFilterStatus" (ngModelChange)="loadCopies()" name="fstat">
+          <option value="">All statuses</option>
+          <option value="in_stock">in_stock</option>
+          <option value="permanent_out">permanent_out</option>
+          <option value="on_loan">on_loan</option>
+          <option value="lost">lost</option>
+        </select>
+        <input
+          class="inv-input inv-input--grow"
+          type="search"
+          [(ngModel)]="copySearch"
+          name="copyS"
+          placeholder="Filter by tag, title, or copy id…"
+        />
+        <button type="button" class="inv-btn inv-btn--ghost" (click)="loadCopies()">Refresh</button>
+      </div>
+      <div class="inv-table-wrap" *ngIf="filteredCopies.length">
+        <table class="inv-table inv-table-sm">
+          <thead>
+            <tr>
+              <th scope="col" class="inv-col-num" *ngIf="isAdmin()">
+                <input
+                  type="checkbox"
+                  [checked]="allFilteredCopiesSelected"
+                  (change)="toggleAllFilteredCopies($any($event.target).checked)"
+                  aria-label="Select all visible copy rows"
+                />
+              </th>
+              <th scope="col">BookNumber</th>
+              <th scope="col">Title</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="inv-th-actions" aria-label="Actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of filteredCopies; trackBy: trackById">
+              <td *ngIf="isAdmin()">
+                <input
+                  type="checkbox"
+                  [checked]="isCopySelected(c.id)"
+                  (change)="toggleCopySelection(c.id, $any($event.target).checked)"
+                  [attr.aria-label]="'Select copy ' + (c.assetTag || c.id)"
+                />
+              </td>
+              <td class="inv-td-copy-id">
+                <div class="inv-copy-id-stack">
+                  <div class="inv-copy-id-line">
+                    <span class="inv-copy-id-meta">BookNumber</span>
+                    <code class="inv-code">{{ c.assetTag || '—' }}</code>
+                  </div>
+                </div>
+              </td>
+              <td>{{ c.catalog?.title }}</td>
+              <td><span [class]="statusPillClass(c.status)">{{ statusLabel(c.status) }}</span></td>
+              <td class="inv-td-actions">
+                <button type="button" class="inv-btn-text inv-btn-text--danger" *ngIf="c.status !== 'lost'" (click)="markCopyLost(c.id)">
+                  Mark lost
+                </button>
+                <button
+                  type="button"
+                  class="inv-btn-text inv-btn-text--danger"
+                  *ngIf="isAdmin()"
+                  (click)="deleteCopy(c.id)"
+                >
+                  Delete row
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inv-empty" *ngIf="copies.length && !filteredCopies.length">No copies match the current filter.</div>
+    </div>
+
+    <div class="inv-panel inv-panel--elevated">
+      <div class="inv-panel-head">
+        <h2>Furniture</h2>
+        <p class="inv-panel-desc">Desks and chairs with unique inventory codes.</p>
+      </div>
+      <div class="inv-toolbar">
+        <input
+          class="inv-input inv-input--grow"
+          type="search"
+          [(ngModel)]="furnSearch"
+          name="furnS"
+          placeholder="Search code, type, or location…"
+        />
+      </div>
+      <div class="inv-form-compact">
+        <select [(ngModel)]="newFurn.itemType" name="invFurnType">
+          <option [ngValue]="'desk'">desk</option>
+          <option [ngValue]="'chair'">chair</option>
+        </select>
+        <input type="number" min="1" [(ngModel)]="newFurn.count" name="invFurnCount" placeholder="Quantity" />
+        <input [(ngModel)]="newFurn.classroomLocation" name="invFurnLoc" placeholder="Location / classroom" />
+        <button
+          type="button"
+          class="inv-btn inv-btn--primary"
+          (click)="createFurn()"
+          [disabled]="!(newFurn.count > 0)"
+        >
+          Add furniture (bulk)
+        </button>
+      </div>
+      <div class="inv-table-wrap" *ngIf="filteredFurniture.length">
+        <table class="inv-table inv-table-sm">
+          <thead>
+            <tr>
+              <th scope="col">Code</th>
+              <th scope="col">Type</th>
+              <th scope="col">Location</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="inv-th-actions" aria-label="Actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let f of filteredFurniture; trackBy: trackById">
+              <td><code class="inv-code">{{ f.itemCode }}</code></td>
+              <td>{{ f.itemType }}</td>
+              <td>{{ f.classroomLocation || '—' }}</td>
+              <td><span [class]="statusPillClass(f.status)">{{ statusLabel(f.status) }}</span></td>
+              <td class="inv-td-actions">
+                <button type="button" class="inv-btn-text inv-btn-text--danger" *ngIf="f.status !== 'lost'" (click)="markFurnLost(f.id)">
+                  Mark lost
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inv-empty" *ngIf="furniture.length && !filteredFurniture.length">No furniture matches your search.</div>
+      <div class="inv-empty" *ngIf="!furniture.length && !loading">No furniture yet — register items above.</div>
+    </div>
+
+    <div *ngIf="stockOverview" class="inv-panel inv-panel--elevated inv-stock-summary">
+      <div class="inv-panel-head">
+        <h2>Aggregated stock</h2>
+        <p class="inv-panel-desc">Counts by title and status — updates when you refresh the Stock tab.</p>
+      </div>
+      <div class="inv-table-wrap" *ngIf="stockOverview.textbookCounts?.length">
+        <table class="inv-table inv-table-sm">
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="inv-col-num">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of stockOverview.textbookCounts">
+              <td>{{ row.title || row.catalogTitle || row.catalogId || '—' }}</td>
+              <td><span [class]="statusPillClass(row.status)">{{ statusLabel(row.status) }}</span></td>
+              <td><span class="inv-num">{{ row.count }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p *ngIf="!stockOverview.textbookCounts?.length" class="inv-hint">No textbook copy aggregates yet.</p>
+
+      <h3 class="inv-subhead" *ngIf="stockOverview.furnitureCounts?.length">Furniture</h3>
+      <div class="inv-table-wrap" *ngIf="stockOverview.furnitureCounts?.length">
+        <table class="inv-table inv-table-sm">
+          <thead>
+            <tr>
+              <th scope="col">Type</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="inv-col-num">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of stockOverview.furnitureCounts">
+              <td>{{ row.itemType || '—' }}</td>
+              <td><span [class]="statusPillClass(row.status)">{{ statusLabel(row.status) }}</span></td>
+              <td><span class="inv-num">{{ row.count }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p *ngIf="!stockOverview.furnitureCounts?.length" class="inv-hint">No furniture aggregates yet.</p>
+    </div>
+  </section>
+
+  <!-- Textbook allocation chain (Admin → HOD → Teacher → Student) -->
+  <section *ngIf="activeTab === 'custody'" class="inv-panel inv-panel--elevated">
+    <div class="inv-panel-head">
+      <h2>Textbook Allocation</h2>
+      <p class="inv-panel-desc">
+        Admin issues textbooks in bulk to HODs. HODs issue to teachers. Teachers issue copies via BookNumber from the list below (quick issue).
+      </p>
+    </div>
+
+    <!-- BookNumbers paste field: not on /teacher/inventory_manage (HOD uses table checkboxes only). -->
+    <label
+      class="inv-field inv-field--block"
+      *ngIf="!isTeacherNavRestricted() && !isAdmin() && (!isTeacher() || isHod())"
+    >
+      <span class="inv-label">{{ isHod() ? 'BookNumbers (optional)' : 'BookNumbers (bulk)' }}</span>
+      <textarea
+        class="inv-input inv-input--block inv-textarea"
+        [(ngModel)]="custodyCopyIdsText"
+        name="custodyCopyIds"
+        rows="4"
+        placeholder="Paste BookNumbers separated by commas or new lines…"
+      ></textarea>
+      <span class="inv-hint">Tip: use the BookNumber shown in stock list (e.g. BK0001).</span>
+      <span class="inv-hint" *ngIf="isHod()">
+        As HOD: tick one or more textbooks in the table below (or paste extra numbers here), choose a teacher in your department, then click Transfer to teacher.
+      </span>
+    </label>
+
+    <div class="inv-table-wrap" *ngIf="isHod()">
+      <h3 class="inv-subhead">My allocated textbooks (from Admin)</h3>
+      <div class="inv-hod-stats-row">
+        <p class="inv-hod-remaining-count" role="status" aria-live="polite">
+          <span class="inv-hod-remaining-count__label">Textbooks remaining with you</span>
+          <span class="inv-hod-remaining-count__num">{{ hodAllocatedCopies.length }}</span>
+          <span class="inv-hod-remaining-count__hint">
+            — in your custody from Admin; updates after each Transfer to teacher.
+          </span>
+        </p>
+        <p class="inv-hod-remaining-count inv-hod-issued-count" role="status" aria-live="polite">
+          <span class="inv-hod-remaining-count__label">Issued by you to teachers</span>
+          <span class="inv-hod-remaining-count__num">{{ hodIssuedToTeachersCount }}</span>
+          <span class="inv-hod-remaining-count__hint">
+            — with teachers now (not yet given to students); updates after each transfer.
+          </span>
+        </p>
+      </div>
+      <table class="inv-table inv-table-sm" *ngIf="hodAllocatedCopies.length; else noHodAllocatedTop">
+        <thead>
+          <tr>
+            <th scope="col" class="inv-col-num">
+              <input
+                type="checkbox"
+                [checked]="allHodBooksSelected"
+                (change)="toggleAllHodBooks($any($event.target).checked)"
+                aria-label="Select all textbooks"
+              />
+            </th>
+            <th scope="col">BookNumber</th>
+            <th scope="col">Title</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of hodAllocatedCopies; trackBy: trackById">
+            <td>
+              <input
+                type="checkbox"
+                [checked]="isHodBookSelected(c.assetTag || '')"
+                (change)="toggleHodBookSelection(c.assetTag || '', $any($event.target).checked)"
+                [attr.aria-label]="'Select ' + (c.assetTag || 'textbook')"
+              />
+            </td>
+            <td><code class="inv-code">{{ c.assetTag || '—' }}</code></td>
+            <td>{{ c.catalog?.title || '—' }}</td>
+            <td><span [class]="statusPillClass(c.status)">{{ statusLabel(c.status) }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noHodAllocatedTop>
+        <div class="inv-empty">No textbooks currently allocated to this HOD account.</div>
+      </ng-template>
+      <p class="inv-hint" *ngIf="isHod() && selectedHodBookNumberList.length">
+        {{ selectedHodBookNumberList.length }} textbook(s) selected — pick a teacher below and use Transfer to teacher.
+      </p>
+    </div>
+
+    <div class="inv-chain-grid">
+      <div class="inv-chain-card" *ngIf="isAdmin()">
+        <h3>Admin → HOD (bulk)</h3>
+        <select class="inv-input inv-input--block" [(ngModel)]="adminBulkCatalogId" name="adminBulkCatalog">
+          <option [ngValue]="''">All catalog titles</option>
+          <option *ngFor="let c of catalog" [ngValue]="c.id">{{ c.title }}</option>
+        </select>
+        <input class="inv-input inv-input--block" type="number" min="1" [(ngModel)]="adminBulkCount" name="adminBulkCount" placeholder="Quantity" />
+        <select class="inv-input inv-input--block" [(ngModel)]="custodyHodUserId" name="hodId">
+          <option [ngValue]="''">Select HOD…</option>
+          <option *ngFor="let u of hodUsers" [ngValue]="u.id">
+            HOD {{ u.teacher?.department?.name || '—' }} —
+            {{ u.teacher ? (u.teacher.lastName + ' ' + u.teacher.firstName) : (u.username || u.email || u.id) }}
+            ({{ u.teacher?.teacherId || u.username || u.id }})
+          </option>
+        </select>
+        <button type="button" class="inv-btn inv-btn--primary" (click)="doAdminToHod()">Transfer to HOD</button>
+      </div>
+
+      <div class="inv-chain-card" *ngIf="isHod()">
+        <h3>HOD → Teacher (bulk)</h3>
+        <ng-container *ngIf="departmentTeachers.length; else noDepartmentTeachers">
+          <select class="inv-input inv-input--block" [(ngModel)]="custodyTeacherId" name="tId">
+            <option [ngValue]="''">Select teacher in your department…</option>
+            <option *ngFor="let t of departmentTeachers" [ngValue]="t.id">
+              {{ t.lastName }} {{ t.firstName }} ({{ t.teacherId || t.id }})
+            </option>
+          </select>
+        </ng-container>
+        <ng-template #noDepartmentTeachers>
+          <p class="inv-hint">No teachers found under your department.</p>
+        </ng-template>
+        <button
+          type="button"
+          class="inv-btn inv-btn--primary"
+          (click)="doHodToTeacher()"
+          [disabled]="!custodyTeacherId || !hodToTeacherBookNumbers().length"
+        >
+          Transfer to teacher
+        </button>
+        <p class="inv-hint" *ngIf="isHod() && custodyTeacherId && hodToTeacherBookNumbers().length">
+          Sending {{ hodToTeacherBookNumbers().length }} BookNumber(s) to the selected teacher.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="inv-table-wrap" *ngIf="isTeacher()">
+      <h3 class="inv-subhead">My allocated textbooks (from HOD)</h3>
+      <p class="inv-hod-remaining-count inv-teacher-from-hod-count" *ngIf="!isHod()" role="status" aria-live="polite">
+        <span class="inv-hod-remaining-count__label">Textbooks issued to you by your HOD</span>
+        <span class="inv-hod-remaining-count__num">{{ teacherHeldCopies.length }}</span>
+        <span class="inv-hod-remaining-count__hint"> — in your custody to issue to students.</span>
+      </p>
+      <table class="inv-table inv-table-sm" *ngIf="teacherHeldCopies.length; else noTeacherHeld">
+        <thead>
+          <tr>
+            <th scope="col">BookNumber</th>
+            <th scope="col">Title</th>
+            <th scope="col">Status</th>
+            <th scope="col">Allocation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of teacherHeldCopies; trackBy: trackById">
+            <td>
+              <button
+                type="button"
+                class="inv-btn-text"
+                [disabled]="!(c.assetTag || '')"
+                (click)="openQuickIssueModal(c)"
+                [attr.title]="'Issue ' + (c.assetTag || 'textbook') + ' to a student'"
+              >
+                <code class="inv-code">{{ c.assetTag || '—' }}</code>
+              </button>
+            </td>
+            <td>{{ c.catalog?.title || '—' }}</td>
+            <td><span [class]="statusPillClass(c.status)">{{ statusLabel(c.status) }}</span></td>
+            <td><span class="inv-pill inv-pill--muted">UnAllocated</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noTeacherHeld>
+        <div class="inv-empty">No textbooks currently allocated to this teacher account.</div>
+      </ng-template>
+      <p class="inv-hint" *ngIf="recentQuickIssue as r">
+        Recently issued:
+        <code class="inv-code">{{ r.bookNumber }}</code>
+        to {{ r.studentLabel }}
+        at {{ r.issuedAt | date : 'shortTime' }}.
+      </p>
+      <p class="inv-hint" *ngIf="teacherHeldCopies.length">
+        Click a BookNumber to open quick issue modal and allocate it to a student in one of your classes.
+      </p>
+      <p class="inv-hint" *ngIf="isTeacher() && teacherHeldCopies.length">
+        Rule: each student can receive only <strong>one</strong> textbook per title (same catalog). The system blocks a second
+        copy of the same title to the same student.
+      </p>
+    </div>
+  </section>
+
+  <!-- Furniture allocation -->
+  <section *ngIf="activeTab === 'furnitureAllocation'" class="inv-panel inv-panel--elevated">
+    <div class="inv-panel-head">
+      <h2>Furniture Allocation</h2>
+      <p class="inv-panel-desc">Manage furniture flow from central stock to class teacher pools, then to students.</p>
+    </div>
+
+    <div class="inv-chain-grid">
+      <div class="inv-chain-card inv-chain-card--admin-bulk" *ngIf="isAdmin()">
+        <h3>Furniture → class teacher (bulk)</h3>
+        <p class="inv-hint">Allocate desks/chairs from central stock to a class teacher pool using auto-pick quantities below.</p>
+        <select class="inv-input inv-input--block inv-select-teacher" [(ngModel)]="furAdminTeacherId" name="furAdminTidFurnitureTab">
+          <option [ngValue]="''">Select class teacher…</option>
+          <option *ngFor="let t of classTeachersForFurniture" [ngValue]="t.id">
+            {{ t.lastName }} {{ t.firstName }} ({{ t.teacherId || t.id }})
+          </option>
+        </select>
+        <div class="inv-inline-2">
+          <label class="inv-field">
+            <span class="inv-label">Auto-pick desks</span>
+            <input type="number" min="0" class="inv-input" [(ngModel)]="furAdminDeskCount" name="furDcFurnitureTab" placeholder="Qty" />
+          </label>
+          <label class="inv-field">
+            <span class="inv-label">Auto-pick chairs</span>
+            <input type="number" min="0" class="inv-input" [(ngModel)]="furAdminChairCount" name="furCcFurnitureTab" placeholder="Qty" />
+          </label>
+        </div>
+        <button
+          type="button"
+          class="inv-btn inv-btn--primary"
+          (click)="doAdminFurniturePoolTransfer()"
+          [disabled]="furAdminTransferLoading"
+        >
+          {{ furAdminTransferLoading ? 'Transferring…' : 'Transfer to class teacher pool' }}
+        </button>
+      </div>
+
+      <div class="inv-tx-card inv-furniture-pool-card" *ngIf="isTeacher() && isClassTeacher()">
+        <h3>Admin-allocated furniture pool</h3>
+        <p class="inv-hint">
+          Click a <strong>Desk ID</strong> or <strong>Chair ID</strong> in a row to allocate the <strong>matched desk and chair together</strong> in one step (the server receives both item codes whenever the student still needs them).
+        </p>
+
+        <div class="inv-table-wrap inv-furniture-pool-wrap" *ngIf="matchedFurniturePoolPairs.length; else noPool">
+          <table class="inv-table inv-table-sm">
+            <thead>
+              <tr>
+                <th scope="col">Desk ID</th>
+                <th scope="col">Chair ID</th>
+                <th scope="col">Desk Location</th>
+                <th scope="col">Chair Location</th>
+                <th scope="col">Allocation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of matchedFurniturePoolPairs; trackBy: trackByPairKey">
+                <td>
+                  <button type="button" class="inv-btn-text" (click)="openFurnitureAssignFromPool(p)" [disabled]="furnitureAssignLoading">
+                    <code class="inv-code">{{ p.desk.itemCode || '—' }}</code>
+                  </button>
+                </td>
+                <td>
+                  <button type="button" class="inv-btn-text" (click)="openFurnitureAssignFromPool(p)" [disabled]="furnitureAssignLoading">
+                    <code class="inv-code">{{ p.chair.itemCode || '—' }}</code>
+                  </button>
+                </td>
+                <td class="inv-td-muted">{{ p.desk.classroomLocation || '—' }}</td>
+                <td class="inv-td-muted">{{ p.chair.classroomLocation || '—' }}</td>
+                <td><span class="inv-pill inv-pill--muted">UnAllocated</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noPool>
+          <div class="inv-empty">No matched desk/chair pairs in your pool yet. Desk ID must match Chair ID suffix (e.g. DK0007 ↔ CH0007).</div>
+        </ng-template>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="inv-modal-backdrop" *ngIf="quickIssueOpen" (click)="closeQuickIssueModal()">
+    <div class="inv-modal-card" (click)="$event.stopPropagation()">
+      <div class="inv-panel-head">
+        <h2>Issue textbook to student</h2>
+        <p class="inv-panel-desc">BookNumber: <code class="inv-code">{{ quickIssueBookNumber }}</code></p>
+        <p class="inv-panel-desc" *ngIf="quickIssueCatalogTitle">Title: <strong>{{ quickIssueCatalogTitle }}</strong></p>
+        <p class="inv-hint">
+          Each student may have only <strong>one</strong> copy per textbook title. Students who already have this title are
+          disabled below.
+        </p>
+      </div>
+
+      <label class="inv-field inv-field--block">
+        <span class="inv-label">Class (only classes you teach)</span>
+        <select
+          class="inv-input inv-input--block"
+          [(ngModel)]="quickIssueClassId"
+          (ngModelChange)="onQuickIssueClassChange()"
+          name="quickIssueClass"
+        >
+          <option [ngValue]="''">Select class…</option>
+          <option *ngFor="let c of teacherClassOptions" [ngValue]="c.id">{{ c.name || c.form || c.id }}</option>
+        </select>
+      </label>
+
+      <label class="inv-field inv-field--block">
+        <span class="inv-label">Student (selected class)</span>
+        <select class="inv-input inv-input--block" [(ngModel)]="quickIssueStudentId" name="quickIssueStudent">
+          <option [ngValue]="''">Select student…</option>
+          <option
+            *ngFor="let s of quickIssueClassStudents"
+            [ngValue]="s.id"
+            [disabled]="studentBlockedForQuickIssue(s.id)"
+          >
+            {{ studentLabel(s) }}{{ studentBlockedForQuickIssue(s.id) ? ' (already has this title)' : '' }}
+          </option>
+        </select>
+      </label>
+
+      <div class="inv-student-pick-list" *ngIf="quickIssueClassStudents.length">
+        <button
+          type="button"
+          class="inv-student-pick-item"
+          *ngFor="let s of quickIssueClassStudents; trackBy: trackById"
+          [class.inv-student-pick-item--blocked]="studentBlockedForQuickIssue(s.id)"
+          [disabled]="quickIssueLoading || studentBlockedForQuickIssue(s.id)"
+          (click)="issueQuickToStudent(s.id)"
+        >
+          {{ studentLabel(s)
+          }}{{ studentBlockedForQuickIssue(s.id) ? ' — already has this title' : '' }}
+        </button>
+      </div>
+      <div class="inv-empty" *ngIf="quickIssueClassId && !quickIssueClassStudents.length">
+        No students found in the selected class.
+      </div>
+
+      <div class="inv-actions-row">
+        <button type="button" class="inv-btn inv-btn--ghost" (click)="closeQuickIssueModal()" [disabled]="quickIssueLoading">Close</button>
+        <button
+          type="button"
+          class="inv-btn inv-btn--primary"
+          (click)="issueQuickToStudent()"
+          [disabled]="
+            quickIssueLoading ||
+            !quickIssueClassId ||
+            !quickIssueStudentId ||
+            studentBlockedForQuickIssue(quickIssueStudentId)
+          "
+        >
+          {{ quickIssueLoading ? 'Issuing…' : 'Issue selected textbook' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Term end process (class teachers / HOD — not shown to pure admin staff) -->
+  <section *ngIf="activeTab === 'tx' && isTeacher()" class="inv-panel inv-panel--elevated">
+    <div class="inv-panel-head">
+      <h2>Term end process</h2>
+      <p class="inv-panel-desc">All actions are timestamped and tied to your staff login.</p>
+    </div>
+
+    <div class="inv-tx-grid">
+      <div class="inv-tx-card inv-tx-card--wide">
+        <h3>Term-end textbook return (by Student ID)</h3>
+        <p class="inv-hint">
+          Enter Student ID, load allocated textbooks, inspect condition, then click Cleared to deallocate from the student.
+        </p>
+        <div class="inv-form-compact inv-form-wrap">
+          <input
+            [(ngModel)]="termReturnStudentCode"
+            name="termReturnStudentCode"
+            placeholder="Student ID"
+            class="inv-input"
+          />
+          <button
+            type="button"
+            class="inv-btn inv-btn--secondary"
+            (click)="searchTermEndStudentReturns()"
+            [disabled]="termReturnLoading || !termReturnStudentCode.trim()"
+          >
+            {{ termReturnLoading ? 'Loading…' : 'Load student record' }}
+          </button>
+        </div>
+        <div class="inv-table-wrap" *ngIf="termReturnRows.length">
+          <table class="inv-table inv-table-sm">
+            <thead>
+              <tr>
+                <th scope="col">Student ID</th>
+                <th scope="col">Full name</th>
+                <th scope="col">Class</th>
+                <th scope="col">Book Number</th>
+                <th scope="col">Condition</th>
+                <th scope="col">Clearance</th>
+                <th scope="col" class="inv-th-actions" aria-label="Actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of termReturnRows">
+                <td><code class="inv-code">{{ row.studentId }}</code></td>
+                <td>{{ termReturnStudentFullName(row) }}</td>
+                <td>{{ row.className || '—' }}</td>
+                <td><code class="inv-code">{{ row.bookNumber }}</code></td>
+                <td>
+                  <select
+                    class="inv-input"
+                    [(ngModel)]="termReturnCondByBook[row.bookNumber]"
+                    [name]="'termCond_' + row.bookNumber"
+                  >
+                    <option [ngValue]="'good'">good</option>
+                    <option [ngValue]="'torn'">torn</option>
+                    <option [ngValue]="'lost'">lost</option>
+                  </select>
+                </td>
+                <td><span [class]="termReturnFlagClass(row)">{{ termReturnFlagLabel(row) }}</span></td>
+                <td class="inv-td-actions">
+                  <button
+                    type="button"
+                    class="inv-btn inv-btn--primary inv-btn--xs"
+                    (click)="clearTermEndBook(row)"
+                    [disabled]="termReturnFlagLabel(row) === 'Cleared'"
+                  >
+                    Apply
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inv-empty" *ngIf="!termReturnLoading && termReturnStudentCode.trim() && !termReturnRows.length">
+          No allocated textbook record loaded for this student ID.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Teacher: textbooks you issued (chain of custody), students in your classes -->
+  <section *ngIf="activeTab === 'textbookReport' && isTeacher()" class="inv-panel inv-panel--elevated">
+    <div class="inv-panel-head">
+      <h2>Textbook Report</h2>
+      <p class="inv-panel-desc">
+        Textbook copies you issued to students (issuing chain), limited to students in classes you are assigned to teach.
+      </p>
+      <div class="inv-chip-actions">
+        <button type="button" class="inv-chip-btn" (click)="loadTeacherTextbookReport()" [disabled]="teacherTextbookReportLoading">
+          {{ teacherTextbookReportLoading ? 'Loading…' : 'Refresh' }}
+        </button>
+        <button
+          type="button"
+          class="inv-btn inv-btn--xs inv-btn--ghost"
+          *ngIf="teacherReportTextbooks.length"
+          (click)="copyJson('Teacher-issued textbooks', teacherReportTextbooks)"
+        >
+          Copy data
+        </button>
+      </div>
+    </div>
+
+    <p class="inv-hint inv-report-count" *ngIf="!teacherTextbookReportLoading">{{ teacherReportTextbooks.length }} row(s)</p>
+    <div class="inv-table-wrap inv-table-wrap--report" *ngIf="teacherReportTextbooks.length">
+      <table class="inv-table inv-table-sm">
+        <thead>
+          <tr>
+            <th scope="col">Student ID</th>
+            <th scope="col">Last name</th>
+            <th scope="col">First name</th>
+            <th scope="col">Gender</th>
+            <th scope="col">Class</th>
+            <th scope="col">Book number</th>
+            <th scope="col">Title</th>
+            <th scope="col">Issue date</th>
+            <th scope="col">Allocation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of teacherReportTextbooks">
+            <td><code class="inv-code">{{ row.studentId }}</code></td>
+            <td>{{ row.lastName }}</td>
+            <td>{{ row.firstName }}</td>
+            <td>{{ row.gender }}</td>
+            <td>{{ row.className }}</td>
+            <td><code class="inv-code">{{ row.bookNumber }}</code></td>
+            <td><strong>{{ row.title }}</strong></td>
+            <td class="inv-td-muted">{{ row.issueDate ? (row.issueDate | date : 'medium') : '—' }}</td>
+            <td>
+              <span class="inv-pill inv-pill--warn">{{ row.allocationLabel || 'Allocated' }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="inv-empty" *ngIf="!teacherTextbookReportLoading && !teacherReportTextbooks.length">
+      No textbooks you issued are currently with students in your classes, or copies are not tracked under your teacher account.
+    </div>
+  </section>
+
+  <!-- Teacher (class teacher): furniture you assigned in your class-teacher classes -->
+  <section *ngIf="activeTab === 'furnitureReport' && isTeacher()" class="inv-panel inv-panel--elevated">
+    <div class="inv-panel-head">
+      <h2>Furniture Report</h2>
+      <p class="inv-panel-desc">
+        Desk and chair assignments you recorded as class teacher, for students in those classes only (not subject classes where you are not the class teacher).
+      </p>
+      <div class="inv-chip-actions">
+        <button type="button" class="inv-chip-btn" (click)="loadTeacherFurnitureReport()" [disabled]="teacherFurnitureReportLoading">
+          {{ teacherFurnitureReportLoading ? 'Loading…' : 'Refresh' }}
+        </button>
+        <button
+          type="button"
+          class="inv-btn inv-btn--xs inv-btn--ghost"
+          *ngIf="teacherReportFurniture.length"
+          (click)="copyJson('Class-teacher furniture assignments', teacherReportFurniture)"
+        >
+          Copy data
+        </button>
+      </div>
+    </div>
+
+    <p class="inv-hint inv-report-count" *ngIf="!teacherFurnitureReportLoading">{{ teacherReportFurniture.length }} active assignment(s)</p>
+    <div class="inv-table-wrap inv-table-wrap--report" *ngIf="teacherReportFurniture.length">
+      <table class="inv-table inv-table-sm">
+        <thead>
+          <tr>
+            <th scope="col">Student ID</th>
+            <th scope="col">Last name</th>
+            <th scope="col">First name</th>
+            <th scope="col">Gender</th>
+            <th scope="col">Class</th>
+            <th scope="col">Desk</th>
+            <th scope="col">Chair</th>
+            <th scope="col">Desk location</th>
+            <th scope="col">Chair location</th>
+            <th scope="col">Issued</th>
+            <th scope="col">Allocation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of teacherReportFurniture">
+            <td><code class="inv-code">{{ row.studentId }}</code></td>
+            <td>{{ row.lastName }}</td>
+            <td>{{ row.firstName }}</td>
+            <td>{{ row.gender }}</td>
+            <td>{{ row.className }}</td>
+            <td><code class="inv-code">{{ row.deskCode }}</code></td>
+            <td><code class="inv-code">{{ row.chairCode }}</code></td>
+            <td class="inv-td-muted">{{ row.deskLocation }}</td>
+            <td class="inv-td-muted">{{ row.chairLocation }}</td>
+            <td class="inv-td-muted">{{ row.issuedAt ? (row.issuedAt | date : 'medium') : '—' }}</td>
+            <td><span class="inv-pill inv-pill--warn">Allocated</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="inv-empty" *ngIf="!teacherFurnitureReportLoading && !teacherReportFurniture.length">
+      No matching furniture assignments. This list only includes allocations you made as class teacher for students in a class where you are the assigned class teacher.
+    </div>
+  </section>
+
+  <!-- Report: furniture allocated to class teachers -->
+  <section *ngIf="activeTab === 'reportsFurniture' && !isTeacher()" class="inv-panel inv-panel--elevated">
+    <div class="inv-panel-head">
+      <h2>Report Furniture</h2>
+      <p class="inv-panel-desc">
+        Desks and chairs in <strong>class teacher pools</strong> (allocated by admin from central stock, not yet assigned to students).
+      </p>
+    </div>
+    <div class="inv-toolbar">
+      <button type="button" class="inv-btn inv-btn--secondary" (click)="loadAdminClassTeacherFurnitureReport()" [disabled]="adminClassTeacherFurnitureLoading">
+        {{ adminClassTeacherFurnitureLoading ? 'Loading…' : 'Refresh' }}
+      </button>
+    </div>
+    <div class="inv-table-wrap" *ngIf="adminClassTeacherFurnitureItems.length">
+      <table class="inv-table inv-table-sm">
+        <thead>
+          <tr>
+            <th scope="col">Type</th>
+            <th scope="col">Code</th>
+            <th scope="col">Location</th>
+            <th scope="col">Condition</th>
+            <th scope="col">Class teacher</th>
+            <th scope="col">Staff ID</th>
+            <th scope="col">Login</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of adminClassTeacherFurnitureItems; trackBy: trackById">
+            <td>{{ row.itemType }}</td>
+            <td><code class="inv-code">{{ row.itemCode }}</code></td>
+            <td>{{ row.classroomLocation || '—' }}</td>
+            <td>{{ row.condition }}</td>
+            <td>{{ row.teacherLastName }} {{ row.teacherFirstName }}</td>
+            <td><code class="inv-code">{{ row.teacherStaffId || '—' }}</code></td>
+            <td>{{ row.teacherUsername || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="inv-empty" *ngIf="!adminClassTeacherFurnitureLoading && !adminClassTeacherFurnitureItems.length">
+      No furniture is currently allocated to class teacher pools.
+    </div>
+  </section>
+
+  <!-- Report: textbooks allocated to HODs -->
+  <section *ngIf="activeTab === 'reportsTextbooksHod' && !isTeacher()" class="inv-panel inv-panel--elevated">
+    <div class="inv-panel-head">
+      <h2>Report Textbook</h2>
+      <p class="inv-panel-desc">
+        Textbook copies held by <strong>heads of department</strong> after admin transfer (not yet issued to teachers in the chain).
+      </p>
+      <p class="inv-hint" *ngIf="isAdmin()">
+        For administrators, opening this tab automatically returns invalid rows to central stock: HOD has <strong>no department</strong> and/or <strong>no first and last name</strong>. Use
+        <strong>Clear invalid HOD rows</strong> to run that cleanup again without leaving the tab.
+      </p>
+    </div>
+    <div class="inv-toolbar">
+      <button type="button" class="inv-btn inv-btn--secondary" (click)="loadAdminHodTextbooksReport()" [disabled]="adminHodTextbooksLoading">
+        {{ adminHodTextbooksLoading ? 'Loading…' : 'Refresh' }}
+      </button>
+      <button
+        type="button"
+        class="inv-btn inv-btn--primary"
+        *ngIf="isAdmin()"
+        (click)="clearInvalidHodTextbookHoldings()"
+        [disabled]="adminHodTextbooksLoading || adminClearInvalidHodLoading"
+      >
+        {{ adminClearInvalidHodLoading ? 'Clearing…' : 'Clear invalid HOD rows' }}
+      </button>
+    </div>
+    <div class="inv-table-wrap" *ngIf="adminHodTextbookItems.length">
+      <table class="inv-table inv-table-sm">
+        <thead>
+          <tr>
+            <th scope="col">Book number</th>
+            <th scope="col">Title</th>
+            <th scope="col">Condition</th>
+            <th scope="col">HOD</th>
+            <th scope="col">Department</th>
+            <th scope="col">Staff ID</th>
+            <th scope="col">Login</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of adminHodTextbookItems; trackBy: trackById">
+            <td><code class="inv-code">{{ row.bookNumber }}</code></td>
+            <td><strong>{{ row.catalogTitle }}</strong></td>
+            <td>{{ row.condition }}</td>
+            <td>{{ row.hodLastName }} {{ row.hodFirstName }}</td>
+            <td>{{ row.hodDepartmentName || '—' }}</td>
+            <td><code class="inv-code">{{ row.hodTeacherStaffId || '—' }}</code></td>
+            <td>{{ row.hodUsername || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="inv-empty" *ngIf="!adminHodTextbooksLoading && !adminHodTextbookItems.length">
+      No textbook copies are currently allocated to HOD accounts.
+    </div>
+  </section>
+
+  <!-- Audit -->
+  <section *ngIf="activeTab === 'audit'" class="inv-panel inv-panel--elevated">
+    <div class="inv-panel-head">
+      <h2>Audit trail</h2>
+      <p class="inv-panel-desc">Recent inventory actions. Optional date range and filters apply to the audit query.</p>
+    </div>
+    <div class="inv-report-filters">
+      <label class="inv-field"
+        >From
+        <input type="date" [(ngModel)]="reportFrom" name="rfromAud" />
+      </label>
+      <label class="inv-field"
+        >To
+        <input type="date" [(ngModel)]="reportTo" name="rtoAud" />
+      </label>
+      <label class="inv-field inv-field--grow"
+        >Student ID
+        <input [(ngModel)]="reportStudentId" name="rsidAud" placeholder="Student ID" />
+      </label>
+      <label class="inv-field inv-field--grow"
+        >Class ID
+        <input [(ngModel)]="reportClassId" name="rcidAud" placeholder="Class ID" />
+      </label>
+    </div>
+    <div class="inv-toolbar">
+      <input class="inv-input inv-input--grow" type="search" [(ngModel)]="auditQuery" name="audQ" placeholder="Filter action, entity, staff…" />
+      <button type="button" class="inv-btn inv-btn--secondary" (click)="loadAudit()">Refresh</button>
+    </div>
+    <div class="inv-table-wrap" *ngIf="filteredAuditRows.length">
+      <table class="inv-table inv-table-sm">
+        <thead>
+          <tr>
+            <th scope="col">When</th>
+            <th scope="col">Action</th>
+            <th scope="col">Entity</th>
+            <th scope="col">Staff</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let a of filteredAuditRows; trackBy: trackById">
+            <td class="inv-td-muted">{{ a.createdAt | date : 'medium' }}</td>
+            <td><code class="inv-code-sm">{{ a.action }}</code></td>
+            <td>{{ a.entityType }} <code class="inv-code-sm">{{ a.entityId?.slice(0, 8) }}</code></td>
+            <td>{{ a.performedBy?.username || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="inv-empty" *ngIf="auditRows.length && !filteredAuditRows.length">No audit rows match your filter.</div>
+    <div class="inv-empty" *ngIf="!auditRows.length">No rows loaded — click Refresh (set Reports dates if you use range filters).</div>
+  </section>
+</div>
+
+<div class="inv-modal-backdrop" *ngIf="furnitureAssignOpen" (click)="closeFurnitureAssign()">
+  <div class="inv-modal-card" (click)="$event.stopPropagation()">
+    <div class="inv-panel-head">
+      <h2>Allocate furniture to student</h2>
+      <p class="inv-panel-desc" *ngIf="furnitureAssignPair as fp">
+        Allocating <strong>desk + chair</strong> together:
+        <code class="inv-code">{{ fp.desk.itemCode }}</code>
+        <span class="inv-td-muted">{{ fp.desk.classroomLocation || '—' }}</span>
+        ·
+        <code class="inv-code">{{ fp.chair.itemCode }}</code>
+        <span class="inv-td-muted">{{ fp.chair.classroomLocation || '—' }}</span>
+      </p>
+    </div>
+
+    <label class="inv-field inv-field--block">
+      <span class="inv-label">Student (your class-teacher classes)</span>
+      <input
+        class="inv-input inv-input--block"
+        type="search"
+        [(ngModel)]="furnitureAssignQuery"
+        name="furPickQ"
+        placeholder="Search student name / number…"
+        [disabled]="furnitureAssignLoading"
+      />
+    </label>
+
+    <div class="inv-student-pick-list" *ngIf="furnitureEligibleStudents.length">
+      <button
+        type="button"
+        class="inv-student-pick-item"
+        *ngFor="let s of furnitureEligibleStudents; trackBy: trackById"
+        [disabled]="furnitureAssignLoading"
+        (click)="assignPoolItemToStudent(s.id)"
+      >
+        {{ furnitureStudentPickLabel(s) }}
+      </button>
+    </div>
+    <div class="inv-empty" *ngIf="!furnitureEligibleStudents.length">
+      No eligible students found (everyone in your class-teacher classes already has both a desk and a chair, or no students loaded).
+    </div>
+
+    <div class="inv-actions-row">
+      <button type="button" class="inv-btn inv-btn--ghost" (click)="closeFurnitureAssign()" [disabled]="furnitureAssignLoading">Close</button>
+      <span class="inv-hint" *ngIf="furnitureAssignLoading">Allocating…</span>
+    </div>
+  </div>
+</div>

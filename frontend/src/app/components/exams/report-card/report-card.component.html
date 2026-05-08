@@ -1,0 +1,549 @@
+<div class="container">
+  <div class="report-card-wrapper">
+    <!-- Top banner: match Report Card PDF (no full-width Logo 1 image) -->
+    <div class="rc-pdf-banner" *ngIf="schoolName || schoolLogo">
+      <div class="rc-pdf-banner__text">
+        <div class="rc-pdf-banner__school">{{ schoolName || 'School' }}</div>
+        <div class="rc-pdf-banner__meta" *ngIf="schoolAddress">{{ schoolAddress }}</div>
+        <div class="rc-pdf-banner__meta" *ngIf="schoolEmail">Email: {{ schoolEmail }}</div>
+      </div>
+      <div class="rc-pdf-banner__logo" *ngIf="schoolLogo">
+        <img [src]="schoolLogo" alt="School logo" />
+      </div>
+    </div>
+
+    <!-- Header Section -->
+    <div class="form-header">
+      <div class="header-content">
+        <h1>
+          <span class="icon">📊</span>
+          Report Cards
+        </h1>
+        <p class="subtitle">Generate and view student report cards</p>
+      </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div class="alert alert-success" *ngIf="success" [@fadeInOut]>
+      <span class="alert-icon">✓</span>
+      <span>{{ success }}</span>
+    </div>
+    <div class="alert alert-error" *ngIf="error" [@fadeInOut] [class.access-denied]="accessDenied">
+      <span class="alert-icon">✕</span>
+      <span>{{ error }}</span>
+    </div>
+    
+    <!-- Parent Access Denied Message -->
+    <div *ngIf="isParent && accessDenied && studentBalance !== null && studentBalance > 0" 
+         class="access-denied-card" 
+         [@fadeInOut]>
+      <div class="access-denied-icon">⚠️</div>
+      <h3>Report Card Access Restricted</h3>
+      <p>
+        Report card access is restricted. Please clear the outstanding balance of 
+        <strong>{{ currencySymbol }} {{ studentBalance | number:'1.2-2' }}</strong> 
+        to view the report card.
+      </p>
+    </div>
+    
+    <!-- Selection Form Card -->
+    <div class="card selection-card">
+      <div class="card-header">
+        <h2>
+          <span class="section-icon">🎯</span>
+          Generate Report Cards
+        </h2>
+        <p class="section-description">Select class and exam type to generate report cards</p>
+      </div>
+
+      <form (ngSubmit)="generateReportCards()">
+        <div class="form-grid">
+          <div class="form-group" *ngIf="!isParent; else parentClassDisplay" [class.has-error]="isFieldInvalid('class')">
+            <label>
+              Class <span class="required">*</span>
+            </label>
+            <select 
+              [(ngModel)]="selectedClass" 
+              name="class" 
+              required
+              [class.invalid]="isFieldInvalid('class')"
+              class="form-control"
+              (change)="onSelectionChange()">
+              <option value="">Select Class</option>
+              <option *ngFor="let class of classes" [value]="class.id">
+                {{ class.name }}
+              </option>
+            </select>
+            <div class="field-error" *ngIf="isFieldInvalid('class')">
+              {{ getFieldError('class') }}
+            </div>
+          </div>
+
+        <ng-template #parentClassDisplay>
+          <div class="form-group">
+            <label>
+              Class
+            </label>
+            <div class="form-control readonly">
+              {{ parentStudentClassName || 'Class information unavailable' }}
+            </div>
+            <div class="field-helper">
+              Class is automatically selected based on the linked student.
+            </div>
+          </div>
+        </ng-template>
+
+          <div class="form-group" [class.has-error]="isFieldInvalid('term')">
+            <label>
+              Term <span class="required">*</span>
+            </label>
+            <select 
+              [(ngModel)]="selectedTerm"
+              name="term"
+              required
+              [disabled]="loadingTerms"
+              [class.invalid]="isFieldInvalid('term')"
+              class="form-control"
+              (change)="onSelectionChange()">
+              <option value="">{{ loadingTerms ? 'Loading terms...' : 'Select Term' }}</option>
+              <option *ngFor="let term of availableTerms" [value]="term">
+                {{ term }}
+              </option>
+            </select>
+            <small style="color: #666; font-style: italic; display: block; margin-top: 5px;">
+              {{ loadingTerms ? 'Loading term from settings...' : (selectedTerm ? 'Current term is automatically selected from system settings' : 'Please configure active term in settings') }}
+            </small>
+            <div class="field-error" *ngIf="loadingTerms">
+              Loading term options...
+            </div>
+            <div class="field-error" *ngIf="!loadingTerms && isFieldInvalid('term')">
+              {{ getFieldError('term') || 'Term is required' }}
+            </div>
+          </div>
+
+          <div class="form-group" [class.has-error]="isFieldInvalid('examType')">
+            <label>
+              Exam Type <span class="required">*</span>
+            </label>
+            <select 
+              [(ngModel)]="selectedExamType" 
+              name="examType" 
+              required
+              [class.invalid]="isFieldInvalid('examType')"
+              class="form-control"
+              (change)="onSelectionChange()">
+              <option value="">Select Exam Type</option>
+              <option *ngFor="let type of examTypes" [value]="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+            <div class="field-error" *ngIf="isFieldInvalid('examType')">
+              {{ getFieldError('examType') }}
+            </div>
+          </div>
+
+        </div>
+
+        <div class="form-actions-inline">
+          <button 
+            type="submit" 
+            class="btn btn-primary btn-generate" 
+            [disabled]="loading || loadingTerms || !isSelectionValid()">
+            <span *ngIf="!loading">
+              📄 Generate Report Cards
+            </span>
+            <span *ngIf="loading" class="loading-content">
+              <span class="spinner-small"></span>
+              Generating...
+            </span>
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            (click)="resetSelection()"
+            [disabled]="loading">
+            🔄 Reset
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Report Cards Section -->
+    <div *ngIf="reportCards.length > 0" class="report-cards-section">
+      <!-- Summary Statistics -->
+      <div class="summary-card">
+        <div class="summary-header">
+          <h3>
+            <span class="summary-icon">📈</span>
+            Report Cards Summary
+          </h3>
+        </div>
+        <div class="summary-content">
+          <div class="summary-item">
+            <span class="summary-label">Class</span>
+            <span class="summary-value">{{ classInfo?.name ? classInfo.name : 'N/A' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Term</span>
+            <span class="summary-value">{{ classInfo?.term ? classInfo.term : (selectedTerm || 'N/A') }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Exam Type</span>
+            <span class="summary-value">{{ classInfo?.examType ? (classInfo.examType | titlecase) : 'N/A' }}</span>
+          </div>
+          <div class="summary-item highlight">
+            <span class="summary-label">Total Report Cards</span>
+            <span class="summary-value">{{ reportCards.length }}</span>
+          </div>
+          <div class="summary-item highlight">
+            <span class="summary-label">Average Score</span>
+            <span class="summary-value">{{ getOverallAverage() | number:'1.2-2' }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search and Filter Controls -->
+      <div class="table-controls">
+        <div class="search-box">
+          <input 
+            type="text" 
+            [(ngModel)]="studentSearchQuery"
+            [ngModelOptions]="{standalone: true}"
+            placeholder="🔍 Search students by name or ID..."
+            class="search-input"
+            (input)="filterReportCards()">
+        </div>
+        <div class="view-options">
+          <button 
+            class="btn btn-sm btn-secondary" 
+            (click)="downloadAllPDFs()"
+            [disabled]="loading || filteredReportCards.length === 0">
+            📥 Download All PDFs
+          </button>
+        </div>
+      </div>
+
+      <!-- Report Cards List -->
+      <div class="report-cards-list">
+        <div 
+          *ngFor="let reportCard of filteredReportCards; let i = index" 
+          class="report-card-preview"
+          [@fadeInUp]>
+          <!-- Report Card Header -->
+          <div class="report-card-header">
+            <div class="report-card-number">
+              <span class="number-badge">{{ i + 1 }}</span>
+              <span class="total-count">of {{ filteredReportCards.length }}</span>
+            </div>
+            <div class="report-card-student-info">
+              <h4>{{ reportCard.student.name }}</h4>
+              <p>{{ reportCard.student.studentNumber }}</p>
+            </div>
+            <div class="report-card-actions">
+              <button 
+                type="button" 
+                class="btn btn-primary btn-sm" 
+                (click)="downloadPDF(reportCard)" 
+                [disabled]="loading">
+                📥 Download PDF
+              </button>
+            </div>
+          </div>
+          
+          <!-- School header: banner (Logo 1 only) + details — no second logo -->
+          <div *ngIf="reportCard.settings || schoolLogo" class="school-header-block">
+            <!-- Match PDF banner style (do not show full-width Logo 1 image) -->
+            <div class="rc-pdf-banner rc-pdf-banner--in-card">
+              <div class="rc-pdf-banner__text">
+                <div class="rc-pdf-banner__school">
+                  {{ reportCard.settings?.schoolName || schoolName || 'School' }}
+                </div>
+                <div class="rc-pdf-banner__meta" *ngIf="reportCard.settings?.schoolAddress || schoolAddress">
+                  {{ reportCard.settings?.schoolAddress || schoolAddress }}
+                </div>
+                <div class="rc-pdf-banner__meta" *ngIf="reportCard.settings?.schoolEmail || schoolEmail">
+                  Email: {{ reportCard.settings?.schoolEmail || schoolEmail }}
+                </div>
+              </div>
+              <div class="rc-pdf-banner__logo" *ngIf="schoolLogo">
+                <img [src]="schoolLogo" alt="School logo" />
+              </div>
+            </div>
+            <div class="school-header-details">
+              <div class="school-text">
+                <h3 *ngIf="reportCard.settings?.schoolName">{{ reportCard.settings.schoolName }}</h3>
+                <p *ngIf="reportCard.settings?.schoolAddress" class="school-address">
+                  {{ reportCard.settings.schoolAddress }}
+                </p>
+                <p *ngIf="reportCard.settings?.schoolPhone" class="school-phone">
+                  Phone: {{ reportCard.settings.schoolPhone }}
+                </p>
+                <p *ngIf="reportCard.settings?.academicYear" class="academic-year">
+                  Academic Year: {{ reportCard.settings.academicYear }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Student Information -->
+          <div class="student-info-grid">
+            <div class="info-item">
+              <span class="info-label">Student:</span>
+              <span class="info-value">{{ reportCard.student.name }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Student Number:</span>
+              <span class="info-value">{{ reportCard.student.studentNumber }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Class:</span>
+              <span class="info-value">{{ reportCard.student.class }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Class Position:</span>
+              <span class="info-value">
+                {{ reportCard.classPosition ? reportCard.classPosition : 0 }} out of {{ reportCard.totalStudents ? reportCard.totalStudents : 0 }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Grade Position:</span>
+              <span class="info-value">
+                {{ reportCard.formPosition ? reportCard.formPosition : 0 }} out of {{ reportCard.totalStudentsPerStream ? reportCard.totalStudentsPerStream : 0 }}
+              </span>
+            </div>
+            <div class="info-item" *ngIf="reportCard.totalAttendance !== undefined && reportCard.totalAttendance !== null">
+              <span class="info-label">Total Attendance:</span>
+              <span class="info-value">
+                {{ reportCard.totalAttendance }} day{{ reportCard.totalAttendance !== 1 ? 's' : '' }}
+                <span *ngIf="reportCard.presentAttendance !== undefined && reportCard.presentAttendance !== null">
+                  (Present: {{ reportCard.presentAttendance }})
+                </span>
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Exam Type:</span>
+              <span class="info-value">{{ reportCard.examType | titlecase }}</span>
+            </div>
+            <div class="info-item full-width">
+              <span class="info-label">Exams Included:</span>
+              <span class="info-value">
+                <span *ngFor="let exam of reportCard.exams; let i = index" class="exam-tag">
+                  {{ exam.name }}<span *ngIf="i < reportCard.exams.length - 1">, </span>
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Subjects Table -->
+          <div class="table-wrapper">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Subject</th>
+                  <th>Subject Code</th>
+                  <th>Mark Obtained</th>
+                  <th>Possible Mark</th>
+                  <th>Class Average</th>
+                  <th>Grade</th>
+                <th class="points-header" *ngIf="classInfo?.isUpperForm">Points</th>
+                  <th>Comments</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let subject of reportCard.subjects" [class.high-score]="subject.percentage >= 80" [class.low-score]="subject.percentage < 50">
+                  <td class="subject-name">
+                    <strong>{{ subject.subject || 'N/A' }}</strong>
+                  </td>
+                  <td class="subject-code-cell">{{ subject.subjectCode || '-' }}</td>
+                  <td class="score">{{ subject.score !== null && subject.score !== undefined ? subject.score : '-' }}</td>
+                  <td class="max-score">{{ subject.maxScore !== null && subject.maxScore !== undefined ? subject.maxScore : '-' }}</td>
+                  <td class="class-average">{{ subject.classAverage !== null && subject.classAverage !== undefined ? subject.classAverage : '-' }}</td>
+                  <td>
+                    <span class="grade-badge grade-{{ subject.grade?.toLowerCase().replace(' ', '-') }}">
+                      {{ subject.grade }}
+                    </span>
+                  </td>
+                <td class="points" *ngIf="classInfo?.isUpperForm">
+                  {{ subject.grade === 'N/A' ? '-' : (subject.points !== null && subject.points !== undefined ? subject.points : 0) }}
+                </td>
+                  <td class="comments">{{ subject.comments ? subject.comments : '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Overall Performance -->
+          <div class="performance-summary">
+            <div class="performance-item">
+              <span class="performance-label">Overall Average</span>
+              <span class="performance-value highlight">{{ reportCard.overallAverage | number:'1.0-0' }}%</span>
+            </div>
+            <div class="performance-item">
+              <span class="performance-label">Overall Grade</span>
+              <span class="performance-value">
+                <span class="grade-badge grade-{{ reportCard.overallGrade?.toLowerCase().replace(' ', '-') }}">
+                  {{ reportCard.overallGrade }}
+                </span>
+              </span>
+            </div>
+            <div class="performance-item" *ngIf="classInfo?.isUpperForm">
+              <span class="performance-label">Total Points</span>
+              <span class="performance-value highlight">{{ reportCard.totalPoints ?? 0 }}</span>
+            </div>
+          </div>
+
+          <!-- Remarks Section -->
+          <div class="remarks-section">
+            <h3 class="remarks-title">Remarks</h3>
+            
+            <div class="remarks-item">
+              <div class="remarks-label-row">
+                <label class="remarks-label remarks-label-inline">
+                  Class Teacher Remarks
+                  <span *ngIf="!canEditRemarks" class="read-only-badge">Read-only</span>
+                </label>
+                <button
+                  *ngIf="canEditRemarks"
+                  type="button"
+                  class="btn btn-sm btn-ai-report-remark"
+                  (click)="generateAIReportRemark(reportCard, 'class_teacher')"
+                  [disabled]="isAIReportRemarkBusy(reportCard.student.id, 'class_teacher')"
+                  title="AI suggestion — text is saved automatically after generation and when you stop typing">
+                  <span *ngIf="!isAIReportRemarkBusy(reportCard.student.id, 'class_teacher')" class="btn-ai-inner">
+                    <svg class="ai-suggest-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path fill="currentColor" d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/>
+                    </svg>
+                    Suggestion
+                  </span>
+                  <span *ngIf="isAIReportRemarkBusy(reportCard.student.id, 'class_teacher')" class="ai-busy">
+                    <span class="spinner-tiny"></span> Generating…
+                  </span>
+                </button>
+                <span
+                  *ngIf="canEditRemarks && getRemarkAutosaveState(reportCard.student.id) === 'saved'"
+                  class="remark-saved-tick"
+                  role="img"
+                  aria-label="Class teacher remark saved"
+                  title="Saved">
+                  <svg viewBox="0 0 24 24" class="remark-saved-tick-icon" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="12" fill="currentColor"/>
+                    <path fill="#ffffff" d="M17.65 8.35l-6.4 6.35-3.45-3.4 1.05-1.05 2.4 2.35 5.35-5.3 1.05 1.05z"/>
+                  </svg>
+                </span>
+              </div>
+              <textarea 
+                *ngIf="canEditRemarks"
+                [(ngModel)]="reportCard.remarks.classTeacherRemarks" 
+                (ngModelChange)="onReportCardRemarksChange(reportCard)"
+                name="classTeacherRemarks_{{reportCard.student.id}}"
+                class="remarks-textarea"
+                [placeholder]="isAIReportRemarkBusy(reportCard.student.id, 'class_teacher') ? 'Generating AI suggestion…' : 'Enter class teacher remarks...'"
+                rows="3"
+                maxlength="500"
+                [disabled]="isAIReportRemarkBusy(reportCard.student.id, 'class_teacher')"></textarea>
+              <div *ngIf="!canEditRemarks" class="remarks-readonly">
+                {{ reportCard.remarks?.classTeacherRemarks ? reportCard.remarks.classTeacherRemarks : 'No remarks entered' }}
+              </div>
+            </div>
+
+            <div class="remarks-item">
+              <div class="remarks-label-row">
+                <label class="remarks-label remarks-label-inline">
+                  Headmaster/Principal Remarks
+                  <span *ngIf="!isAdmin" class="read-only-badge">Read-only</span>
+                </label>
+                <button
+                  *ngIf="isAdmin"
+                  type="button"
+                  class="btn btn-sm btn-ai-report-remark"
+                  (click)="generateAIReportRemark(reportCard, 'headmaster')"
+                  [disabled]="isAIReportRemarkBusy(reportCard.student.id, 'headmaster')"
+                  title="AI suggestion — text is saved automatically after generation and when you stop typing">
+                  <span *ngIf="!isAIReportRemarkBusy(reportCard.student.id, 'headmaster')" class="btn-ai-inner">
+                    <svg class="ai-suggest-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path fill="currentColor" d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/>
+                    </svg>
+                    Suggestion
+                  </span>
+                  <span *ngIf="isAIReportRemarkBusy(reportCard.student.id, 'headmaster')" class="ai-busy">
+                    <span class="spinner-tiny"></span> Generating…
+                  </span>
+                </button>
+                <span
+                  *ngIf="isAdmin && getRemarkAutosaveState(reportCard.student.id) === 'saved'"
+                  class="remark-saved-tick"
+                  role="img"
+                  aria-label="Headmaster remark saved"
+                  title="Saved">
+                  <svg viewBox="0 0 24 24" class="remark-saved-tick-icon" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="12" fill="currentColor"/>
+                    <path fill="#ffffff" d="M17.65 8.35l-6.4 6.35-3.45-3.4 1.05-1.05 2.4 2.35 5.35-5.3 1.05 1.05z"/>
+                  </svg>
+                </span>
+              </div>
+              <textarea 
+                *ngIf="isAdmin"
+                [(ngModel)]="reportCard.remarks.headmasterRemarks" 
+                (ngModelChange)="onReportCardRemarksChange(reportCard)"
+                name="headmasterRemarks_{{reportCard.student.id}}"
+                class="remarks-textarea"
+                [placeholder]="isAIReportRemarkBusy(reportCard.student.id, 'headmaster') ? 'Generating AI suggestion…' : 'Enter headmaster/principal remarks...'"
+                rows="3"
+                maxlength="500"
+                [disabled]="isAIReportRemarkBusy(reportCard.student.id, 'headmaster')"></textarea>
+              <div *ngIf="!isAdmin" class="remarks-readonly">
+                {{ reportCard.remarks?.headmasterRemarks ? reportCard.remarks.headmasterRemarks : 'No remarks entered' }}
+              </div>
+            </div>
+
+            <div
+              *ngIf="canEditRemarks && (getRemarkAutosaveState(reportCard.student.id) === 'saving' || getRemarkAutosaveState(reportCard.student.id) === 'error')"
+              class="remarks-actions remarks-actions--status-only">
+              <span *ngIf="getRemarkAutosaveState(reportCard.student.id) === 'saving'" class="autosave-indicator">
+                <span class="spinner-small"></span> Saving…
+              </span>
+              <span *ngIf="getRemarkAutosaveState(reportCard.student.id) === 'error'" class="autosave-indicator autosave-err">
+                Couldn’t save remarks — check connection or try again
+              </span>
+            </div>
+          </div>
+          
+          <!-- Navigation Hint -->
+          <div *ngIf="i < filteredReportCards.length - 1" class="navigation-hint">
+            <p>↓ Scroll down to view next student's report card ({{ filteredReportCards.length - i - 1 }} more) ↓</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty Search State -->
+      <div *ngIf="filteredReportCards.length === 0 && studentSearchQuery" class="empty-state-card">
+        <span class="empty-icon">🔍</span>
+        <h3>No report cards found</h3>
+        <p>No report cards match your search criteria. Try adjusting your search.</p>
+        <button class="btn btn-secondary" (click)="studentSearchQuery = ''; filterReportCards()">
+          Clear Search
+        </button>
+      </div>
+
+      <!-- Grade Scale Footer (thresholds + labels from Settings) -->
+      <div *ngIf="reportCards.length > 0 && gradeThresholds && getGradeScaleFooterRows().length > 0" class="grade-scale-footer">
+        <div class="grade-scale-header">
+          <h3>📊 Grade Scale / Attainment Levels</h3>
+        </div>
+        <div class="grade-scale-grid">
+          <div class="grade-scale-item" *ngFor="let row of getGradeScaleFooterRows()">
+            <span class="grade-range">{{ row.range }}</span>
+            <span class="grade-label">{{ row.label }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && reportCards.length === 0 && !error" class="empty-state-card info">
+      <span class="empty-icon">📊</span>
+      <h3>Ready to Generate Report Cards</h3>
+      <p>Select a class and exam type above, then click "Generate Report Cards" to view student report cards.</p>
+    </div>
+  </div>
+</div>

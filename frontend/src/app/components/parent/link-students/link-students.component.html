@@ -1,0 +1,191 @@
+<div class="ls-page">
+  <aside class="ls-sidebar">
+    <div class="ls-sidebar-brand">
+      <span class="ls-logo" aria-hidden="true">🔗</span>
+      <div>
+        <h2>Parent Portal</h2>
+        <p class="ls-user">{{ parentName }}</p>
+      </div>
+    </div>
+    <nav class="ls-nav">
+      <a routerLink="/parent/dashboard" class="ls-nav-link">
+        <span class="ls-nav-ico">📊</span>
+        Dashboard
+      </a>
+      <a routerLink="/parent/communications/view" class="ls-nav-link">
+        <span class="ls-nav-ico">💬</span>
+        Communications
+      </a>
+      <a routerLink="/parent/link-students" routerLinkActive="active" class="ls-nav-link">
+        <span class="ls-nav-ico">🔗</span>
+        Link students
+      </a>
+    </nav>
+    <button type="button" class="ls-logout" (click)="logout()">Logout</button>
+  </aside>
+
+  <main class="ls-main">
+    <header class="ls-toolbar">
+      <div class="ls-toolbar-text">
+        <p class="ls-kicker">Family access</p>
+        <h1>Link your children</h1>
+        <p class="ls-sub">
+          Connect your account to your child’s school record using their official Student ID. If linking fails,
+          confirm the ID with the school office.
+        </p>
+      </div>
+      <div class="ls-toolbar-actions">
+        <button type="button" class="ls-btn ls-btn-ghost" (click)="refresh()" [disabled]="loading || linking" title="Refresh list">
+          <span [class.ls-spin]="loading">↻</span>
+          Refresh
+        </button>
+        <button type="button" class="ls-btn ls-btn-ghost" (click)="goToDashboard()">Dashboard</button>
+      </div>
+    </header>
+
+    <div class="ls-stats" *ngIf="!loading || linkedCount > 0">
+      <div class="ls-stat">
+        <span class="ls-stat-label">Linked</span>
+        <strong>{{ linkedCount }}</strong>
+      </div>
+      <div class="ls-stat ls-stat-accent">
+        <span class="ls-stat-label">Status</span>
+        <strong>{{ linkedCount > 0 ? 'Active' : 'None yet' }}</strong>
+      </div>
+    </div>
+
+    <div class="ls-alert ls-alert-success" *ngIf="success" role="status">
+      <span class="ls-alert-ico">✓</span>
+      {{ success }}
+    </div>
+    <div class="ls-alert ls-alert-error" *ngIf="error" role="alert">
+      <span class="ls-alert-ico">!</span>
+      {{ error }}
+    </div>
+
+    <!-- Link card -->
+    <section class="ls-card ls-card-form" aria-labelledby="ls-form-title">
+      <div class="ls-card-head">
+        <div class="ls-card-icon" aria-hidden="true">➕</div>
+        <div>
+          <h2 id="ls-form-title">Add a student</h2>
+          <p class="ls-card-desc">Enter the Student ID issued by the school (e.g. on reports or ID card).</p>
+        </div>
+      </div>
+
+      <form (ngSubmit)="linkStudent()" class="ls-form">
+        <label class="ls-field">
+          <span class="ls-label">Student ID <span class="ls-req">*</span></span>
+          <div class="ls-input-wrap">
+            <span class="ls-input-prefix" aria-hidden="true">#</span>
+            <input
+              type="text"
+              [(ngModel)]="studentId"
+              name="studentId"
+              id="studentId"
+              class="ls-input"
+              placeholder="e.g. VIC123456"
+              [disabled]="linking"
+              autocomplete="off"
+              autocapitalize="characters"
+            />
+            <button
+              type="button"
+              class="ls-input-clear"
+              *ngIf="studentId && !linking"
+              (click)="studentId = ''"
+              aria-label="Clear"
+            >
+              ×
+            </button>
+          </div>
+          <span class="ls-hint">The school must have your child’s date of birth on file for verification.</span>
+        </label>
+
+        <div class="ls-form-actions">
+          <button type="submit" class="ls-btn ls-btn-primary" [disabled]="!canSubmitLink">
+            <span *ngIf="!linking">Link student</span>
+            <span *ngIf="linking" class="ls-linking">
+              <span class="ls-spin">↻</span>
+              Linking…
+            </span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Linked list -->
+    <section class="ls-section" aria-labelledby="ls-list-title">
+      <div class="ls-section-head">
+        <h2 id="ls-list-title">Your linked students</h2>
+        <span class="ls-count-pill" *ngIf="!loading">{{ linkedCount }}</span>
+      </div>
+
+      <div class="ls-skeleton" *ngIf="loading">
+        <div class="ls-skel-card" *ngFor="let _ of [1, 2, 3]">
+          <div class="ls-skel-avatar"></div>
+          <div class="ls-skel-lines">
+            <div class="ls-skel-line ls-w40"></div>
+            <div class="ls-skel-line ls-w70"></div>
+            <div class="ls-skel-line ls-w50"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ls-empty" *ngIf="!loading && linkedStudents.length === 0">
+        <div class="ls-empty-icon" aria-hidden="true">👨‍👩‍👧</div>
+        <h3>No students linked yet</h3>
+        <p>Add a Student ID above to connect your first child. You can link more than one student.</p>
+      </div>
+
+      <ul class="ls-student-grid" *ngIf="!loading && linkedStudents.length > 0">
+        <li *ngFor="let student of linkedStudents" class="ls-student-card">
+          <div class="ls-student-avatar" aria-hidden="true">{{ initials(student) }}</div>
+          <div class="ls-student-body">
+            <div class="ls-student-title">
+              <h3>{{ student.firstName }} {{ student.lastName }}</h3>
+              <span class="ls-chip ls-chip-ok">Linked</span>
+            </div>
+            <dl class="ls-meta">
+              <div>
+                <dt>Student ID</dt>
+                <dd>{{ student.studentNumber }}</dd>
+              </div>
+              <div>
+                <dt>Class</dt>
+                <dd>{{ student.class?.name || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd>{{ student.studentType || 'Day Scholar' }}</dd>
+              </div>
+            </dl>
+          </div>
+          <button type="button" class="ls-btn ls-btn-danger-soft" (click)="requestUnlink(student)">Unlink</button>
+        </li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<!-- Unlink confirmation -->
+<div
+  class="ls-modal"
+  *ngIf="pendingUnlinkId"
+  (click)="cancelUnlink()"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="ls-modal-title"
+>
+  <div class="ls-modal-card" (click)="$event.stopPropagation()">
+    <h3 id="ls-modal-title">Unlink student?</h3>
+    <p>
+      Remove <strong>{{ pendingUnlinkName }}</strong> from your account? You can link them again later with their
+      Student ID.
+    </p>
+    <div class="ls-modal-actions">
+      <button type="button" class="ls-btn ls-btn-ghost" (click)="cancelUnlink()">Cancel</button>
+      <button type="button" class="ls-btn ls-btn-danger" (click)="confirmUnlink()">Unlink</button>
+    </div>
+  </div>
+</div>

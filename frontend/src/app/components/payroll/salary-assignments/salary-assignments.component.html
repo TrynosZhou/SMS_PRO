@@ -1,0 +1,69 @@
+<div class="assignments-page">
+  <div class="assignments-header">
+    <div class="assignments-title-block">
+      <h1 class="assignments-title">
+        <span class="assignments-icon">🔗</span>
+        Salary Assignments
+      </h1>
+      <p class="assignments-subtitle">Assign salary structures to all staff—including teachers (synced from Teachers)</p>
+    </div>
+    <button type="button" class="btn-back" (click)="back()">← Back</button>
+  </div>
+
+  <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+  <div class="alert alert-success" *ngIf="success && !error">{{ success }}</div>
+
+  <div class="assignments-kpis" *ngIf="!initialLoading">
+    <div class="assignments-kpi-card">
+      <div class="assignments-kpi-value">{{ payrollStaffCount }}</div>
+      <div class="assignments-kpi-label">Payroll staff</div>
+    </div>
+    <div class="assignments-kpi-card">
+      <div class="assignments-kpi-value">{{ totalAssignments }}</div>
+      <div class="assignments-kpi-label">Salary assigned</div>
+    </div>
+    <div class="assignments-kpi-card">
+      <div class="assignments-kpi-value">{{ unassignedStaffCount }}</div>
+      <div class="assignments-kpi-label">Pending assignment</div>
+    </div>
+    <div class="assignments-kpi-card kpi-loan">
+      <div class="assignments-kpi-value loan">{{ withLoanBalance }}</div>
+      <div class="assignments-kpi-label">With loan balance</div>
+    </div>
+  </div>
+
+  <div class="assignments-loading" *ngIf="initialLoading">Loading…</div>
+
+  <div class="assignments-form-card panel" *ngIf="!initialLoading">
+    <h2 class="assignments-form-title">Assign Salary</h2>
+    <div class="assignments-form-row">
+      <div class="assignments-field">
+        <label>Employee</label>
+        <select [(ngModel)]="selectedEmployeeId" [disabled]="initialLoading || saving">
+          <option [ngValue]="null">— Select employee —</option>
+          <option *ngFor="let e of filteredEmployees" [ngValue]="e.id">
+            {{ e.fullName }} ({{ e.employeeNumber }})
+          </option>
+        </select>
+      </div>
+      <div class="assignments-field">
+        <label>Salary Structure</label>
+        <select [(ngModel)]="selectedStructureId" [disabled]="initialLoading || saving">
+          <option [ngValue]="null">— Select structure —</option>
+          <option *ngFor="let s of activeStructures" [ngValue]="s.id">
+            {{ s.name }} ({{ s.salaryType }})
+          </option>
+        </select>
+      </div>
+      <div class="assignments-field">
+        <label>Effective From</label>
+        <input type="date" [(ngModel)]="effectiveFrom" [disabled]="initialLoading || saving" />
+      </div>
+    </div>
+    <div class="assignments-form-actions">
+      <button type="button" class="btn-assign" [disabled]="initialLoading || saving" (click)="assignSalary()">
+        {{ saving ? 'Saving…' : 'Assign Salary' }}
+      </button>
+    </div>
+  </div>
+</div>

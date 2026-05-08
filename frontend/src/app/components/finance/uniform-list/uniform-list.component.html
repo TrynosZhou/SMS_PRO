@@ -1,0 +1,321 @@
+<div class="uniform-page">
+  <!-- Hero header -->
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <p class="hero-eyebrow">Finance · Uniforms</p>
+        <h1 class="hero-title">Uniform billing</h1>
+        <p class="hero-lead">
+          Prices come from <strong>Settings → Uniform Items</strong>. Find a student, build a cart, then apply charges to the latest invoice.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button type="button" class="btn btn-ghost" (click)="loadUniformCatalog()" [disabled]="catalogLoading" title="Reload catalog from server">
+          <span class="btn-icon" [class.spin]="catalogLoading">↻</span>
+          Refresh prices
+        </button>
+        <button type="button" class="btn btn-ghost" (click)="goToSettingsUniforms()">Settings</button>
+        <button type="button" class="btn btn-secondary" (click)="backToInvoices()">← Invoices</button>
+      </div>
+    </div>
+
+    <!-- Progress steps -->
+    <nav class="workflow" aria-label="Workflow steps">
+      <div class="workflow-track">
+        <div class="workflow-step" [class.is-active]="workflowStep === 1" [class.is-done]="workflowStep > 1">
+          <span class="workflow-dot">1</span>
+          <span class="workflow-label">Find student</span>
+        </div>
+        <div class="workflow-line" [class.is-done]="workflowStep > 1"></div>
+        <div class="workflow-step" [class.is-active]="workflowStep === 2" [class.is-done]="workflowStep > 2">
+          <span class="workflow-dot">2</span>
+          <span class="workflow-label">Add to cart</span>
+        </div>
+        <div class="workflow-line" [class.is-done]="workflowStep > 2"></div>
+        <div class="workflow-step" [class.is-active]="workflowStep === 3">
+          <span class="workflow-dot">3</span>
+          <span class="workflow-label">Apply</span>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Search -->
+  <section class="card card-search" aria-labelledby="uniform-search-title">
+    <div class="card-head">
+      <span class="card-icon" aria-hidden="true">🔍</span>
+      <div>
+        <h2 id="uniform-search-title" class="card-title">Find student</h2>
+        <p class="card-sub">Student ID, first name, or last name</p>
+      </div>
+    </div>
+    <label class="sr-only" for="uniformStudentSearch">Search student</label>
+    <div class="search-bar">
+      <input
+        id="uniformStudentSearch"
+        type="search"
+        class="input input-lg"
+        [(ngModel)]="searchValue"
+        (keyup.enter)="searchStudent()"
+        placeholder="Search e.g. JHS8012025 or Chloe…"
+        autocomplete="off"
+      />
+      <button type="button" class="btn btn-primary" (click)="searchStudent()" [disabled]="loading">
+        <span *ngIf="!loading">Search</span>
+        <span *ngIf="loading" class="skeleton-inline">Searching…</span>
+      </button>
+      <button type="button" class="btn btn-muted" (click)="clear()">Clear</button>
+    </div>
+
+    <div class="toast toast-error" *ngIf="error" role="alert">{{ error }}</div>
+    <div class="toast toast-success" *ngIf="success" role="status" aria-live="polite">{{ success }}</div>
+    <div class="toast toast-info" *ngIf="catalogError">{{ catalogError }}</div>
+
+    <div class="picker-block" *ngIf="canSearchByName() && showStudentPicker && nameSearchResults.length > 1">
+      <label class="field-label" for="uniformStudentPicker">Multiple matches — pick one</label>
+      <select id="uniformStudentPicker" class="input" [(ngModel)]="nameSearchSelectedStudentKey">
+        <option value="">— Select student —</option>
+        <option *ngFor="let s of nameSearchResults" [value]="s.id || s.studentNumber">
+          {{ s.firstName }} {{ s.lastName }} ({{ s.studentNumber }})
+        </option>
+      </select>
+      <button
+        type="button"
+        class="btn btn-primary btn-block"
+        (click)="confirmSelectedStudent()"
+        [disabled]="!nameSearchSelectedStudentKey || nameSearchLoading || loading"
+      >
+        Load student
+      </button>
+    </div>
+  </section>
+
+  <!-- Main content when student + invoice -->
+  <ng-container *ngIf="studentData && studentData.lastInvoiceId">
+    <!-- Student metrics -->
+    <section class="card card-metrics" aria-label="Student and invoice summary">
+      <div class="metrics-header">
+        <h2 class="metrics-title">Student &amp; invoice</h2>
+        <span class="badge badge-success">Ready</span>
+      </div>
+      <div class="metrics-grid">
+        <article class="metric">
+          <span class="metric-icon" aria-hidden="true">👤</span>
+          <span class="metric-label">Name</span>
+          <span class="metric-value">{{ studentData.fullName }}</span>
+        </article>
+        <article class="metric">
+          <span class="metric-icon" aria-hidden="true">#</span>
+          <span class="metric-label">Student #</span>
+          <span class="metric-value mono">{{ studentData.studentNumber }}</span>
+        </article>
+        <article class="metric">
+          <span class="metric-icon" aria-hidden="true">📄</span>
+          <span class="metric-label">Invoice</span>
+          <span class="metric-value mono">{{ studentData.lastInvoiceNumber }}</span>
+        </article>
+        <article class="metric">
+          <span class="metric-icon" aria-hidden="true">📅</span>
+          <span class="metric-label">Term</span>
+          <span class="metric-value">{{ studentData.lastInvoiceTerm }}</span>
+        </article>
+        <article class="metric metric-highlight">
+          <span class="metric-icon" aria-hidden="true">💳</span>
+          <span class="metric-label">Current balance</span>
+          <span class="metric-value metric-money">{{ currencySymbol }} {{ formatCurrency(studentData.balance) }}</span>
+        </article>
+        <article class="metric">
+          <span class="metric-icon" aria-hidden="true">🧥</span>
+          <span class="metric-label">Uniform on invoice</span>
+          <span class="metric-value metric-money">{{ currencySymbol }} {{ formatCurrency(studentData.uniformTotal || 0) }}</span>
+        </article>
+      </div>
+    </section>
+
+    <div class="split">
+      <!-- Catalog -->
+      <section class="card card-catalog" aria-labelledby="catalog-title">
+        <div class="card-head">
+          <span class="card-icon" aria-hidden="true">🛒</span>
+          <div class="card-head-text">
+            <h2 id="catalog-title" class="card-title">Uniform catalog</h2>
+            <p class="card-sub">From Settings · unit prices below</p>
+          </div>
+        </div>
+
+        <div class="catalog-toolbar" *ngIf="!catalogLoading && uniformCatalog.length > 0">
+          <label class="sr-only" for="catalogFilter">Filter items</label>
+          <div class="filter-wrap">
+            <span class="filter-icon" aria-hidden="true">⌕</span>
+            <input
+              id="catalogFilter"
+              type="search"
+              class="input"
+              [(ngModel)]="catalogFilterText"
+              placeholder="Filter by item name…"
+            />
+          </div>
+          <span class="catalog-count">{{ filteredCatalog.length }} of {{ uniformCatalog.length }} items</span>
+        </div>
+
+        <!-- Skeleton loading -->
+        <div class="skeleton-block" *ngIf="catalogLoading" aria-busy="true" aria-label="Loading catalog">
+          <div class="skeleton skeleton-line lg"></div>
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line short"></div>
+        </div>
+
+        <div class="quick-add" *ngIf="!catalogLoading && filteredCatalog.length > 0">
+          <label class="field-label" for="uniformQuickPick">Quick add</label>
+          <div class="quick-add-row">
+            <select
+              id="uniformQuickPick"
+              class="input"
+              [(ngModel)]="pickItemId"
+              (ngModelChange)="onUniformItemSelected($event)"
+            >
+              <option value="">Choose item…</option>
+              <option *ngFor="let u of filteredCatalog; trackBy: trackByUniformId" [value]="u.id">
+                {{ u.name }} — {{ currencySymbol }} {{ u.unitPrice | number:'1.2-2' }}
+              </option>
+            </select>
+            <div class="qty-box">
+              <span class="qty-label">Qty</span>
+              <input type="number" class="input qty-input" [(ngModel)]="pickQuantity" min="1" step="1" />
+            </div>
+          </div>
+          <p class="hint-text">Picking an item adds it to the cart (same line merges qty).</p>
+        </div>
+
+        <div class="table-wrap" *ngIf="!catalogLoading && filteredCatalog.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Unit</th>
+                <th>Qty</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let u of filteredCatalog; trackBy: trackByUniformId">
+                <td>
+                  <span class="cell-title">{{ u.name }}</span>
+                  <span class="cell-desc" *ngIf="u.description">{{ u.description }}</span>
+                </td>
+                <td class="cell-num">{{ currencySymbol }} {{ u.unitPrice | number:'1.2-2' }}</td>
+                <td>
+                  <input type="number" class="input input-tight" min="1" step="1" [value]="1" #rowQty />
+                </td>
+                <td>
+                  <button type="button" class="btn btn-accent btn-sm" (click)="addFromCatalogRow(u, +(rowQty.value || 1))">
+                    Add
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="empty-catalog" *ngIf="!catalogLoading && uniformCatalog.length === 0">
+          <p>No uniform items in Settings.</p>
+          <button type="button" class="btn btn-primary" (click)="goToSettingsUniforms()">Open Settings</button>
+        </div>
+        <p class="empty-catalog soft" *ngIf="!catalogLoading && uniformCatalog.length > 0 && filteredCatalog.length === 0">
+          No items match “{{ catalogFilterText }}”. Clear the filter to see all.
+        </p>
+      </section>
+
+      <!-- Cart (sticky on wide screens) -->
+      <aside class="card card-cart" aria-labelledby="cart-title">
+        <div class="card-head">
+          <span class="card-icon" aria-hidden="true">🧺</span>
+          <div class="card-head-text">
+            <h2 id="cart-title" class="card-title">Cart</h2>
+            <p class="card-sub" *ngIf="cartLines.length === 0">Add items from the catalog</p>
+            <p class="cart-pill" *ngIf="cartLines.length > 0">{{ cartItemCount() }} items · {{ currencySymbol }} {{ formatCurrency(cartTotal()) }}</p>
+          </div>
+        </div>
+
+        <div class="cart-empty-state" *ngIf="cartLines.length === 0">
+          <div class="empty-illus" aria-hidden="true"></div>
+          <p>Your cart is empty</p>
+          <span class="empty-hint">Use quick add or the table</span>
+        </div>
+
+        <div class="table-wrap" *ngIf="cartLines.length > 0">
+          <table class="data-table data-table-compact">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Each</th>
+                <th>Qty</th>
+                <th>Line</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let line of cartLines; trackBy: trackByCartLine">
+                <td>{{ line.name }}</td>
+                <td class="cell-num">{{ currencySymbol }} {{ formatCurrency(line.unitPrice) }}</td>
+                <td>
+                  <div class="stepper">
+                    <button type="button" class="stepper-btn" (click)="bumpQuantity(line, -1)" aria-label="Decrease quantity">−</button>
+                    <input
+                      type="number"
+                      class="input input-tight stepper-input"
+                      [ngModel]="line.quantity"
+                      (ngModelChange)="setLineQuantity(line, $event)"
+                      min="1"
+                      step="1"
+                    />
+                    <button type="button" class="stepper-btn" (click)="bumpQuantity(line, 1)" aria-label="Increase quantity">+</button>
+                  </div>
+                </td>
+                <td class="cell-num strong">{{ currencySymbol }} {{ formatCurrency(lineTotal(line)) }}</td>
+                <td>
+                  <button type="button" class="btn btn-link-danger" (click)="removeLine(line.itemId)">Remove</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="cart-summary" *ngIf="cartLines.length > 0">
+          <div class="cart-summary-row">
+            <span>Subtotal</span>
+            <strong>{{ currencySymbol }} {{ formatCurrency(cartTotal()) }}</strong>
+          </div>
+        </div>
+
+        <fieldset class="billing-fieldset">
+          <legend class="fieldset-legend">Charge as</legend>
+          <div class="segmented" role="radiogroup" aria-label="Billing mode">
+            <label class="segment" [class.is-selected]="billingMode === 'invoice'">
+              <input type="radio" name="billingMode" [(ngModel)]="billingMode" value="invoice" />
+              <span class="segment-title">Bill to invoice</span>
+              <span class="segment-desc">Adds to amount owed</span>
+            </label>
+            <label class="segment" [class.is-selected]="billingMode === 'cash'">
+              <input type="radio" name="billingMode" [(ngModel)]="billingMode" value="cash" />
+              <span class="segment-title">Cash now</span>
+              <span class="segment-desc">Recorded as paid</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <button
+          type="button"
+          class="btn btn-primary btn-xl btn-block"
+          (click)="applyUniform()"
+          [disabled]="applying || cartLines.length === 0 || !canManageFinance()"
+        >
+          <span *ngIf="!applying">Apply to invoice</span>
+          <span *ngIf="applying" class="apply-loading">Applying…</span>
+        </button>
+        <p class="perm-hint" *ngIf="!canManageFinance()">You don’t have permission to apply charges.</p>
+      </aside>
+    </div>
+  </ng-container>
+</div>

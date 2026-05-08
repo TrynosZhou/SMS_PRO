@@ -1,0 +1,497 @@
+<div class="sfm-page">
+
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
+  <div class="sfm-header">
+    <span class="sfm-header-ico">&#127963;</span>
+    <div>
+      <h1 class="sfm-header-title">Student Finance Management</h1>
+      <span class="sfm-header-sub">Manage student billing and invoice generation</span>
+    </div>
+  </div>
+
+  <!-- ── Alerts ──────────────────────────────────────────────────────── -->
+  <div class="sfm-alert sfm-alert-success" *ngIf="success" [innerHTML]="success"></div>
+  <div class="sfm-alert sfm-alert-error"   *ngIf="error">{{ error }}</div>
+
+  <!-- ── Body (two columns) ─────────────────────────────────────────── -->
+  <div class="sfm-body">
+
+    <!-- ════════════════════════════════════════
+         LEFT PANEL
+    ════════════════════════════════════════ -->
+    <div class="sfm-left">
+
+      <!-- ── Student & Term Selection ─────────────────────────────── -->
+      <div class="sfm-card">
+        <div class="sfm-card-hdr">
+          <span class="sfm-card-ico">&#128269;</span>
+          <span class="sfm-card-title">Student &amp; Term Selection</span>
+        </div>
+        <p class="sfm-card-sub">Select a student and the term you are billing for, then generate or save.</p>
+
+        <div class="sfm-sel-row">
+          <!-- Term dropdown -->
+          <div class="sfm-sel-wrap">
+            <select class="sfm-select" [(ngModel)]="selectedBillingTerm">
+              <option value="">Academic term to bill</option>
+              <option *ngFor="let t of terms" [value]="t.label">{{ t.label }}</option>
+            </select>
+            <span class="sfm-sel-arrow">&#9660;</span>
+          </div>
+          <!-- Search for Student -->
+          <button class="sfm-search-btn" (click)="openStudentSearch()">Search for Student</button>
+        </div>
+        <p class="sfm-hint">The invoice will be created for this exact term (if it does not already exist).</p>
+
+        <!-- Student search dropdown -->
+        <div class="sfm-student-search-box" *ngIf="showStudentSearch">
+          <input class="sfm-student-inp" placeholder="Type name or student number…"
+                 [(ngModel)]="studentSearchInput" (ngModelChange)="searchStudents()" />
+          <div class="sfm-student-list">
+            <div class="sfm-student-item" *ngFor="let s of filteredStudentsForSearch"
+                 (click)="selectStudentForBilling(s)">
+              <strong>{{ s.firstName }} {{ s.lastName }}</strong>
+              <span class="sfm-student-num">{{ s.studentNumber }}</span>
+            </div>
+            <div class="sfm-no-students" *ngIf="filteredStudentsForSearch.length === 0">
+              No students found
+            </div>
+          </div>
+        </div>
+
+        <!-- Selected student chip -->
+        <div class="sfm-sel-chip" *ngIf="selectedStudentForBilling">
+          <span>
+            &#128100; {{ selectedStudentForBilling.firstName }} {{ selectedStudentForBilling.lastName }}
+            &mdash; {{ selectedStudentForBilling.studentNumber }}
+            <ng-container *ngIf="billingClassLabel !== 'N/A'">
+              <br /><small class="sfm-chip-class">Class: {{ billingClassLabel }}</small>
+            </ng-container>
+          </span>
+          <button class="sfm-chip-remove" (click)="selectedStudentForBilling = null; invoiceForDisplay = null">&#10005;</button>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="sfm-action-row">
+          <button class="sfm-btn sfm-btn-primary" (click)="generateInvoice()" [disabled]="loadingInvoiceDisplay">
+            &#128196; {{ loadingInvoiceDisplay ? 'Loading…' : 'Generate Invoice' }}
+          </button>
+          <button class="sfm-btn sfm-btn-outline" (click)="saveInvoiceChanges()">&#128190; Save Invoice</button>
+          <button class="sfm-btn sfm-btn-ghost"   (click)="clearBillingForm()">&#8635; Clear All</button>
+        </div>
+      </div>
+
+      <!-- ── Whole school invoicing ──────────────────────────────────── -->
+      <div class="sfm-card">
+        <div class="sfm-card-hdr">
+          <span class="sfm-card-ico">&#127979;</span>
+          <span class="sfm-card-title">Whole School Invoicing</span>
+        </div>
+        <p class="sfm-card-sub">
+          The <strong>current (active) term</strong> must match <strong>School Settings</strong>. The system
+          only creates invoices for the <strong>next</strong> term (Term 1 → Term 2, Term 2 → Term 3,
+          Term 3 → Term 1 of the next year). If Settings has no current term, or your selection does not match it,
+          bulk invoicing will be blocked. Students who already have an invoice for that next term are skipped.
+        </p>
+
+        <div class="sfm-bulk-grid">
+          <div class="sfm-sel-wrap">
+            <select class="sfm-select" [(ngModel)]="selectedBulkCurrentTerm">
+              <option value="">Current active term (required)</option>
+              <option *ngFor="let t of terms" [value]="t.label">{{ t.label }}</option>
+            </select>
+            <span class="sfm-sel-arrow">&#9660;</span>
+          </div>
+          <p class="sfm-hint sfm-bulk-next-hint" *ngIf="selectedBulkCurrentTerm">
+            Invoices will be generated for: <strong>{{ bulkTargetTermPreview }}</strong>
+          </p>
+          <button class="sfm-btn sfm-btn-primary sfm-btn-full" (click)="runBulkInvoicing()"
+                  [disabled]="creatingBulk">
+            {{ creatingBulk ? '&#8635; Running…' : '&#8635; Run whole school invoicing' }}
+          </button>
+        </div>
+
+        <!-- Bulk progress bar -->
+        <div class="sfm-progress-wrap" *ngIf="creatingBulk">
+          <div class="sfm-progress-bar" [style.width.%]="bulkProgress"></div>
+          <span class="sfm-progress-text">{{ bulkProgressText }}</span>
+        </div>
+
+        <!-- Bulk result -->
+        <div class="sfm-bulk-result" *ngIf="bulkDone && bulkSummaryLines.length">
+          <div *ngFor="let line of bulkSummaryLines">{{ line }}</div>
+          <button class="sfm-btn sfm-btn-ghost sfm-btn-sm" (click)="closeBulkResult()">Dismiss</button>
+        </div>
+      </div>
+
+      <!-- ── Billing Management / Enrollment Preferences ──────────── -->
+      <div class="sfm-card">
+        <div class="sfm-card-hdr">
+          <span class="sfm-card-ico">&#9881;</span>
+          <span class="sfm-card-title">Billing Management</span>
+        </div>
+        <p class="sfm-card-sub">Manage fees and billing for the selected student</p>
+
+        <div class="sfm-enroll-box">
+          <div class="sfm-enroll-title">&#9881; Enrollment Preferences</div>
+          <p class="sfm-enroll-sub">Configure specific enrollment options for O Level and A Level students.</p>
+
+          <div class="sfm-level-row">
+            <strong>Select Academic Level:</strong>
+            <label class="sfm-radio-lbl">
+              <input type="radio" name="level" value="O" [(ngModel)]="selectedLevel" /> O Level
+            </label>
+            <label class="sfm-radio-lbl">
+              <input type="radio" name="level" value="A" [(ngModel)]="selectedLevel" /> A Level
+            </label>
+          </div>
+
+          <table class="sfm-enroll-table">
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th class="sfm-tcol-o">O Level</th>
+                <th class="sfm-tcol-a">A Level</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- New Comer -->
+              <tr>
+                <td>New Comer?</td>
+                <td class="sfm-tcol-o">
+                  <label class="sfm-chk-lbl">
+                    <input type="checkbox" [(ngModel)]="enrollPrefs.oLevelNewComer" /> O Level New Comer
+                  </label>
+                </td>
+                <td class="sfm-tcol-a">
+                  <label class="sfm-chk-lbl sfm-chk-disabled">
+                    <input type="checkbox" [(ngModel)]="enrollPrefs.aLevelNewComer" /> A Level New Comer
+                  </label>
+                </td>
+              </tr>
+              <!-- Additional Fees -->
+              <tr>
+                <td>Additional Fees</td>
+                <td class="sfm-tcol-o"></td>
+                <td class="sfm-tcol-a">
+                  <label class="sfm-chk-lbl sfm-chk-disabled">
+                    <input type="checkbox" [(ngModel)]="enrollPrefs.scienceLevy" /> Science Levy
+                  </label>
+                </td>
+              </tr>
+              <!-- Residence Type -->
+              <tr>
+                <td>Residence Type</td>
+                <td class="sfm-tcol-o">
+                  <label class="sfm-radio-lbl">
+                    <input type="radio" name="oRes" value="Boarder" [(ngModel)]="enrollPrefs.oResidence" /> Boarder
+                  </label>
+                  <label class="sfm-radio-lbl">
+                    <input type="radio" name="oRes" value="Day" [(ngModel)]="enrollPrefs.oResidence" /> Day
+                  </label>
+                </td>
+                <td class="sfm-tcol-a">
+                  <label class="sfm-radio-lbl sfm-chk-disabled">
+                    <input type="radio" name="aRes" value="Boarder" [(ngModel)]="enrollPrefs.aResidence" /> Boarder
+                  </label>
+                  <label class="sfm-radio-lbl sfm-chk-disabled">
+                    <input type="radio" name="aRes" value="Day" [(ngModel)]="enrollPrefs.aResidence" /> Day
+                  </label>
+                </td>
+              </tr>
+              <!-- Miscellaneous -->
+              <tr>
+                <td>Miscellaneous Charges</td>
+                <td class="sfm-tcol-o">
+                  <label class="sfm-chk-lbl"><input type="checkbox" [(ngModel)]="enrollPrefs.groomingFee" /> Grooming Fee</label>
+                  <label class="sfm-chk-lbl"><input type="checkbox" [(ngModel)]="enrollPrefs.brokenFurniture" /> Broken Furniture</label>
+                </td>
+                <td class="sfm-tcol-a">
+                  <label class="sfm-chk-lbl sfm-chk-disabled"><input type="checkbox" [(ngModel)]="enrollPrefs.lostBooks" /> Lost Books</label>
+                  <label class="sfm-chk-lbl sfm-chk-disabled"><input type="checkbox" [(ngModel)]="enrollPrefs.otherCharges" /> Other Charges</label>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="sfm-enroll-btns">
+            <button class="sfm-btn sfm-btn-ghost" (click)="cancelEnrollmentPrefs()">Cancel</button>
+            <button class="sfm-btn sfm-btn-outline sfm-btn-save-prefs" (click)="saveEnrollmentPrefs()">Save Changes</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sfm-left -->
+
+    <!-- ════════════════════════════════════════
+         RIGHT PANEL — Invoice Details
+    ════════════════════════════════════════ -->
+    <div class="sfm-right">
+      <div class="sfm-invoice-panel">
+
+        <!-- Card header -->
+        <div class="sfm-inv-card-hdr">
+          <span class="sfm-inv-card-ico">&#128521;</span>
+          <span class="sfm-inv-card-title">Invoice Details</span>
+        </div>
+
+        <!-- Invoice # + Balance B/F row -->
+        <div class="sfm-inv-topbar">
+          <div class="sfm-inv-num-wrap">
+            <span class="sfm-inv-num-label">Invoice #</span>
+          </div>
+          <div class="sfm-bf-wrap">
+            <fieldset class="sfm-bf-fieldset">
+              <legend class="sfm-bf-legend">Balance brought forward (legacy)</legend>
+              <input class="sfm-bf-inp" type="number" [(ngModel)]="balanceBF" min="0" />
+            </fieldset>
+            <p class="sfm-bf-hint">Opening balance from before this system.<br>Added to this invoice total.</p>
+            <button class="sfm-btn sfm-btn-outline sfm-btn-sm" (click)="saveInvoiceBF()">&#128190; Save with Balance B/F</button>
+          </div>
+        </div>
+
+        <hr class="sfm-panel-divider" />
+
+        <!-- Loading spinner -->
+        <div class="sfm-inv-loading" *ngIf="loadingInvoiceDisplay">
+          <span class="sfm-spinner"></span> Loading invoice…
+        </div>
+
+        <!-- ── Invoice Document (always visible, N/A when no data) ── -->
+        <div class="sfm-inv-doc" *ngIf="!loadingInvoiceDisplay">
+
+          <!-- School letterhead -->
+          <div class="sfm-letterhead">
+            <div class="sfm-school-logo-wrap">
+              <div class="sfm-school-logo-placeholder">&#127963;</div>
+            </div>
+            <div class="sfm-school-info">
+              <h2 class="sfm-school-name">{{ schoolName }}</h2>
+              <p class="sfm-school-detail"><span class="sfm-lh-ico sfm-ico-loc">&#128205;</span> {{ schoolAddress || '—' }}</p>
+              <p class="sfm-school-detail"><span class="sfm-lh-ico sfm-ico-ph">&#128222;</span> {{ schoolPhone || '—' }}</p>
+              <p class="sfm-school-detail">
+                <span class="sfm-lh-ico sfm-ico-mail">&#9993;</span> {{ schoolEmail || '—' }}
+                &nbsp;|&nbsp;
+                <span class="sfm-lh-ico sfm-ico-web">&#127760;</span> {{ schoolWebsite || '—' }}
+              </p>
+            </div>
+          </div>
+
+          <hr class="sfm-divider-blue" />
+
+          <!-- Invoice meta row -->
+          <div class="sfm-inv-meta">
+            <div class="sfm-inv-label-block">
+              <h3 class="sfm-inv-heading">INVOICE</h3>
+              <div class="sfm-inv-sub">{{ invoiceForDisplay?.term || 'Term' }}</div>
+            </div>
+            <div class="sfm-inv-fields">
+              <div class="sfm-inv-field">
+                <span class="sfm-inv-field-lbl">INVOICE #</span>
+                <span class="sfm-inv-field-val">{{ invoiceForDisplay?.invoiceNumber || 'N/A' }}</span>
+              </div>
+              <div class="sfm-inv-field">
+                <span class="sfm-inv-field-lbl">DATE</span>
+                <span class="sfm-inv-field-val">{{ invoiceForDisplay ? fmtDate(invoiceForDisplay.createdAt) : 'N/A' }}</span>
+              </div>
+              <div class="sfm-inv-field">
+                <span class="sfm-inv-field-lbl">DUE DATE</span>
+                <span class="sfm-inv-field-val">{{ invoiceForDisplay ? fmtDate(invoiceForDisplay.dueDate) : 'N/A' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bill To + Invoice Summary -->
+          <div class="sfm-bill-summary-row">
+            <!-- Bill To -->
+            <div class="sfm-bill-to">
+              <h4 class="sfm-section-hdr">BILL TO</h4>
+              <table class="sfm-billto-table">
+                <tr>
+                  <td class="sfm-bt-lbl">Name</td>
+                  <td>{{ invoiceForDisplay ? ((invoiceForDisplay.student?.firstName || '') + ' ' + (invoiceForDisplay.student?.lastName || invoiceForDisplay.studentName || '')).trim() || 'N/A' : 'N/A' }}</td>
+                </tr>
+                <tr>
+                  <td class="sfm-bt-lbl">Student Number</td>
+                  <td>{{ invoiceForDisplay?.student?.studentNumber || invoiceForDisplay?.studentNumber || 'N/A' }}</td>
+                </tr>
+                <tr>
+                  <td class="sfm-bt-lbl">Class</td>
+                  <td>{{ billingClassLabel }}</td>
+                </tr>
+                <tr>
+                  <td class="sfm-bt-lbl">Residence</td>
+                  <td>{{ invoiceForDisplay?.residenceType || 'N/A' }}</td>
+                </tr>
+              </table>
+            </div>
+            <!-- Invoice Summary -->
+            <div class="sfm-inv-summary">
+              <h4 class="sfm-section-hdr">INVOICE SUMMARY</h4>
+              <div class="sfm-summary-row">
+                <span>Total Bill</span>
+                <span *ngIf="invoiceForDisplay">{{ currencySymbol }} {{ fmtCurrency(invoiceForDisplay.totalAmount) }}</span>
+                <span *ngIf="!invoiceForDisplay">&nbsp;</span>
+              </div>
+              <div class="sfm-summary-row">
+                <span>Amount Paid</span>
+                <span *ngIf="invoiceForDisplay">{{ currencySymbol }} {{ fmtCurrency(invoiceForDisplay.paidAmount) }}</span>
+                <span *ngIf="!invoiceForDisplay">&nbsp;</span>
+              </div>
+              <div class="sfm-summary-row sfm-summary-due">
+                <span>Balance Due</span>
+                <span *ngIf="invoiceForDisplay">{{ currencySymbol }} {{ fmtCurrency(invoiceForDisplay.balance) }}</span>
+                <span *ngIf="!invoiceForDisplay">&nbsp;</span>
+              </div>
+              <div class="sfm-summary-row sfm-summary-status" *ngIf="invoiceForDisplay">
+                <span>Status</span>
+                <span class="sfm-status-badge sfm-status-{{ invoiceStatus.toLowerCase() }}">{{ invoiceStatus }}</span>
+              </div>
+              <div class="sfm-summary-row sfm-summary-status" *ngIf="!invoiceForDisplay">
+                <span>Status</span>
+                <span class="sfm-status-badge sfm-status-na">N/A</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Line items table -->
+          <table class="sfm-items-table">
+            <thead>
+              <tr>
+                <th>DESCRIPTION</th>
+                <th class="sfm-items-amt">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of getInvoiceLineItems()">
+                <td>{{ item.description || item.name || item.itemName }}</td>
+                <td class="sfm-items-amt">{{ currencySymbol }} {{ fmtCurrency(item.amount) }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="sfm-items-total">
+                <td><strong>TOTAL</strong></td>
+                <td class="sfm-items-amt">
+                  <strong *ngIf="invoiceForDisplay">{{ currencySymbol }} {{ fmtCurrency(invoiceForDisplay.totalAmount) }}</strong>
+                  <strong *ngIf="!invoiceForDisplay">&nbsp;</strong>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <!-- Terms and Conditions -->
+          <div class="sfm-terms-box">
+            <p class="sfm-terms-title">TERMS AND CONDITIONS</p>
+            <p class="sfm-terms-text">Payment is due within 30 days or before schools open, whichever comes first.
+              Please include the Student Number on your payment.</p>
+          </div>
+
+          <!-- Banking Details -->
+          <div class="sfm-banking">
+            <h4 class="sfm-banking-title">BANKING DETAILS</h4>
+            <hr class="sfm-divider" />
+            <table class="sfm-banking-table">
+              <tr><td class="sfm-bk-lbl">Account Name</td><td>{{ bankAccountName }}</td></tr>
+              <tr><td class="sfm-bk-lbl">Bank</td><td>{{ bankName }}</td></tr>
+              <tr><td class="sfm-bk-lbl">Branch</td><td>{{ bankBranch }}</td></tr>
+              <tr><td class="sfm-bk-lbl">Account Number</td><td class="sfm-bk-acc">{{ bankAccountNumber }}</td></tr>
+            </table>
+            <hr class="sfm-divider" />
+            <p class="sfm-thankyou">Thank you for your business!</p>
+          </div>
+
+          <!-- PDF + Print actions (only when invoice is loaded) -->
+          <div class="sfm-inv-actions" *ngIf="invoiceForDisplay && canManageFinance()">
+            <button class="sfm-btn sfm-btn-primary" (click)="viewInvoicePDF(invoiceForDisplay.id)">
+              &#128196; View PDF
+            </button>
+            <button class="sfm-btn sfm-btn-outline" (click)="openPaymentForm(invoiceForDisplay)">
+              &#128179; Record Payment
+            </button>
+          </div>
+
+        </div><!-- /sfm-inv-doc -->
+      </div><!-- /sfm-invoice-panel -->
+    </div><!-- /sfm-right -->
+
+  </div><!-- /sfm-body -->
+
+  <!-- ═══════════════════════════════════════════════════
+       EXISTING MODALS (preserved)
+  ═══════════════════════════════════════════════════ -->
+
+  <!-- Management Modal -->
+  <div *ngIf="showManagementModal" class="modal-overlay" (click)="closeManagementModal()">
+    <div class="management-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ managementModalTitle }}</h2>
+        <button class="modal-close-btn" (click)="closeManagementModal()">&times;</button>
+      </div>
+      <div class="modal-body" *ngIf="managementModalMode === 'message'">
+        <p style="white-space:pre-wrap">{{ managementModalMessage }}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" (click)="closeManagementModal()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Viewer Modal -->
+  <div *ngIf="showPdfViewer" class="modal-overlay" (click)="closePdfViewer()">
+    <div class="pdf-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Invoice #{{ currentInvoiceNumber }}</h3>
+        <button class="modal-close-btn" (click)="closePdfViewer()">&times;</button>
+      </div>
+      <div class="pdf-body">
+        <div *ngIf="loadingPdf" class="pdf-loading">Loading PDF…</div>
+        <iframe *ngIf="safePdfUrl && !loadingPdf" [src]="safePdfUrl" class="pdf-iframe"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="downloadInvoicePDF()">Download</button>
+        <button class="btn btn-primary" (click)="closePdfViewer()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Form Modal -->
+  <div *ngIf="showPaymentForm" class="modal-overlay" (click)="closePaymentForm()">
+    <div class="payment-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Record Payment — {{ selectedInvoice?.invoiceNumber }}</h3>
+        <button class="modal-close-btn" (click)="closePaymentForm()">&times;</button>
+      </div>
+      <div class="modal-body" *ngIf="selectedInvoice">
+        <div class="form-group">
+          <label>Amount</label>
+          <input type="number" class="form-control" [(ngModel)]="paymentForm.amount"
+                 [max]="selectedInvoice?.balance || 0" (change)="onAmountChange()" />
+          <small>Max: {{ currencySymbol }} {{ fmtCurrency(selectedInvoice?.balance) }}</small>
+        </div>
+        <div class="form-group">
+          <label>Payment Date</label>
+          <input type="date" class="form-control" [(ngModel)]="paymentForm.paymentDate" />
+        </div>
+        <div class="form-group">
+          <label>Method</label>
+          <select class="form-control" [(ngModel)]="paymentForm.paymentMethod">
+            <option>Cash</option><option>Bank Transfer</option><option>EcoCash</option>
+            <option>Innbucks</option><option>Visa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea class="form-control" [(ngModel)]="paymentForm.notes" rows="2"></textarea>
+        </div>
+        <label class="sfm-radio-lbl">
+          <input type="checkbox" [(ngModel)]="paymentForm.receiptNeeded" /> Print receipt
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="closePaymentForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="updatePayment()">Save Payment</button>
+      </div>
+    </div>
+  </div>
+
+</div>

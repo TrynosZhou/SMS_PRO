@@ -1,0 +1,76 @@
+<section class="as-wrap">
+  <header class="as-header">
+    <h2>Assign subjects to a class</h2>
+    <p class="as-lead">
+      Choose a class, then tick the subjects that class should take. Save when you are done.
+    </p>
+  </header>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+
+  <div class="as-loading" *ngIf="loading">
+    <span class="as-spinner"></span>
+    Loading classes and subjects…
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <div class="as-toolbar">
+      <div class="as-field">
+        <label for="as-class">Class</label>
+        <select
+          id="as-class"
+          class="form-control as-select"
+          [(ngModel)]="selectedClassId"
+          (ngModelChange)="onClassChange()"
+        >
+          <option value="">— Select a class —</option>
+          <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+      <div class="as-field as-field-grow" *ngIf="selectedClassId">
+        <label for="as-search">Search subjects</label>
+        <input
+          id="as-search"
+          type="search"
+          class="form-control"
+          [(ngModel)]="subjectSearch"
+          placeholder="Filter by name or code"
+        />
+      </div>
+      <div class="as-actions" *ngIf="selectedClassId">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="saveAssignments()"
+          [disabled]="saving"
+        >
+          {{ saving ? 'Saving…' : 'Save assignments' }}
+        </button>
+      </div>
+    </div>
+
+    <p class="as-hint" *ngIf="!selectedClassId">Select a class to see and edit its subjects.</p>
+
+    <div class="as-card" *ngIf="selectedClassId">
+      <div class="as-card-head">
+        <span class="as-class-pill">{{ selectedClassName }}</span>
+        <span class="as-count">{{ assignedSubjectIds.size }} subject(s) selected</span>
+      </div>
+      <div class="as-grid">
+        <label *ngFor="let s of filteredSubjects" class="as-subject-row">
+          <input
+            type="checkbox"
+            [checked]="isChecked(s.id)"
+            (change)="toggleSubject(s.id)"
+          />
+          <span class="as-subject-body">
+            <span class="as-subject-name">{{ s.name }}</span>
+            <span class="as-subject-code" *ngIf="s.code">{{ s.code }}</span>
+          </span>
+        </label>
+      </div>
+      <p class="as-empty" *ngIf="filteredSubjects.length === 0">No subjects match your search.</p>
+    </div>
+  </ng-container>
+</section>

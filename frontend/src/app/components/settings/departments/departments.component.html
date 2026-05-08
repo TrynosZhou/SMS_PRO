@@ -1,0 +1,109 @@
+<div class="dep-wrap">
+  <header class="dep-head">
+    <h2 class="dep-title">Departments</h2>
+    <p class="dep-sub">
+      Define departments (used for HOD assignment and teacher grouping). Under each department, tick the subjects that
+      belong to it. A subject can only belong to one department at a time.
+    </p>
+  </header>
+
+  <div class="dep-alert dep-alert--error" *ngIf="error">{{ error }}</div>
+  <div class="dep-alert dep-alert--success" *ngIf="success">{{ success }}</div>
+
+  <section class="dep-card" *ngIf="canManage()">
+    <h3 class="dep-card-title">Add department</h3>
+    <div class="dep-row">
+      <input class="dep-input" type="text" [(ngModel)]="newName" placeholder="e.g. Sciences" />
+      <button class="dep-btn" type="button" (click)="add()">Add</button>
+    </div>
+  </section>
+
+  <section class="dep-card">
+    <h3 class="dep-card-title">All departments</h3>
+    <div *ngIf="loading">Loading…</div>
+
+    <div class="dep-table-wrap" *ngIf="!loading">
+      <table class="dep-table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Active</th>
+            <th scope="col" *ngIf="canManage()">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let d of departments">
+            <td>
+              <input
+                class="dep-input dep-input--inline"
+                [ngModel]="d.name"
+                (ngModelChange)="rename(d, $event)"
+                [disabled]="!canManage()"
+              />
+            </td>
+            <td>
+              <button
+                type="button"
+                class="dep-pill"
+                [class.dep-pill--off]="!d.isActive"
+                (click)="canManage() && toggleActive(d)"
+                [disabled]="!canManage()"
+              >
+                {{ d.isActive ? 'Yes' : 'No' }}
+              </button>
+            </td>
+            <td *ngIf="canManage()">
+              <button type="button" class="dep-btn dep-btn--danger" (click)="remove(d)">Delete</button>
+            </td>
+          </tr>
+          <tr *ngIf="departments.length === 0">
+            <td [attr.colspan]="canManage() ? 3 : 2" class="dep-empty">No departments yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="dep-card" *ngIf="!loading && departments.length > 0">
+    <h3 class="dep-card-title">Subjects by department</h3>
+    <p class="dep-hint" *ngIf="allSubjects.length === 0">
+      No active subjects in the system yet. Add subjects under Subjects first, then return here to assign them to a
+      department.
+    </p>
+
+    <div class="dep-dept-blocks" *ngIf="allSubjects.length > 0">
+      <div class="dep-dept-block" *ngFor="let d of departments">
+        <div class="dep-dept-block-head">
+          <h4 class="dep-dept-name">{{ d.name }}</h4>
+          <button
+            type="button"
+            class="dep-btn dep-btn--secondary"
+            *ngIf="canManage()"
+            (click)="saveDepartmentSubjects(d)"
+            [disabled]="savingDeptId === d.id">
+            {{ savingDeptId === d.id ? 'Saving…' : 'Save subjects' }}
+          </button>
+        </div>
+        <div class="dep-subject-grid" *ngIf="canManage(); else readOnlySubjects">
+          <label class="dep-subj-row" *ngFor="let s of allSubjects">
+            <input
+              type="checkbox"
+              [checked]="isSubjectInDepartment(d.id, s.id)"
+              (change)="toggleSubject(d.id, s.id, $any($event.target).checked)"
+            />
+            <span class="dep-subj-label">
+              <span class="dep-subj-name">{{ s.name }}</span>
+              <span class="dep-subj-code" *ngIf="s.code">{{ s.code }}</span>
+            </span>
+          </label>
+        </div>
+        <ng-template #readOnlySubjects>
+          <ul class="dep-subj-readonly">
+            <li *ngFor="let s of d.subjects || []">{{ s.name }} <span class="dep-subj-code" *ngIf="s.code">({{ s.code }})</span></li>
+            <li *ngIf="!(d.subjects?.length)" class="dep-empty">No subjects assigned.</li>
+          </ul>
+        </ng-template>
+      </div>
+    </div>
+  </section>
+</div>

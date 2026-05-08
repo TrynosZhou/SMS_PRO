@@ -1,0 +1,17 @@
+# Node modules (ignore in any folder)
+node_modules/
+**/node_modules/
+
+# Environment variables
+.env
+
+# Build folders
+dist/
+build/
+
+# Uploads (VERY IMPORTANT)
+uploads/
+backend/uploads/
+
+# Logs
+*.log

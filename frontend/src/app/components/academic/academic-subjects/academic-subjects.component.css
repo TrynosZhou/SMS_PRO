@@ -1,0 +1,313 @@
+/* ── Purple top banner ── */
+.acs-top-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 50%, #7c3aed 100%);
+  padding: 1.1rem 1.5rem;
+  color: #fff;
+  flex-wrap: wrap;
+}
+.acs-top-banner-ico {
+  font-size: 1.3rem;
+  opacity: 0.9;
+}
+.acs-top-banner-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.acs-top-banner-sub {
+  font-size: 0.85rem;
+  opacity: 0.82;
+  margin-left: 0.25rem;
+}
+
+/* ── Blue directory bar ── */
+.acs-dir-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #2563eb;
+  padding: 0.85rem 1.5rem;
+  color: #fff;
+}
+.acs-dir-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.acs-dir-ico { font-size: 1.4rem; }
+.acs-dir-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.acs-dir-count {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  margin-top: 0.1rem;
+}
+.acs-add-btn {
+  background: transparent;
+  border: 2px solid rgba(255,255,255,0.7);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.acs-add-btn:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: #fff;
+}
+
+/* ── Search section ── */
+.acs-search-section {
+  background: #f8fafc;
+  padding: 1.1rem 1.5rem 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.acs-search-wrap {
+  position: relative;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.acs-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+.acs-search {
+  width: 100%;
+  padding: 0.65rem 1rem 0.65rem 2.4rem;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #334155;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.acs-search:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.acs-search-hint {
+  text-align: center;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0.35rem 0 0;
+}
+
+/* ── Table headers ── */
+.acs-table-headers {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 0.6rem 1.5rem;
+  gap: 0;
+}
+.acs-th {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.acs-th-code    { width: 160px; flex-shrink: 0; }
+.acs-th-name    { flex: 1; }
+.acs-th-actions { width: 110px; flex-shrink: 0; justify-content: flex-end; }
+.acs-th-ico     { font-style: normal; }
+
+/* ── Loading ── */
+.acs-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1.5rem;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+.acs-spinner {
+  width: 20px; height: 20px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Rows ── */
+.acs-rows { background: #fff; }
+.acs-row {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+.acs-row:hover { background: #f8faff; }
+
+.acs-cell { display: flex; align-items: center; }
+.acs-cell-code    { width: 160px; flex-shrink: 0; }
+.acs-cell-name    { flex: 1; font-weight: 500; color: #1e293b; font-size: 0.9rem; }
+.acs-cell-actions { width: 110px; flex-shrink: 0; justify-content: flex-end; }
+
+.acs-code-badge {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: monospace;
+}
+.acs-action-edit,
+.acs-action-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.acs-action-edit:hover { background: #dbeafe; }
+.acs-action-del:hover  { background: #fee2e2; }
+
+/* ── Empty state ── */
+.acs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+.acs-empty-ico { margin-bottom: 1rem; opacity: 0.65; }
+.acs-empty-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #374151;
+  margin: 0 0 0.4rem;
+}
+.acs-empty-desc {
+  color: #94a3b8;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+/* ── Modal ── */
+.acs-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,0.5);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+.acs-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  background: #f1f3f6;
+  border-radius: 16px;
+  box-shadow: 0 24px 72px rgba(0,0,0,0.22);
+  width: 92%; max-width: 460px;
+  overflow: hidden;
+}
+.acs-modal-header {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1.4rem 1.6rem 1.2rem;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%);
+  color: #fff;
+}
+.acs-modal-header-ico {
+  display: flex; align-items: center; justify-content: center;
+  width: 2.4rem; height: 2.4rem;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  font-size: 1.4rem; font-weight: 700;
+  flex-shrink: 0; color: #fbbf24;
+}
+.acs-modal-title { font-size: 1.1rem; font-weight: 800; margin: 0 0 0.2rem; }
+.acs-modal-subtitle { font-size: 0.82rem; margin: 0; opacity: 0.85; }
+.acs-modal-body {
+  padding: 1.25rem 1.4rem;
+  display: flex; flex-direction: column; gap: 1rem;
+  max-height: 65vh; overflow-y: auto;
+}
+.acs-error {
+  background: #fef2f2; color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 8px; padding: 0.6rem 0.9rem; font-size: 0.875rem;
+}
+.acs-form-section {
+  background: #fff; border-radius: 12px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.acs-section-header { display: flex; align-items: center; gap: 0.5rem; }
+.acs-section-ico { font-size: 1.2rem; }
+.acs-section-title { font-size: 1rem; font-weight: 700; color: #1e1b4b; margin: 0; }
+.acs-divider { border: none; border-top: 1px solid #e2e8f0; margin: 0; }
+.acs-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.acs-field-error .acs-input { border-color: #f87171; }
+.acs-label { font-size: 0.82rem; font-weight: 600; color: #475569; }
+.acs-input {
+  padding: 0.62rem 0.85rem;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem; color: #1e293b; background: #fff;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.acs-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+.acs-hint { font-size: 0.76rem; color: #94a3b8; }
+.acs-hint-err { color: #ef4444; font-weight: 500; }
+.acs-modal-footer {
+  display: flex; justify-content: flex-end; gap: 0.75rem;
+  padding: 1rem 1.4rem;
+  background: #f1f3f6; border-top: 1px solid #e2e8f0;
+}
+.acs-btn-cancel, .acs-btn-save {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.6rem 1.3rem; border-radius: 50px;
+  font-size: 0.88rem; font-weight: 600;
+  cursor: pointer; border: none; transition: background 0.2s;
+}
+.acs-btn-cancel { background: #374151; color: #fff; }
+.acs-btn-cancel:hover { background: #1f2937; }
+.acs-btn-save { background: #2563eb; color: #fff; }
+.acs-btn-save:hover { background: #1d4ed8; }
+.acs-btn-save:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.acs-modal-header-edit {
+  background: linear-gradient(135deg, #065f46 0%, #059669 60%, #10b981 100%);
+}
+.acs-modal-header-ico-edit { font-size: 1.1rem; }
+
+.acs-btn-update {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.6rem 1.3rem; border-radius: 50px;
+  font-size: 0.88rem; font-weight: 600;
+  cursor: pointer; border: none;
+  background: #059669; color: #fff;
+  transition: background 0.2s;
+}
+.acs-btn-update:hover { background: #047857; }
+.acs-btn-update:disabled { opacity: 0.55; cursor: not-allowed; }

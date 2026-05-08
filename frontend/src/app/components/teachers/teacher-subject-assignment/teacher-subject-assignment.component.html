@@ -1,0 +1,189 @@
+<div class="tsa-wrap">
+  <header class="tsa-head">
+    <h1 class="tsa-title">
+      <span class="tsa-ico" aria-hidden="true">👨‍🏫</span>
+      Teacher Subject Assignment
+    </h1>
+    <p class="tsa-sub">
+      Select a teacher, then use <strong>Edit</strong>, <strong>Remove</strong>, or <strong>Lessons</strong> (assignment contract).
+      Double-click a row to open Lessons. Counts use the active timetable configuration.
+    </p>
+  </header>
+
+  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <div class="tsa-toolbar-card">
+    <div class="tsa-toolbar">
+      <label class="tsa-search">
+        <span class="visually-hidden">Search teachers</span>
+        <input
+          type="search"
+          class="form-control tsa-search-input"
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchInput()"
+          placeholder="Search by name, staff ID, or short code…"
+          autocomplete="off"
+        />
+      </label>
+      <button type="button" class="btn btn-secondary btn-sm tsa-refresh" (click)="load()" [disabled]="loading || actionBusy">
+        Refresh
+      </button>
+    </div>
+
+    <div class="tsa-stats" *ngIf="!loading && teachers.length" role="status" aria-live="polite">
+      <span class="tsa-stat">
+        <span class="tsa-stat-val">{{ filtered.length }}</span>
+        <span class="tsa-stat-label">shown</span>
+        <span class="tsa-stat-of">of {{ teachers.length }}</span>
+      </span>
+      <span class="tsa-stat tsa-stat-accent">
+        <span class="tsa-stat-val">{{ activeCountShown() }}</span>
+        <span class="tsa-stat-label">active</span>
+      </span>
+      <span class="tsa-stat">
+        <span class="tsa-stat-val">{{ lessonsTotalShown() }}</span>
+        <span class="tsa-stat-label">lessons total</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="tsa-loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading teachers…</p>
+  </div>
+
+  <div class="tsa-layout" *ngIf="!loading">
+    <div class="tsa-main">
+      <div class="tsa-table-wrap" *ngIf="filtered.length">
+        <table class="tsa-table">
+          <thead>
+            <tr>
+              <th
+                scope="col"
+                class="tsa-th-sort"
+                (click)="sortBy('name')"
+                (keyup.enter)="sortBy('name')"
+                (keydown.space)="$event.preventDefault(); sortBy('name')"
+                [attr.aria-sort]="ariaSort('name')"
+                tabindex="0"
+              >
+                Full name
+                <span class="tsa-sort-ind" aria-hidden="true">{{ sortIndicator('name') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="tsa-th-sort tsa-num"
+                (click)="sortBy('lessons')"
+                (keyup.enter)="sortBy('lessons')"
+                (keydown.space)="$event.preventDefault(); sortBy('lessons')"
+                [attr.aria-sort]="ariaSort('lessons')"
+                tabindex="0"
+              >
+                Lessons
+                <span class="tsa-sort-ind" aria-hidden="true">{{ sortIndicator('lessons') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="tsa-th-sort tsa-num"
+                (click)="sortBy('rows')"
+                (keyup.enter)="sortBy('rows')"
+                (keydown.space)="$event.preventDefault(); sortBy('rows')"
+                [attr.aria-sort]="ariaSort('rows')"
+                tabindex="0"
+              >
+                Rows
+                <span class="tsa-sort-ind" aria-hidden="true">{{ sortIndicator('rows') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="tsa-th-sort tsa-num"
+                (click)="sortBy('classes')"
+                (keyup.enter)="sortBy('classes')"
+                (keydown.space)="$event.preventDefault(); sortBy('classes')"
+                [attr.aria-sort]="ariaSort('classes')"
+                tabindex="0"
+              >
+                Classes
+                <span class="tsa-sort-ind" aria-hidden="true">{{ sortIndicator('classes') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="tsa-th-sort"
+                (click)="sortBy('staffId')"
+                (keyup.enter)="sortBy('staffId')"
+                (keydown.space)="$event.preventDefault(); sortBy('staffId')"
+                [attr.aria-sort]="ariaSort('staffId')"
+                tabindex="0"
+              >
+                Staff ID
+                <span class="tsa-sort-ind" aria-hidden="true">{{ sortIndicator('staffId') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="tsa-th-sort"
+                (click)="sortBy('status')"
+                (keyup.enter)="sortBy('status')"
+                (keydown.space)="$event.preventDefault(); sortBy('status')"
+                [attr.aria-sort]="ariaSort('status')"
+                tabindex="0"
+              >
+                Status
+                <span class="tsa-sort-ind" aria-hidden="true">{{ sortIndicator('status') }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let t of filtered"
+              [ngClass]="rowClass(t)"
+              (click)="selectRow(t, $event)"
+              (dblclick)="openLessons(t)"
+              tabindex="0"
+              (keyup.enter)="selectRow(t)"
+            >
+              <td class="tsa-name">
+                <span class="tsa-cap" aria-hidden="true">🎓</span>
+                <span class="tsa-name-text">{{ displayName(t) }}</span>
+              </td>
+              <td class="tsa-num">{{ t.weeklyLessons }}</td>
+              <td class="tsa-num">{{ t.assignmentCount }}</td>
+              <td class="tsa-num">{{ t.assignedClassCount ?? '—' }}</td>
+              <td class="tsa-muted">{{ t.teacherId }}</td>
+              <td>
+                <span class="tsa-badge" [class.active]="t.isActive" [class.inactive]="!t.isActive">
+                  {{ t.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tsa-empty" *ngIf="!filtered.length">
+        <p *ngIf="teachers.length">No teachers match your search.</p>
+        <p *ngIf="!teachers.length">No teachers to show.</p>
+      </div>
+    </div>
+
+    <aside class="tsa-actions" aria-label="Teacher actions">
+      <button type="button" class="tsa-btn tsa-btn-new" (click)="onNew()" [disabled]="actionBusy">
+        <span class="tsa-btn-ico tsa-ico-new" aria-hidden="true">+</span>
+        New
+      </button>
+      <button type="button" class="tsa-btn tsa-btn-edit" (click)="onEdit()" [disabled]="actionsDisabled()">
+        <span class="tsa-btn-ico" aria-hidden="true">🎓</span>
+        Edit
+      </button>
+      <button type="button" class="tsa-btn tsa-btn-remove" (click)="onRemove()" [disabled]="actionsDisabled()">
+        <span class="tsa-btn-ico tsa-ico-minus" aria-hidden="true">−</span>
+        Remove
+      </button>
+      <div class="tsa-actions-gap"></div>
+      <button type="button" class="tsa-btn tsa-btn-lessons" (click)="onLessons()" [disabled]="actionsDisabled()">
+        <span class="tsa-btn-ico tsa-ico-lessons" aria-hidden="true"></span>
+        Lessons
+      </button>
+    </aside>
+  </div>
+</div>

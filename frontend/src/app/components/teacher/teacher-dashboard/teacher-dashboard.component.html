@@ -1,0 +1,331 @@
+<div class="dashboard-container teacher-dashboard-root td-modern">
+  <main class="main-content td-main">
+    <!-- Hero -->
+    <section class="td-hero" aria-labelledby="td-hero-title">
+      <div class="td-hero-bg" aria-hidden="true"></div>
+      <div class="td-hero-grid">
+        <div class="td-hero-copy">
+          <p class="td-daypart">{{ daypartGreeting }}</p>
+          <h1 id="td-hero-title" class="td-hero-title">
+            <span class="td-hero-emoji" aria-hidden="true">{{ getTeacherHeroEmoji() }}</span>
+            Teacher workspace
+          </h1>
+          <p class="td-welcome-line">
+            <strong class="td-welcome-strong">{{ getWelcomeLine() }}</strong>
+            <span class="td-welcome-dot" aria-hidden="true">·</span>
+            <span class="td-sub">Here’s everything you need for today.</span>
+          </p>
+          <div class="td-hero-chips">
+            <div class="td-chip td-chip-clock" role="status" aria-live="polite">
+              <span class="td-chip-label">Local time</span>
+              <span class="td-chip-time">{{ clockTime }}</span>
+              <span class="td-chip-date">{{ clockDate }}</span>
+            </div>
+            <div class="td-chip td-chip-school" *ngIf="schoolName">
+              <span class="td-chip-icon" aria-hidden="true">🏫</span>
+              <span>{{ schoolName }}</span>
+            </div>
+            <div class="td-chip td-chip-soft">
+              <span class="td-chip-icon" aria-hidden="true">📚</span>
+              <span>Teaching workspace</span>
+            </div>
+          </div>
+        </div>
+        <div class="td-hero-panel" aria-hidden="true">
+          <div class="td-blob td-blob-a"></div>
+          <div class="td-blob td-blob-b"></div>
+          <div class="td-hero-stat-preview">
+            <div class="td-mini-stat">
+              <span class="td-mini-value">{{ loading ? '—' : teacherClasses.length }}</span>
+              <span class="td-mini-label">Classes</span>
+            </div>
+            <div class="td-mini-stat">
+              <span class="td-mini-value">{{ loading ? '—' : subjectCount }}</span>
+              <span class="td-mini-label">Subjects</span>
+            </div>
+            <div class="td-mini-stat" *ngIf="canAccessModule('recordBook')">
+              <span class="td-mini-value">{{ elearningLoading ? '…' : tasksCreatedCount }}</span>
+              <span class="td-mini-label">Tasks</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="loading-stats td-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <p>Loading your teaching profile…</p>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="td-stats-section" *ngIf="!loading">
+      <h2 class="td-section-title td-sr-only">Overview</h2>
+      <div class="stats-grid td-stats-grid">
+        <div class="stat-card primary modern-card td-stat-card">
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon modern-icon">🏫</div>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value animated-value">{{ teacherClasses.length }}</div>
+            <div class="stat-label">Classes assigned</div>
+            <div class="stat-sublabel"><span class="sublabel-item">Teach &amp; record for these groups</span></div>
+          </div>
+          <div class="stat-trend"><span class="trend-icon">📋</span></div>
+        </div>
+
+        <div class="stat-card success modern-card td-stat-card">
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon modern-icon">📚</div>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value animated-value">{{ subjectCount }}</div>
+            <div class="stat-label">Subjects</div>
+            <div class="stat-sublabel"><span class="sublabel-item">Linked to your profile</span></div>
+          </div>
+          <div class="stat-trend"><span class="trend-icon">✨</span></div>
+        </div>
+
+        <div class="stat-card info modern-card td-stat-card">
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon modern-icon">🔓</div>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value animated-value">{{ availableModules.length }}</div>
+            <div class="stat-label">Modules unlocked</div>
+            <div class="stat-sublabel"><span class="sublabel-item">Based on school access</span></div>
+          </div>
+          <div class="stat-trend"><span class="trend-icon">⚡</span></div>
+        </div>
+
+        <div class="stat-card warning modern-card td-stat-card">
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon modern-icon">📅</div>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value stat-value-text">{{ activeTerm || '—' }}</div>
+            <div class="stat-label">Active term</div>
+            <div class="stat-sublabel"><span class="sublabel-item">From school settings</span></div>
+          </div>
+          <div class="stat-trend"><span class="trend-icon">🎯</span></div>
+        </div>
+
+        <div class="stat-card modern-card td-stat-card td-stat-elearn" *ngIf="canAccessModule('recordBook')">
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon modern-icon">✏️</div>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value animated-value">{{ elearningLoading ? '…' : tasksCreatedCount }}</div>
+            <div class="stat-label">E-tasks posted</div>
+            <div class="stat-sublabel"><span class="sublabel-item">Assignments &amp; tests you created</span></div>
+          </div>
+          <div class="stat-trend"><span class="trend-icon">💻</span></div>
+        </div>
+
+        <div class="stat-card modern-card td-stat-card td-stat-elearn" *ngIf="canAccessModule('recordBook')">
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon modern-icon">📥</div>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value animated-value">{{ elearningLoading ? '…' : submissionsReceivedCount }}</div>
+            <div class="stat-label">Submissions in</div>
+            <div class="stat-sublabel"><span class="sublabel-item">Student work uploaded</span></div>
+          </div>
+          <div class="stat-trend"><span class="trend-icon">📎</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+    <div class="td-layout">
+      <div class="td-layout-main">
+        <!-- Featured shortcuts -->
+        <section class="td-featured" aria-labelledby="td-featured-title" *ngIf="!loading">
+          <h2 id="td-featured-title" class="td-section-title">Start here</h2>
+          <div class="td-featured-grid">
+            <a routerLink="/teacher/elearning-manage/record-book" class="td-feature-card td-fc-record" *ngIf="canAccessModule('recordBook')">
+              <span class="td-fc-icon">📘</span>
+              <span class="td-fc-title">Record book</span>
+              <span class="td-fc-desc">Marks &amp; comments for your classes</span>
+              <span class="td-fc-go">Open →</span>
+            </a>
+            <a routerLink="/teacher/elearning-manage/tasks" class="td-feature-card td-fc-task" *ngIf="canAccessModule('recordBook')">
+              <span class="td-fc-icon">✏️</span>
+              <span class="td-fc-title">E-learning tasks</span>
+              <span class="td-fc-desc">Post assignments &amp; share materials</span>
+              <span class="td-fc-go">Create →</span>
+            </a>
+            <a routerLink="/teacher/elearning-manage/submissions" class="td-feature-card td-fc-sub" *ngIf="canAccessModule('recordBook')">
+              <span class="td-fc-icon">📥</span>
+              <span class="td-fc-title">Submissions</span>
+              <span class="td-fc-desc">Review student uploads</span>
+              <span class="td-fc-go">Review →</span>
+            </a>
+            <a routerLink="/classes/manage/mark-register" class="td-feature-card td-fc-att" *ngIf="canAccessModule('attendance')">
+              <span class="td-fc-icon">✅</span>
+              <span class="td-fc-title">Mark register</span>
+              <span class="td-fc-desc">Quick attendance for today</span>
+              <span class="td-fc-go">Mark →</span>
+            </a>
+            <a routerLink="/exams/manage/marks-capturing" class="td-feature-card td-fc-exam" *ngIf="canAccessModule('exams')">
+              <span class="td-fc-icon">📝</span>
+              <span class="td-fc-title">Marks &amp; exams</span>
+              <span class="td-fc-desc">Capture and review assessments</span>
+              <span class="td-fc-go">Go →</span>
+            </a>
+            <a routerLink="/teacher/elearning-manage/my-classes" class="td-feature-card td-fc-class">
+              <span class="td-fc-icon">👥</span>
+              <span class="td-fc-title">My classes</span>
+              <span class="td-fc-desc">Rosters and class overview</span>
+              <span class="td-fc-go">View →</span>
+            </a>
+          </div>
+        </section>
+
+        <div class="dashboard-cards td-dashboard-cards">
+          <div class="card modern-card td-card">
+            <div class="card-header-modern">
+              <h2><span class="card-icon">⚡</span> What you can do here</h2>
+            </div>
+            <p class="teacher-intro">
+              This portal shows <strong>your classes, subjects, and tools</strong> — not whole-school statistics.
+              Use the sidebar or shortcuts below for exams, attendance, report cards, and more.
+            </p>
+            <ul class="teacher-feature-list">
+              <li *ngIf="canAccessModule('exams')">Enter and review marks for assessments you’re involved in.</li>
+              <li *ngIf="canAccessModule('recordBook')">Use the <strong>Record Book</strong>, <strong>Create Task</strong>, and <strong>Submissions</strong> under E-learning Services.</li>
+              <li *ngIf="canAccessModule('attendance')">Take attendance and view attendance reports for your groups.</li>
+              <li *ngIf="canAccessModule('reportCards')">View or generate report cards where permitted.</li>
+              <li *ngIf="canAccessModule('rankings')">Review rankings for your subjects or classes.</li>
+              <li *ngIf="canAccessModule('students')">Browse student profiles you’re allowed to see.</li>
+            </ul>
+          </div>
+
+          <div class="card modern-card td-card">
+            <div class="card-header-modern">
+              <h2><span class="card-icon">🚀</span> Quick actions</h2>
+            </div>
+            <div class="td-qa-groups">
+              <div class="td-qa-group" *ngIf="canAccessModule('recordBook')">
+                <h3 class="td-qa-heading">E-learning</h3>
+                <div class="quick-actions modern-actions td-qa-grid">
+                  <a routerLink="/teacher/elearning-manage/record-book" class="action-btn modern-action-btn primary-action">
+                    <span class="action-icon">📘</span><span class="action-text">Record Book</span><span class="action-arrow">→</span>
+                  </a>
+                  <a routerLink="/teacher/elearning-manage/tasks" class="action-btn modern-action-btn elearning-quick-action">
+                    <span class="action-icon">✏️</span><span class="action-text">Create Task</span><span class="action-arrow">→</span>
+                  </a>
+                  <a routerLink="/teacher/elearning-manage/submissions" class="action-btn modern-action-btn elearning-quick-action">
+                    <span class="action-icon">📥</span><span class="action-text">Submissions</span><span class="action-arrow">→</span>
+                  </a>
+                </div>
+              </div>
+              <div class="td-qa-group">
+                <h3 class="td-qa-heading">Classes &amp; attendance</h3>
+                <div class="quick-actions modern-actions td-qa-grid">
+                  <a routerLink="/teacher/elearning-manage/my-classes" class="action-btn modern-action-btn info-action">
+                    <span class="action-icon">👥</span><span class="action-text">My Classes</span><span class="action-arrow">→</span>
+                  </a>
+                  <a routerLink="/classes/manage/mark-register" class="action-btn modern-action-btn success-action" *ngIf="canAccessModule('attendance')">
+                    <span class="action-icon">✅</span><span class="action-text">Mark Register</span><span class="action-arrow">→</span>
+                  </a>
+                  <a routerLink="/classes/manage/attendance-reports" class="action-btn modern-action-btn info-action" *ngIf="canAccessModule('attendance')">
+                    <span class="action-icon">📊</span><span class="action-text">Attendance Reports</span><span class="action-arrow">→</span>
+                  </a>
+                  <a routerLink="/classes/manage/lists" class="action-btn modern-action-btn secondary-action" *ngIf="canAccessModule('classes')">
+                    <span class="action-icon">📋</span><span class="action-text">Class Lists</span><span class="action-arrow">→</span>
+                  </a>
+                </div>
+              </div>
+              <div class="td-qa-group">
+                <h3 class="td-qa-heading">Assessment</h3>
+                <div class="quick-actions modern-actions td-qa-grid">
+                  <a routerLink="/exams/manage/marks-capturing" class="action-btn modern-action-btn warning-action" *ngIf="canAccessModule('exams')">
+                    <span class="action-icon">📝</span><span class="action-text">Marks Capturing</span><span class="action-arrow">→</span>
+                  </a>
+                  <a routerLink="/exams/manage/rankings" class="action-btn modern-action-btn success-action" *ngIf="canAccessModule('rankings')">
+                    <span class="action-icon">🏆</span><span class="action-text">Rankings</span><span class="action-arrow">→</span>
+                  </a>
+                  <a routerLink="/exams/manage/report-cards" class="action-btn modern-action-btn info-action" *ngIf="canAccessModule('reportCards')">
+                    <span class="action-icon">📊</span><span class="action-text">Report Cards</span><span class="action-arrow">→</span>
+                  </a>
+                </div>
+              </div>
+              <div class="td-qa-group">
+                <h3 class="td-qa-heading">Other</h3>
+                <div class="quick-actions modern-actions td-qa-grid">
+                  <a routerLink="/teacher/inventory_manage" class="action-btn modern-action-btn secondary-action">
+                    <span class="action-icon">📦</span><span class="action-text">Inventory Manager</span><span class="action-arrow">→</span>
+                  </a>
+                  <a routerLink="/timetable" class="action-btn modern-action-btn secondary-action">
+                    <span class="action-icon">🗓️</span><span class="action-text">Timetable</span><span class="action-arrow">→</span>
+                  </a>
+                  <a routerLink="/teacher/manage-account" class="action-btn modern-action-btn secondary-action">
+                    <span class="action-icon">🪪</span><span class="action-text">My Account</span><span class="action-arrow">→</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card modern-card td-card" *ngIf="!loading && teacherClasses.length === 0">
+            <div class="card-header-modern">
+              <h2><span class="card-icon">⚠️</span> No classes assigned</h2>
+            </div>
+            <p>You don’t have any classes assigned yet. Ask an administrator to assign classes to your profile so you can use the record book and other class tools.</p>
+          </div>
+
+          <div class="card modern-card td-card" *ngIf="!loading && teacherClasses.length > 0">
+            <div class="card-header-modern">
+              <h2><span class="card-icon">🏫</span> Jump to record book</h2>
+            </div>
+            <div class="teacher-class-picker">
+              <label for="td-class-select">Pick a class</label>
+              <div class="teacher-class-picker-row">
+                <select
+                  id="td-class-select"
+                  class="form-control td-select"
+                  [(ngModel)]="selectedClassId"
+                  (change)="onClassSelected()">
+                  <option value="">— Select a class —</option>
+                  <option *ngFor="let c of teacherClasses" [value]="c.id">{{ c.name }}{{ c.form ? ' (' + c.form + ')' : '' }}</option>
+                </select>
+                <button type="button" class="btn btn-primary td-btn-primary" (click)="openRecordBook()" [disabled]="!selectedClassId">
+                  Open record book
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card modern-card td-card" *ngIf="availableModules.length > 0">
+            <div class="card-header-modern">
+              <h2><span class="card-icon">🧭</span> All modules</h2>
+            </div>
+            <div class="teacher-modules-grid td-modules">
+              <button type="button" class="teacher-module-tile" *ngFor="let m of availableModules" (click)="navigateToModule(m)">
+                <span class="tm-icon">{{ m.icon }}</span>
+                <span class="tm-name">{{ m.name }}</span>
+                <span class="tm-desc">{{ m.description }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="td-aside" *ngIf="!loading" aria-label="Tips and ideas">
+        <div class="td-widget td-widget-tip">
+          <h3 class="td-widget-title"><span aria-hidden="true">💡</span> Teaching tip</h3>
+          <p class="td-widget-body">Batch similar tasks: set up e-learning assignments for the week, then review submissions in one go from <strong>Submissions</strong>.</p>
+        </div>
+        <div class="td-widget td-widget-shortcuts">
+          <h3 class="td-widget-title"><span aria-hidden="true">⌨️</span> Sidebar</h3>
+          <p class="td-widget-body">Everything is one click away in the collapsible menu — collapse it for more space when marking or capturing marks.</p>
+        </div>
+        <div class="td-widget td-widget-focus" *ngIf="activeTerm">
+          <h3 class="td-widget-title"><span aria-hidden="true">📅</span> Term focus</h3>
+          <p class="td-widget-body">Active term: <strong>{{ activeTerm }}</strong>. Align assessments and report deadlines with your school calendar.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,102 @@
+<div class="tm-wrap">
+  <header class="tm-header">
+    <h1 class="tm-title">Timetable Manager</h1>
+    <p class="tm-sub">View schedules and configure timetable settings</p>
+  </header>
+
+  <nav class="tm-tabs" aria-label="Timetable manager sections">
+    <a routerLink="/timetable/manage/config" routerLinkActive="active" class="tm-tab">
+      <span class="tm-tab-ico" aria-hidden="true">⚙️</span>
+      Configuration
+    </a>
+    <a routerLink="/timetable/manage/view" routerLinkActive="active" class="tm-tab">
+      <span class="tm-tab-ico" aria-hidden="true">🗓️</span>
+      Generate TimeTable
+    </a>
+    <a routerLink="/timetable/manage/manual" routerLinkActive="active" class="tm-tab">
+      <span class="tm-tab-ico" aria-hidden="true">↔️</span>
+      Manual Adjustments
+    </a>
+    <a routerLink="/timetable/manage/view_timetable" routerLinkActive="active" class="tm-tab">
+      <span class="tm-tab-ico" aria-hidden="true">👁️</span>
+      View Timetable
+    </a>
+    <button
+      type="button"
+      class="tm-tab tm-tab--reset"
+      (click)="openResetDialog()"
+      [disabled]="resetInProgress"
+      title="Permanently delete all teaching loads and class–teacher assignments"
+    >
+      <span class="tm-tab-ico" aria-hidden="true">🗑️</span>
+      Clear Timetable Data
+    </button>
+  </nav>
+
+  <div class="tm-alert tm-alert--ok" *ngIf="resetSuccess" role="status">{{ resetSuccess }}</div>
+
+  <div class="tm-outlet">
+    <router-outlet></router-outlet>
+  </div>
+
+  <!-- ── Clear Timetable Data modal ──────────────────────────────────── -->
+  <div class="tm-reset-overlay" *ngIf="showResetDialog" (click)="closeResetDialog()" role="presentation">
+    <div
+      class="tm-reset-dialog"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="tm-reset-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="tm-reset-icon" aria-hidden="true">⚠️</div>
+      <h2 id="tm-reset-title" class="tm-reset-title">Clear All Timetable Data</h2>
+
+      <div class="tm-reset-warning">
+        <p>This action is <strong>permanent and cannot be undone</strong>. It will:</p>
+        <ul class="tm-reset-list">
+          <li>Remove <strong>all teaching loads</strong> from every teacher (the contact sheet on <em>Teachers → Teaching Load</em> will be empty)</li>
+          <li>Unassign <strong>all teachers from all classes</strong> (the <em>Classes → Assign Teachers</em> page will show no assignments)</li>
+          <li>Clear the class-teacher designation for every class</li>
+        </ul>
+        <p class="tm-reset-note">Timetable <em>slot data</em> and <em>teacher / class records</em> are not deleted — only teaching assignments are cleared.</p>
+      </div>
+
+      <label class="tm-reset-label" for="tm-reset-input">
+        Type <strong>RESET</strong> in the box below to confirm:
+      </label>
+      <input
+        id="tm-reset-input"
+        class="tm-reset-input"
+        type="text"
+        [(ngModel)]="resetWord"
+        placeholder="RESET"
+        autocomplete="off"
+        spellcheck="false"
+        [disabled]="resetInProgress"
+        (keydown.enter)="confirmReset()"
+      />
+
+      <div class="tm-reset-error" *ngIf="resetError" role="alert">{{ resetError }}</div>
+
+      <div class="tm-reset-actions">
+        <button
+          type="button"
+          class="tm-btn-ghost"
+          (click)="closeResetDialog()"
+          [disabled]="resetInProgress"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="tm-btn-reset-confirm"
+          (click)="confirmReset()"
+          [disabled]="resetWord.trim() !== 'RESET' || resetInProgress"
+        >
+          <span *ngIf="resetInProgress">Clearing…</span>
+          <span *ngIf="!resetInProgress">Confirm — Clear All Data</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

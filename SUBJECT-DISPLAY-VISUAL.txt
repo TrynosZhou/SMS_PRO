@@ -1,0 +1,178 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                         RECORD BOOK - CLASS & SUBJECT SELECTOR                ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│  📋 Select Class                                     [3 classes assigned]     │
+│                                                                               │
+│  ┌─────────────────────────────────┬───────────────────────────────────────┐ │
+│  │                                 │                                       │ │
+│  │  Your Classes                   │  Subject(s) Teaching                  │ │
+│  │  ┌───────────────────────────┐  │  ┌─────────────────────────────────┐ │ │
+│  │  │ 5 Gold                  ▼ │  │  │ Mathematics, Science,           │ │ │
+│  │  └───────────────────────────┘  │  │ Computer Studies                │ │ │
+│  │                                 │  │                                 │ │ │
+│  │                                 │  └─────────────────────────────────┘ │ │
+│  │                                 │                                       │ │
+│  └─────────────────────────────────┴───────────────────────────────────────┘ │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+
+DESKTOP VIEW (≥768px):
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   Your Classes                        Subject(s) Teaching                  │
+│   ┌──────────────────────────┐        ┌──────────────────────────────────┐│
+│   │ -- Select a class --   ▼│        │ Select a class to view           ││
+│   └──────────────────────────┘        │ subject(s)...                    ││
+│                                       │                                  ││
+│                                       └──────────────────────────────────┘│
+│                                                                             │
+│   [50% width]                         [50% width]                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+AFTER SELECTING CLASS:
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   Your Classes                        Subject(s) Teaching                  │
+│   ┌──────────────────────────┐        ┌──────────────────────────────────┐│
+│   │ 5 Gold                 ▼│        │ Mathematics, Science,            ││
+│   └──────────────────────────┘        │ Computer Studies                 ││
+│                                       │                                  ││
+│                                       └──────────────────────────────────┘│
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+MOBILE VIEW (<768px):
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────┐
+│                                     │
+│  Your Classes                       │
+│  ┌───────────────────────────────┐  │
+│  │ 5 Gold                      ▼│  │
+│  └───────────────────────────────┘  │
+│                                     │
+│  Subject(s) Teaching                │
+│  ┌───────────────────────────────┐  │
+│  │ Mathematics, Science,         │  │
+│  │ Computer Studies              │  │
+│  │                               │  │
+│  └───────────────────────────────┘  │
+│                                     │
+│  [Stacked Vertically - 100% width] │
+│                                     │
+└─────────────────────────────────────┘
+
+
+DIFFERENT SCENARIOS:
+═══════════════════════════════════════════════════════════════════════════════
+
+1. SINGLE SUBJECT:
+   ┌──────────────────────────────┐
+   │ Mathematics                  │
+   │                              │
+   │                              │
+   └──────────────────────────────┘
+
+2. TWO SUBJECTS:
+   ┌──────────────────────────────┐
+   │ Mathematics, Science         │
+   │                              │
+   │                              │
+   └──────────────────────────────┘
+
+3. MANY SUBJECTS:
+   ┌──────────────────────────────┐
+   │ Mathematics, Science,        │
+   │ English, History, Geography, │
+   │ Computer Studies             │
+   └──────────────────────────────┘
+
+4. NO SUBJECTS:
+   ┌──────────────────────────────┐
+   │ No subjects assigned         │
+   │                              │
+   │                              │
+   └──────────────────────────────┘
+
+5. BEFORE SELECTION:
+   ┌──────────────────────────────┐
+   │ Select a class to view       │
+   │ subject(s)...                │
+   │                              │
+   └──────────────────────────────┘
+
+
+COLOR SCHEME:
+═══════════════════════════════════════════════════════════════════════════════
+
+Dropdown:
+  - Background: White (#ffffff)
+  - Border: Light gray (#e9ecef)
+  - Focus: Purple (#667eea)
+  - Arrow: Purple (#667eea)
+
+Text Area:
+  - Background: Light gray (#f8f9fa)
+  - Border: Light gray (#e9ecef)
+  - Text: Dark gray (#495057)
+  - Focus: Purple border (#667eea)
+  - Placeholder: Muted gray (#adb5bd)
+
+
+INTERACTION FLOW:
+═══════════════════════════════════════════════════════════════════════════════
+
+Step 1: Page Load
+   ↓
+   Dropdown: Empty selection
+   Text Area: "Select a class to view subject(s)..."
+
+Step 2: User Selects Class
+   ↓
+   Dropdown: "5 Gold"
+   Text Area: Loading...
+
+Step 3: Subjects Loaded
+   ↓
+   Dropdown: "5 Gold"
+   Text Area: "Mathematics, Science, Computer Studies"
+
+Step 4: User Changes Class
+   ↓
+   Dropdown: "6 Silver"
+   Text Area: Updates to new class subjects
+
+Step 5: User Clears Selection
+   ↓
+   Dropdown: "-- Select a class --"
+   Text Area: "Select a class to view subject(s)..."
+
+
+FEATURES HIGHLIGHTED:
+═══════════════════════════════════════════════════════════════════════════════
+
+✓ Side-by-side layout (desktop)
+✓ Stacked layout (mobile)
+✓ Readonly text area
+✓ Automatic subject loading
+✓ Multiple subject support
+✓ Comma-separated display
+✓ Professional styling
+✓ Consistent with design system
+✓ Responsive design
+✓ Clear labels
+✓ Placeholder text
+✓ Focus states
+✓ Smooth transitions
+
+

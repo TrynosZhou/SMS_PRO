@@ -1,0 +1,350 @@
+/* ── Page wrapper ─────────────────────────────────────────────────────────── */
+.fs-page {
+  min-height: 100%;
+  background: linear-gradient(135deg, #c470d8 0%, #9b59b6 40%, #a87fd4 100%);
+  padding: 24px 20px 40px;
+  position: relative;
+}
+
+/* ── Header bar ───────────────────────────────────────────────────────────── */
+.fs-header-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(90deg, #1a78e6 0%, #4faef5 100%);
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin-bottom: 18px;
+}
+
+.fs-back-btn {
+  background: rgba(255,255,255,0.18);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fs-back-btn:hover { background: rgba(255,255,255,0.32); }
+
+.fs-header-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+.fs-header-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+  margin-top: 2px;
+}
+.fs-header-text { display: flex; flex-direction: column; }
+
+/* ── Banners ──────────────────────────────────────────────────────────────── */
+.fs-success-banner {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 7px;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+.fs-error-banner {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 7px;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+/* ── Fee Management card ──────────────────────────────────────────────────── */
+.fs-mgmt-card {
+  background: #f5f5f5;
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  border-bottom: 3px solid #e0a800;
+}
+
+.fs-mgmt-top { display: flex; align-items: center; gap: 8px; }
+.fs-mgmt-title { font-size: 15px; font-weight: 700; color: #1a6ed8; }
+
+.fs-mgmt-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.fs-btn-add {
+  background: #1a78e6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+.fs-btn-add:hover { background: #1460c0; }
+
+.fs-btn-cat {
+  background: #fff;
+  color: #1a78e6;
+  border: 1.5px solid #1a78e6;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+}
+.fs-btn-cat:hover { background: #e8f1fc; }
+
+/* ── Loading / empty ─────────────────────────────────────────────────────── */
+.fs-loading, .fs-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #fff;
+  font-size: 15px;
+  opacity: .85;
+}
+
+/* ── Category card ───────────────────────────────────────────────────────── */
+.fs-cat-card {
+  background: #fff;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  overflow: hidden;
+  border-top: 3px solid #e0a800;
+}
+
+.fs-cat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #fafafa;
+  border-bottom: 1px solid #e8e8e8;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fs-cat-left { display: flex; align-items: center; gap: 8px; }
+.fs-cat-icon { font-size: 20px; }
+.fs-cat-name { font-size: 16px; font-weight: 700; color: #222; }
+.fs-cat-desc { font-size: 12px; color: #888; margin-left: 6px; }
+.fs-cat-total { font-size: 13px; font-weight: 600; color: #1a6ed8; margin-right: 8px; }
+
+.fs-cat-header-actions { display: flex; align-items: center; gap: 6px; }
+
+/* ── Sub-category ─────────────────────────────────────────────────────────── */
+.fs-sub-wrap {
+  border-bottom: 1px solid #f0f0f0;
+}
+.fs-sub-wrap:last-child { border-bottom: none; }
+
+.fs-sub-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: #fefefe;
+  border-bottom: 1px solid #f4f4f4;
+}
+
+.fs-sub-icon { font-size: 15px; }
+.fs-sub-name { font-size: 14px; font-weight: 600; color: #333; flex: 1; }
+.fs-sub-total { font-size: 12px; color: #666; }
+
+/* ── Items table ─────────────────────────────────────────────────────────── */
+.fs-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.fs-items-table th {
+  background: #f5f5f5;
+  text-align: left;
+  padding: 8px 16px;
+  color: #555;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.fs-items-table td {
+  padding: 9px 16px;
+  border-bottom: 1px solid #f4f4f4;
+  color: #333;
+}
+.fs-items-table tr:last-child td { border-bottom: none; }
+.fs-items-table tr:hover td { background: #f9f9f9; }
+
+.fs-amt-col { text-align: right; width: 120px; }
+.fs-cur-col { text-align: center; width: 80px; }
+.fs-act-col { text-align: center; width: 90px; }
+
+.fs-no-items {
+  padding: 12px 20px;
+  color: #aaa;
+  font-size: 13px;
+  font-style: italic;
+}
+.fs-empty-cat {
+  padding: 18px 20px;
+  color: #aaa;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ── Icon buttons ────────────────────────────────────────────────────────── */
+.fs-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background .15s;
+}
+.fs-edit-btn { color: #1a6ed8; }
+.fs-edit-btn:hover { background: #e8f1fc; }
+.fs-del-btn { color: #c0392b; }
+.fs-del-btn:hover { background: #fdecea; }
+
+/* ── Modals ──────────────────────────────────────────────────────────────── */
+.fs-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 900;
+}
+.fs-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 901;
+  background: #fff;
+  border-radius: 12px;
+  width: 480px;
+  max-width: 95vw;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.22);
+  overflow: hidden;
+}
+.fs-modal-sm { width: 380px; }
+
+.fs-modal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(90deg, #1a78e6 0%, #4faef5 100%);
+  color: #fff;
+}
+.fs-modal-hdr h3 { margin: 0; font-size: 16px; }
+.fs-modal-hdr-danger {
+  background: linear-gradient(90deg, #c0392b 0%, #e74c3c 100%);
+}
+.fs-modal-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: .8;
+}
+.fs-modal-close:hover { opacity: 1; }
+
+.fs-modal-body { padding: 20px; }
+
+.fs-error-inline {
+  background: #fdecea;
+  color: #c0392b;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.fs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.fs-field label { font-size: 13px; font-weight: 600; color: #444; }
+.fs-field input, .fs-field select {
+  border: 1.5px solid #d0d0d0;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: #222;
+  background: #fff;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.fs-field input:focus, .fs-field select:focus { border-color: #1a78e6; }
+
+.fs-field-row { display: flex; gap: 12px; }
+.fs-field-row .fs-field { flex: 1; }
+
+.fs-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #f9f9f9;
+  border-top: 1px solid #eee;
+}
+
+.fs-btn-cancel {
+  background: #fff;
+  color: #555;
+  border: 1.5px solid #ccc;
+  border-radius: 7px;
+  padding: 8px 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fs-btn-cancel:hover { background: #f5f5f5; }
+
+.fs-btn-save {
+  background: #1a78e6;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fs-btn-save:hover { background: #1460c0; }
+.fs-btn-save:disabled, .fs-btn-cancel:disabled { opacity: .6; cursor: not-allowed; }
+
+.fs-btn-danger {
+  background: #c0392b;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fs-btn-danger:hover { background: #a93226; }
+.fs-btn-danger:disabled { opacity: .6; cursor: not-allowed; }
+
+.fs-warn-text { color: #c0392b; font-size: 13px; margin-top: 4px; }
+
+.fs-modal-body p { font-size: 14px; color: #444; margin: 0 0 8px; }

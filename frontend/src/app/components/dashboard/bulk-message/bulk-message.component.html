@@ -1,0 +1,97 @@
+<div class="modal-overlay" (click)="closeModal()">
+  <div class="bulk-message-modal" (click)="$event.stopPropagation()">
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <h2>
+        <span class="modal-icon">📧</span>
+        Send Bulk Message
+      </h2>
+      <button class="modal-close-btn" (click)="closeModal()" title="Close">
+        <span>&times;</span>
+      </button>
+    </div>
+
+    <!-- Alert Messages -->
+    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+    <!-- Message Form -->
+    <form (ngSubmit)="sendMessage()" class="message-form">
+      <!-- Recipients Selection -->
+      <div class="form-group">
+        <label for="recipients">
+          Recipients <span class="required">*</span>
+        </label>
+        <select 
+          id="recipients"
+          [(ngModel)]="messageForm.recipients" 
+          name="recipients"
+          class="form-control"
+          required>
+          <option value="all">All (Students, Parents, Teachers)</option>
+          <option value="students">Students Only</option>
+          <option value="parents">Parents Only</option>
+          <option value="teachers">Teachers Only</option>
+        </select>
+      </div>
+
+      <!-- Subject/Title -->
+      <div class="form-group">
+        <label for="subject">
+          Subject/Title <span class="required">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="subject"
+          [(ngModel)]="messageForm.subject" 
+          name="subject"
+          class="form-control"
+          placeholder="Enter message subject/title"
+          required>
+      </div>
+
+      <!-- Message Content -->
+      <div class="form-group">
+        <label for="message">
+          Message <span class="required">*</span>
+        </label>
+        <div class="message-actions">
+          <button type="button" class="btn btn-secondary btn-sm" (click)="useTemplate()">
+            📝 Use Template
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="clearMessage()">
+            🗑️ Clear
+          </button>
+        </div>
+        <textarea 
+          id="message"
+          [(ngModel)]="messageForm.message" 
+          name="message"
+          class="form-control message-textarea"
+          placeholder="Enter your message here..."
+          rows="12"
+          required></textarea>
+        <small class="form-hint">You can use [Recipient Name], [School Name], and [Headmaster Name] as placeholders</small>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary" 
+          (click)="closeModal()"
+          [disabled]="loading">
+          ❌ Cancel
+        </button>
+        <button 
+          type="submit" 
+          class="btn btn-primary"
+          [disabled]="loading || !canSendMessage()">
+          <span *ngIf="!loading">📧 Send Message</span>
+          <span *ngIf="loading">⏳ Sending...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

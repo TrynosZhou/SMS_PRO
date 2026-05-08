@@ -1,0 +1,36 @@
+<div class="am-wrap">
+  <header class="am-header">
+    <h1 class="am-title">
+      <span class="am-title-ico" aria-hidden="true">🎓</span>
+      Academic Settings
+    </h1>
+    <p class="am-sub">Manage terms, classes, subjects, and grading systems</p>
+  </header>
+
+  <nav class="am-tabs" aria-label="Academic settings sections">
+    <a routerLink="terms" routerLinkActive="active" class="am-tab">
+      <span class="am-tab-ico" aria-hidden="true">📅</span>
+      Terms
+    </a>
+    <a routerLink="classes" routerLinkActive="active" class="am-tab">
+      <span class="am-tab-ico" aria-hidden="true">🏫</span>
+      Classes
+    </a>
+    <a routerLink="subjects" routerLinkActive="active" class="am-tab">
+      <span class="am-tab-ico" aria-hidden="true">📚</span>
+      Subjects
+    </a>
+    <a routerLink="report-releases" routerLinkActive="active" class="am-tab">
+      <span class="am-tab-ico" aria-hidden="true">📋</span>
+      Report Releases
+    </a>
+    <a routerLink="grading" routerLinkActive="active" class="am-tab">
+      <span class="am-tab-ico" aria-hidden="true">🏆</span>
+      Grading System
+    </a>
+  </nav>
+
+  <div class="am-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>

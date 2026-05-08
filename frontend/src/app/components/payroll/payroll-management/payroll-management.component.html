@@ -1,0 +1,1550 @@
+<div class="payroll-wrapper">
+  <div class="payroll-card">
+    <div class="alert alert-error" *ngIf="overviewError && tab==='overview'">
+      {{ overviewError }}
+    </div>
+
+    <div class="alert alert-error" *ngIf="employeeError && tab==='employees' && !showEmployeeRegisterPanel">
+      {{ employeeError }}
+    </div>
+    <div class="alert alert-error" *ngIf="structureError && tab==='structures'">
+      {{ structureError }}
+    </div>
+    <div class="alert alert-error" *ngIf="runError && (tab==='process' || tab==='payslips')">
+      {{ runError }}
+    </div>
+    <div class="alert alert-error" *ngIf="reportError && tab==='reports'">
+      {{ reportError }}
+    </div>
+
+    <!-- ---------------- Payroll Overview ---------------- -->
+    <div *ngIf="tab==='overview'" class="tab-panel payroll-overview">
+      <div *ngIf="overviewLoading" class="loading">Loading overview…</div>
+
+      <ng-container *ngIf="!overviewLoading">
+        <div class="subtitle overview-subtitle">Manage staff payroll, salary structures, and payroll runs</div>
+
+        <!-- First part (top) -->
+        <div class="overview-top-cards">
+          <div class="overview-stat-card">
+            <div class="overview-icon">👥</div>
+            <div>
+              <div class="overview-value">{{ employeeStats.total }}</div>
+              <div class="overview-label">TOTAL EMPLOYEES</div>
+              <div class="overview-meta">👷 {{ overviewPayrollStaffCount }} ancillary &amp; support staff</div>
+            </div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-icon icon-runs">📋</div>
+            <div>
+              <div class="overview-value">{{ overviewRunsThisMonth }}</div>
+              <div class="overview-label">RUNS THIS MONTH</div>
+            </div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-icon icon-structures">📊</div>
+            <div>
+              <div class="overview-value">{{ overviewStructuresCount }}</div>
+              <div class="overview-label">SALARY STRUCTURES</div>
+            </div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-icon icon-assignments">🔗</div>
+            <div>
+              <div class="overview-value">0</div>
+              <div class="overview-label">ASSIGNMENTS</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Second part (middle) -->
+        <div class="overview-middle">
+          <div class="panel middle-left">
+            <h3>Quick Actions</h3>
+            <div class="quick-grid">
+              <button type="button" class="quick-card" (click)="navigateToTab('employees')">
+                <span>👥</span>
+                <strong>Employees</strong>
+              </button>
+              <button type="button" class="quick-card" (click)="navigateToTab('structures')">
+                <span>📊</span>
+                <strong>Salary Structures</strong>
+              </button>
+              <button type="button" class="quick-card" (click)="navigateToAssignments()">
+                <span>🔗</span>
+                <strong>Assignments</strong>
+              </button>
+              <button type="button" class="quick-card quick-active" (click)="navigateToTab('process')">
+                <span>⚙️</span>
+                <strong>Process Payroll</strong>
+              </button>
+              <button type="button" class="quick-card" (click)="navigateToTab('reports')">
+                <span>📈</span>
+                <strong>Reports</strong>
+              </button>
+              <button type="button" class="quick-card">
+                <span>📋</span>
+                <strong>Loan Overview</strong>
+              </button>
+            </div>
+          </div>
+
+          <div class="panel middle-right">
+            <h3>Recent Payroll Runs</h3>
+            <div *ngIf="overviewRecentRuns.length === 0" class="recent-empty">
+              <div>No payroll runs yet.</div>
+              <button type="button" class="btn btn-primary" (click)="openProcessFirstRun()">Process first run →</button>
+            </div>
+            <div *ngIf="overviewRecentRuns.length > 0" class="recent-list">
+              <button type="button" class="recent-item" *ngFor="let r of overviewRecentRuns.slice(0, 5)" (click)="openRunInProcess(r.id)">
+                <span>{{ r.periodLabel }}</span>
+                <span [ngClass]="runStatusClass(r.status)">{{ r.status }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- ---------------- Employees (redesigned: top = summary + tabs + search; bottom = table) ---------------- -->
+    <div *ngIf="tab==='employees'" class="tab-panel employees-page">
+      <!-- Top: header + KPIs + tabs + search (first picture) -->
+      <div class="employees-top">
+        <div class="employees-header-row">
+          <div class="employees-title-block">
+            <h2 class="employees-page-title"><span class="employees-title-icon">👥</span> Employees</h2>
+            <p class="employees-desc">
+              Ancillary and support staff (non-teaching) — assign salaries in
+              <a [routerLink]="payrollSegments('assignments')" class="employees-inline-link">Assignments</a>.
+            </p>
+          </div>
+          <div class="employees-header-actions">
+            <button type="button" class="btn btn-assign-salary" (click)="assignSalaryNavigate()">
+              <span>🔗</span> Assign Salary
+            </button>
+            <button type="button" class="btn btn-back-outline" (click)="backToPayrollHome()">← Back</button>
+          </div>
+        </div>
+
+        <div class="employees-stat-cards" *ngIf="!employeeLoading">
+          <div class="employees-stat-card">
+            <div class="employees-stat-label">Total staff</div>
+            <div class="employees-stat-value">{{ employeeStats.total }}</div>
+          </div>
+          <div class="employees-stat-card">
+            <div class="employees-stat-label">Salary assigned</div>
+            <div class="employees-stat-value">{{ employeesWithSalaryCount }}</div>
+          </div>
+          <div class="employees-stat-card">
+            <div class="employees-stat-label">Active</div>
+            <div class="employees-stat-value">{{ employeeStats.active }}</div>
+          </div>
+          <div class="employees-stat-card">
+            <div class="employees-stat-label">Departments</div>
+            <div class="employees-stat-value">{{ employeeStats.departments }}</div>
+          </div>
+        </div>
+
+        <div class="employees-search-bar" *ngIf="!employeeLoading">
+          <input
+            class="employees-search-input"
+            type="text"
+            placeholder="Search by name, ID, email..."
+            [(ngModel)]="employeeSearch"
+            (input)="onEmployeeFilterChange()"
+          />
+          <div class="employees-salary-toggles">
+            <button type="button" class="salary-toggle" [class.active]="employeeSalaryFilter === 'all'" (click)="setEmployeeSalaryFilter('all')">All</button>
+            <button type="button" class="salary-toggle" [class.active]="employeeSalaryFilter === 'assigned'" (click)="setEmployeeSalaryFilter('assigned')">Salary Assigned</button>
+            <button type="button" class="salary-toggle" [class.active]="employeeSalaryFilter === 'not_assigned'" (click)="setEmployeeSalaryFilter('not_assigned')">Not Assigned</button>
+          </div>
+        </div>
+
+        <div class="employees-info-box" *ngIf="!employeeLoading">
+          Payroll covers <strong>ancillary and support roles</strong> only. Teaching staff are not listed here.
+          Assign salary structures on the
+          <a [routerLink]="payrollSegments('assignments')" class="employees-inline-link">Assignments</a> page.
+        </div>
+      </div>
+
+      <!-- Bottom: table (second picture) -->
+      <div class="employees-bottom panel employees-table-panel">
+        <div *ngIf="employeeLoading" class="loading">Loading...</div>
+
+        <div class="employees-table-toolbar" *ngIf="!employeeLoading">
+          <div class="employees-table-meta">
+            <span class="employees-count">{{ employeeTotal }} {{ employeeTotal === 1 ? 'employee' : 'employees' }}</span>
+            <button type="button" class="btn btn-secondary btn-compact" (click)="refreshEmployees()">Refresh</button>
+            <button type="button" class="btn btn-secondary btn-compact" (click)="exportEmployeesCsv()" [disabled]="employeeRows.length === 0">Export CSV</button>
+            <button type="button" class="btn btn-primary btn-compact" (click)="openEmployeeModal()">Add employee</button>
+          </div>
+        </div>
+
+        <div class="table-wrap employees-data-table" *ngIf="!employeeLoading && employeeRows.length > 0">
+          <table>
+            <thead>
+              <tr>
+                <th class="sortable" (click)="toggleEmployeeSort('employeeNumber')">
+                  EMPLOYEE ID <span class="sort-icon">{{ getEmployeeSortIcon('employeeNumber') }}</span>
+                </th>
+                <th class="sortable" (click)="toggleEmployeeSort('fullName')">
+                  NAME <span class="sort-icon">{{ getEmployeeSortIcon('fullName') }}</span>
+                </th>
+                <th>EMAIL</th>
+                <th>PHONE</th>
+                <th>DATE OF JOINING</th>
+                <th>SALARY</th>
+                <th class="col-actions">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let e of employeeRows">
+                <td class="mono emp-id">{{ e.employeeNumber }}</td>
+                <td class="emp-name">{{ e.fullName }}</td>
+                <td class="emp-muted">—</td>
+                <td class="emp-muted">—</td>
+                <td class="emp-muted">{{ formatJoinDate(e) }}</td>
+                <td>
+                  <span [ngClass]="salaryBadgeClass(e)">{{ salaryBadgeText(e) }}</span>
+                </td>
+                <td class="col-actions">
+                  <button type="button" class="btn-link" (click)="editEmployee(e)">Edit</button>
+                  <span class="sep">·</span>
+                  <button type="button" class="btn-link danger" (click)="deleteEmployee(e.id)">Delete</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!employeeLoading && employeeRows.length === 0" class="empty-state employees-empty">
+          No employees match the selected filters.
+        </div>
+      </div>
+
+      <!-- Register / edit modal -->
+      <div
+        class="employee-modal-backdrop"
+        *ngIf="showEmployeeRegisterPanel"
+        (click)="onEmployeeModalBackdropClick($event)"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="employee-modal-title"
+      >
+        <div class="employee-modal" (click)="$event.stopPropagation()">
+          <div class="employee-modal-header">
+            <h3 id="employee-modal-title">{{ editingEmployeeId ? 'Edit employee' : 'Register employee' }}</h3>
+            <button type="button" class="employee-modal-close" (click)="closeEmployeeModal()" aria-label="Close">×</button>
+          </div>
+          <div class="employee-modal-body">
+            <div class="alert alert-error employee-modal-alert" *ngIf="employeeError">
+              {{ employeeError }}
+            </div>
+            <div class="form-grid">
+              <label>Employee ID (Auto)</label>
+              <input [(ngModel)]="employeeForm.employeeNumber" disabled placeholder="VICT + 6 digits" />
+
+              <label>Name</label>
+              <input [(ngModel)]="employeeForm.fullName" />
+
+              <label>Designation</label>
+              <input [(ngModel)]="employeeForm.designation" placeholder="e.g. Driver, Security, Admin" />
+
+              <label>Department</label>
+              <input [(ngModel)]="employeeForm.department" />
+
+              <label>Salary type (assign salary)</label>
+              <input [(ngModel)]="employeeForm.salaryType" placeholder="Match a salary structure type, or leave empty" />
+
+              <label>Bank Name</label>
+              <input [(ngModel)]="employeeForm.bankName" />
+
+              <label>Bank Account Number</label>
+              <input [(ngModel)]="employeeForm.bankAccountNumber" />
+
+              <label>Employment Status</label>
+              <select [(ngModel)]="employeeForm.employmentStatus">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="terminated">Terminated</option>
+              </select>
+            </div>
+            <div class="generated-id" *ngIf="generatedEmployeeId">
+              Generated Employee ID: <span class="mono">{{ generatedEmployeeId }}</span>
+            </div>
+          </div>
+          <div class="employee-modal-footer">
+            <button type="button" class="btn btn-primary" [disabled]="employeeLoading" (click)="saveEmployee()">
+              {{ editingEmployeeId ? 'Update Employee' : 'Save Employee' }}
+            </button>
+            <button type="button" class="btn btn-secondary" (click)="resetEmployeeForm()">Reset</button>
+            <button type="button" class="btn btn-secondary" (click)="closeEmployeeModal()">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------- Salary Structures: list, full-page add (/structures/new), edit modal ---------------- -->
+    <div *ngIf="tab==='structures'" class="tab-panel structures-page structures-page--modern">
+      <!-- Full-page add salary structure -->
+      <div *ngIf="structurePage === 'new'" class="structures-add-page structures-add-page--modern">
+        <div class="structures-add-hero">
+          <div class="structures-add-hero-text">
+            <h2 class="structures-add-hero-title">Add salary structure</h2>
+            <p class="structures-add-hero-desc">
+              Define basic pay, allowances, and deductions. Assign templates to employees from <strong>Assignments</strong>.
+            </p>
+          </div>
+          <div class="structures-add-hero-actions">
+            <button type="button" class="btn btn-secondary btn-compact" (click)="copyStructuresPageLink()">Copy link</button>
+            <button type="button" class="btn btn-back-outline" (click)="navigateToStructuresList()">← Back to list</button>
+          </div>
+        </div>
+        <div class="structures-copy-toast" *ngIf="structureCopyLinkMessage">{{ structureCopyLinkMessage }}</div>
+        <div class="structures-add-page-card panel structures-form-shell">
+          <div class="structures-form-section-tag">Details</div>
+          <ng-container *ngTemplateOutlet="structureFormBody"></ng-container>
+          <div class="structures-add-page-actions">
+            <button type="button" class="btn btn-primary" [disabled]="structureLoading" (click)="saveStructure()">
+              {{ structureLoading ? 'Saving…' : 'Save structure' }}
+            </button>
+            <button type="button" class="btn btn-secondary" [disabled]="structureLoading" (click)="resetNewStructureFields()">Reset</button>
+            <button type="button" class="btn btn-back-outline" [disabled]="structureLoading" (click)="navigateToStructuresList()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Structures list -->
+      <ng-container *ngIf="structurePage === 'list'">
+        <div class="structures-list-hero">
+          <div class="structures-list-hero-text">
+            <h2 class="structures-hero-title">Salary structures</h2>
+            <p class="structures-hero-desc">
+              Payroll templates (non-teacher) with basic pay and components. Search, filter, then click a card to edit.
+            </p>
+          </div>
+          <div class="structures-list-hero-actions">
+            <button type="button" class="btn btn-secondary btn-compact" (click)="copyStructuresPageLink()">Copy link</button>
+            <button type="button" class="btn btn-add-structure" (click)="openAddStructure()">
+              <span class="plus-ico" aria-hidden="true">+</span> Add structure
+            </button>
+            <button type="button" class="btn btn-back-outline" (click)="backFromStructures()">← Back</button>
+          </div>
+        </div>
+        <div class="structures-copy-toast" *ngIf="structureCopyLinkMessage">{{ structureCopyLinkMessage }}</div>
+
+        <div class="structures-stat-cards structures-stat-cards--modern">
+          <div class="structures-stat-card structures-stat-card--icon">
+            <span class="structures-stat-ico" aria-hidden="true">📊</span>
+            <div class="structures-stat-num">{{ structuresAllCount }}</div>
+            <div class="structures-stat-label">Total (all types)</div>
+          </div>
+          <div class="structures-stat-card structures-stat-card--icon">
+            <span class="structures-stat-ico" aria-hidden="true">👨‍🏫</span>
+            <div class="structures-stat-num">{{ structuresTeacherCount }}</div>
+            <div class="structures-stat-label">Teacher</div>
+          </div>
+          <div class="structures-stat-card structures-stat-card--icon structures-stat-card--accent">
+            <span class="structures-stat-ico" aria-hidden="true">🛠️</span>
+            <div class="structures-stat-num">{{ structuresAncillaryCount }}</div>
+            <div class="structures-stat-label">Ancillary</div>
+          </div>
+        </div>
+
+        <div class="structures-toolbar panel" *ngIf="salaryStructuresForPayroll.length > 0">
+          <div class="structures-toolbar-row">
+            <div class="structures-search-field">
+              <label>Search</label>
+              <input
+                type="search"
+                [(ngModel)]="structureListSearch"
+                name="structureListSearch"
+                placeholder="Name, type, basic salary…"
+                autocomplete="off"
+              />
+            </div>
+            <div class="structures-filter-chips">
+              <span class="structures-filter-label">Show</span>
+              <button
+                type="button"
+                class="structures-chip"
+                [class.active]="structureTypeFilter === 'all'"
+                (click)="structureTypeFilter = 'all'"
+              >
+                All
+              </button>
+              <button
+                type="button"
+                class="structures-chip"
+                [class.active]="structureTypeFilter === 'ancillary'"
+                (click)="structureTypeFilter = 'ancillary'"
+              >
+                Ancillary
+              </button>
+              <button
+                type="button"
+                class="structures-chip"
+                [class.active]="structureTypeFilter === 'fixed_monthly'"
+                (click)="structureTypeFilter = 'fixed_monthly'"
+              >
+                Fixed monthly
+              </button>
+              <button
+                type="button"
+                class="structures-chip"
+                [class.active]="structureTypeFilter === 'other'"
+                (click)="structureTypeFilter = 'other'"
+              >
+                Other
+              </button>
+            </div>
+            <button type="button" class="btn btn-secondary btn-compact" (click)="refreshSalaryStructures()">Refresh</button>
+          </div>
+        </div>
+
+        <div
+          class="structures-main structures-main--modern"
+          [class.structures-main--filled]="salaryStructuresForPayroll.length > 0"
+        >
+          <ng-container *ngIf="salaryStructuresForPayroll.length === 0">
+            <div class="structures-empty structures-empty--modern">
+              <div class="structures-empty-icon" aria-hidden="true">📋</div>
+              <p class="structures-empty-title">No salary structures yet</p>
+              <p class="structures-empty-text">Create a template to use in payroll and assignments.</p>
+              <a [routerLink]="payrollSegments('structuresNew')" class="btn btn-primary structures-empty-cta">Add the first structure</a>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="salaryStructuresForPayroll.length > 0 && payrollStructuresFiltered.length === 0">
+            <div class="structures-empty structures-empty--modern soft">
+              No structures match your search or filter. <button type="button" class="structures-link-inline" (click)="structureListSearch = ''; structureTypeFilter = 'all'">Clear filters</button>
+            </div>
+          </ng-container>
+
+          <div class="structures-card-grid" *ngIf="payrollStructuresFiltered.length > 0">
+            <ng-container *ngFor="let s of payrollStructuresFiltered">
+              <ng-container *ngIf="structureComponentTotals(s) as stTot">
+                <button type="button" class="structure-card" (click)="editStructure(s)">
+                  <div class="structure-card-top">
+                    <div class="structure-card-title-row">
+                      <span class="structure-card-name">{{ s.name }}</span>
+                      <span *ngIf="s.isActive === false" class="structure-badge-inactive">Inactive</span>
+                    </div>
+                    <span [ngClass]="structureTypeBadgeClass(s)">{{ structureTypeBadgeLabel(s) }}</span>
+                  </div>
+                  <span class="structure-card-type mono">{{ s.salaryType }}</span>
+                  <div class="structure-card-metrics">
+                    <div class="structure-metric">
+                      <span class="structure-metric-label">Basic</span>
+                      <span class="structure-metric-value mono">{{ formatMoney(s.basicSalary) }}</span>
+                    </div>
+                    <div class="structure-metric structure-metric--net">
+                      <span class="structure-metric-label">Est. net</span>
+                      <span class="structure-metric-value mono">{{
+                        formatMoney(Number(s.basicSalary || 0) + stTot.allowances - stTot.deductions)
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="structure-card-components muted">
+                    <span *ngIf="stTot.allowanceCount + stTot.deductionCount === 0">No components</span>
+                    <span *ngIf="stTot.allowanceCount + stTot.deductionCount > 0">
+                      +{{ stTot.allowanceCount }} allowance(s) · −{{ stTot.deductionCount }} deduction(s)
+                    </span>
+                  </div>
+                  <span class="structure-card-chevron" aria-hidden="true">›</span>
+                </button>
+              </ng-container>
+            </ng-container>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-template #structureFormBody>
+        <div class="alert alert-error structure-modal-alert" *ngIf="structureError">{{ structureError }}</div>
+        <div class="form-grid">
+          <label>Name <span class="req">*</span></label>
+          <input [(ngModel)]="structureForm.name" name="structureName" placeholder="e.g. Ancillary Scale A" />
+
+          <label>Salary Type <span class="req">*</span></label>
+          <div class="structure-salary-type-wrap">
+            <select
+              class="structure-salary-type-select"
+              [(ngModel)]="structureSalaryTypeCategory"
+              name="structureSalaryTypeCategory"
+            >
+              <option *ngFor="let o of salaryTypeOptions" [ngValue]="o.value">{{ o.label }}</option>
+            </select>
+            <input
+              *ngIf="structureSalaryTypeCategory === 'other'"
+              class="structure-salary-type-other"
+              [(ngModel)]="structureSalaryTypeOther"
+              name="structureSalaryTypeOther"
+              placeholder="Specify type (e.g. contract, hourly, scale B)"
+            />
+            <p class="structure-salary-type-hint" *ngIf="structureSalaryTypeCategory === 'other'">
+              Saved as the salary type — use the same value when assigning employees.
+            </p>
+          </div>
+
+          <label>Basic Salary</label>
+          <input type="number" [(ngModel)]="structureForm.basicSalary" name="structureBasicSalary" min="0" step="0.01" />
+
+          <label>Effective From</label>
+          <input type="date" [(ngModel)]="structureForm.effectiveFrom" name="structureEffectiveFrom" />
+
+          <label>Description</label>
+          <input [(ngModel)]="structureForm.description" name="structureDescription" />
+
+          <label>Is Active</label>
+          <select [(ngModel)]="structureForm.isActive" name="structureIsActive">
+            <option [ngValue]="true">Active</option>
+            <option [ngValue]="false">Inactive</option>
+          </select>
+        </div>
+
+        <div class="structures-form-section-tag">Allowances &amp; deductions</div>
+        <div class="components-grid structure-components-grid">
+          <div class="component-box">
+            <h4>Allowances</h4>
+            <div class="component-row" *ngFor="let a of structureForm.components.allowances; let i = index">
+              <input placeholder="Name" [(ngModel)]="a.name" [name]="'allowName' + i" />
+              <input type="number" placeholder="Amount" [(ngModel)]="a.amount" [name]="'allowAmt' + i" min="0" step="0.01" />
+              <button type="button" class="btn btn-danger" (click)="structureForm.components.allowances.splice(i, 1)">Remove</button>
+            </div>
+            <button type="button" class="btn btn-secondary" (click)="structureForm.components.allowances.push({ name: '', amount: 0 })">+ Add Allowance</button>
+          </div>
+
+          <div class="component-box">
+            <h4>Deductions</h4>
+            <div class="component-row" *ngFor="let d of structureForm.components.deductions; let i = index">
+              <input placeholder="Name" [(ngModel)]="d.name" [name]="'dedName' + i" />
+              <input type="number" placeholder="Amount" [(ngModel)]="d.amount" [name]="'dedAmt' + i" min="0" step="0.01" />
+              <button type="button" class="btn btn-danger" (click)="structureForm.components.deductions.splice(i, 1)">Remove</button>
+            </div>
+            <button type="button" class="btn btn-secondary" (click)="structureForm.components.deductions.push({ name: '', amount: 0 })">+ Add Deduction</button>
+          </div>
+        </div>
+      </ng-template>
+
+      <!-- Edit structure (modal on list view only) -->
+      <div
+        class="structure-modal-backdrop"
+        *ngIf="showStructureFormPanel && structurePage === 'list'"
+        (click)="onStructureModalBackdropClick($event)"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="structure-modal-title"
+      >
+        <div class="structure-modal structure-modal--modern" (click)="$event.stopPropagation()">
+          <div class="structure-modal-header">
+            <div>
+              <h3 id="structure-modal-title">{{ structureForm.id ? 'Edit salary structure' : 'New salary structure' }}</h3>
+              <p class="structure-modal-sub muted">Update basic pay and components. Saved templates apply on the next payroll run.</p>
+            </div>
+            <button type="button" class="structure-modal-close" (click)="cancelStructureForm()" aria-label="Close">×</button>
+          </div>
+          <div class="structure-modal-body">
+            <ng-container *ngTemplateOutlet="structureFormBody"></ng-container>
+          </div>
+          <div class="structure-modal-footer">
+            <button type="button" class="btn btn-primary" [disabled]="structureLoading" (click)="saveStructure()">
+              {{ structureLoading ? 'Saving…' : 'Save Structure' }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              *ngIf="!structureForm.id"
+              [disabled]="structureLoading"
+              (click)="resetNewStructureFields()"
+            >
+              Reset
+            </button>
+            <button type="button" class="btn btn-back-outline" [disabled]="structureLoading" (click)="cancelStructureForm()">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------- Process Payroll (modern) ---------------- -->
+    <div *ngIf="tab==='process'" class="tab-panel process-payroll-page process-payroll-page--modern">
+      <div class="process-hero">
+        <div class="process-hero-text">
+          <h2 class="process-hero-title">Process payroll</h2>
+          <p class="process-hero-desc">
+            Generate the current month’s run, open any past run, approve to create payslips, then jump to Payslips or Reports.
+          </p>
+        </div>
+        <div class="process-hero-actions">
+          <button type="button" class="btn btn-secondary btn-compact" (click)="copyProcessPageLink()">Copy link</button>
+          <button type="button" class="btn btn-back-outline" (click)="navigateToTab('overview')">← Back</button>
+        </div>
+      </div>
+      <div class="process-copy-toast" *ngIf="processCopyLinkMessage">{{ processCopyLinkMessage }}</div>
+
+      <div class="alert alert-success" *ngIf="runSuccess">{{ runSuccess }}</div>
+      <div class="alert alert-warn" *ngIf="runWarning">{{ runWarning }}</div>
+
+      <!-- Global snapshot KPIs -->
+      <div class="process-global-kpis">
+        <div class="process-gkpi-card">
+          <span class="process-gkpi-icon" aria-hidden="true">📋</span>
+          <div>
+            <div class="process-gkpi-value">{{ processKpiTotal }}</div>
+            <div class="process-gkpi-label">Total runs</div>
+          </div>
+        </div>
+        <div class="process-gkpi-card">
+          <span class="process-gkpi-icon" aria-hidden="true">✏️</span>
+          <div>
+            <div class="process-gkpi-value">{{ processKpiDraft }}</div>
+            <div class="process-gkpi-label">Draft</div>
+          </div>
+        </div>
+        <div class="process-gkpi-card process-gkpi-card--accent">
+          <span class="process-gkpi-icon" aria-hidden="true">✓</span>
+          <div>
+            <div class="process-gkpi-value">{{ processKpiApproved }}</div>
+            <div class="process-gkpi-label">Approved / paid</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Run picker -->
+      <div class="panel process-picker-panel">
+        <h3 class="process-section-title">Open a payroll run</h3>
+        <p class="muted process-section-desc">Search and select a run to review lines, or leave empty and generate below.</p>
+        <div class="process-picker-grid">
+          <div class="process-picker-field">
+            <label>Search runs</label>
+            <input type="search" [(ngModel)]="processRunSearch" name="processRunSearch" placeholder="Period, status, year…" autocomplete="off" />
+          </div>
+          <div class="process-picker-field process-picker-field-grow">
+            <label>Payroll run</label>
+            <div class="process-picker-select-wrap">
+              <select
+                class="process-run-select"
+                [(ngModel)]="payslipRunSelectId"
+                name="processRunPick"
+                (ngModelChange)="onProcessTabRunChange($event)"
+                [disabled]="payslipRunsListLoading"
+              >
+                <option [ngValue]="null">— None selected —</option>
+                <ng-container *ngFor="let g of processRunYearGroups">
+                  <optgroup [label]="g.year">
+                    <option *ngFor="let r of g.runs" [ngValue]="r.id">{{ r.periodLabel }} · {{ r.status }}</option>
+                  </optgroup>
+                </ng-container>
+              </select>
+              <span class="process-picker-loading" *ngIf="payslipRunsListLoading">Loading…</span>
+            </div>
+          </div>
+          <div class="process-picker-btns">
+            <button type="button" class="btn btn-secondary" (click)="refreshPayslipRunsList()" [disabled]="payslipRunsListLoading">
+              Refresh list
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate -->
+      <div class="panel process-generate-panel">
+        <div class="process-generate-panel-head">
+          <div>
+            <h3 class="process-section-title">Generate payroll run</h3>
+            <p class="muted process-section-desc">
+              Choose the payroll month, then generate a <strong>draft</strong> run for active employees with a matching salary structure.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-linkish process-rules-toggle"
+            (click)="processRulesOpen = !processRulesOpen"
+            [attr.aria-expanded]="processRulesOpen"
+          >
+            {{ processRulesOpen ? 'Hide rules' : 'How generation works' }}
+          </button>
+        </div>
+        <div class="process-rules-block" *ngIf="processRulesOpen">
+          <ul class="process-rules-list">
+            <li>Select the <strong>payroll month</strong> (up to and including the current calendar month — future months are not allowed).</li>
+            <li>After the <strong>first</strong> run exists, the <strong>previous calendar month’s</strong> run must be <strong>Paid</strong> before you can generate the next period.</li>
+            <li>Only <strong>one run per month</strong>; pick another month if this period already exists.</li>
+          </ul>
+        </div>
+        <div class="process-generate-inner">
+          <div class="process-period-box process-period-box--editable">
+            <span class="process-period-label">Payroll period to generate</span>
+            <div class="process-period-pickers">
+              <div class="process-period-field">
+                <label for="processGenMonth">Month</label>
+                <select
+                  id="processGenMonth"
+                  class="form-control process-gen-select"
+                  [(ngModel)]="process.month"
+                  name="processGenMonth"
+                  [disabled]="runLoading"
+                >
+                  <option *ngFor="let m of monthOptions" [ngValue]="m.value">{{ m.label }}</option>
+                </select>
+              </div>
+              <div class="process-period-field">
+                <label for="processGenYear">Year</label>
+                <input
+                  id="processGenYear"
+                  type="number"
+                  class="form-control process-gen-year"
+                  [(ngModel)]="process.year"
+                  name="processGenYear"
+                  min="2000"
+                  max="2100"
+                  [disabled]="runLoading"
+                />
+              </div>
+            </div>
+            <p class="muted process-period-hint">
+              Generate will create <strong>{{ processMonthLabel }} {{ process.year }}</strong> if allowed by the rules above.
+            </p>
+            <p class="process-period-warn" *ngIf="processPeriodIsFuture">
+              Choose the current month or an earlier month — future periods cannot be generated.
+            </p>
+          </div>
+          <div class="process-generate-actions">
+            <button
+              type="button"
+              class="btn btn-generate-payroll"
+              [disabled]="runLoading || processPeriodIsFuture"
+              (click)="generateRun()"
+            >
+              {{ runLoading ? 'Generating…' : 'Generate payroll' }}
+            </button>
+          </div>
+        </div>
+        <div class="process-notes-row">
+          <label>Notes (optional)</label>
+          <input
+            type="text"
+            [(ngModel)]="process.notes"
+            name="processNotes"
+            [disabled]="runLoading"
+            placeholder="e.g. adjustment period, batch name…"
+          />
+        </div>
+      </div>
+
+      <!-- Loading selected run -->
+      <div class="panel process-run-skeleton" *ngIf="payslipRunDetailLoading && payslipRunSelectId">
+        <div class="process-run-skeleton-line w-40"></div>
+        <div class="process-run-skeleton-line w-70"></div>
+        <div class="process-run-skeleton-cards">
+          <div class="process-run-skeleton-card" *ngFor="let _ of reportSkeletonSlots"></div>
+        </div>
+      </div>
+
+      <!-- Selected run detail -->
+      <div *ngIf="selectedRun && !payslipRunDetailLoading" class="process-run-detail">
+        <div class="process-run-kpi-row">
+          <div class="process-run-kpi">
+            <span class="process-run-kpi-label">Period</span>
+            <span class="process-run-kpi-value mono">{{ selectedRun.periodLabel }}</span>
+            <span [ngClass]="runStatusClass(selectedRun.status)">{{ selectedRun.status }}</span>
+          </div>
+          <div class="process-run-kpi">
+            <span class="process-run-kpi-label">Employees</span>
+            <span class="process-run-kpi-value">{{ runLines.length }}</span>
+          </div>
+          <div class="process-run-kpi process-run-kpi--accent">
+            <span class="process-run-kpi-label">Total net</span>
+            <span class="process-run-kpi-value">{{ formatMoney(processSelectedTotalNet) }}</span>
+          </div>
+        </div>
+
+        <div class="process-run-chips">
+          <button type="button" class="process-chip-btn" (click)="navigateToPayslipsWithRun(selectedRun.id)">Payslips</button>
+          <button type="button" class="process-chip-btn" (click)="openReportsForSelectedRun()">Report (this period)</button>
+        </div>
+
+        <div class="panel process-lines-panel">
+          <div class="process-lines-head">
+            <div>
+              <h3 class="process-section-title">Payroll lines</h3>
+              <p class="muted process-section-desc" *ngIf="runLines.length">
+                {{ processRunLinesDisplay.length }} shown
+                <span *ngIf="processEmployeeSearch.trim()">(filtered)</span>
+              </p>
+            </div>
+            <input
+              type="search"
+              class="process-lines-search"
+              [(ngModel)]="processEmployeeSearch"
+              name="processEmpFilter"
+              placeholder="Filter by name, ID, department…"
+              *ngIf="runLines.length > 0"
+            />
+          </div>
+
+          <p class="process-draft-banner" *ngIf="isRunDraft(selectedRun) && runLines.length > 0">
+            <strong>Draft</strong> — Approve below to generate PDF payslips. You can preview from <strong>Payslips</strong> before approval too.
+          </p>
+
+          <div class="process-line-cards" *ngIf="processRunLinesDisplay.length > 0">
+            <div class="process-line-card" *ngFor="let line of processRunLinesDisplay">
+              <div class="process-line-card-main">
+                <div class="process-line-name">{{ line.employeeName }}</div>
+                <div class="mono process-line-num">{{ line.employeeNumber }}</div>
+                <div class="process-line-dept">{{ line.department || '—' }}</div>
+              </div>
+              <div class="process-line-amounts">
+                <div class="process-line-amt">
+                  <span class="process-line-amt-label">Basic</span>
+                  <span class="mono">{{ line.basicSalary | number : '1.2-2' }}</span>
+                </div>
+                <div class="process-line-amt process-line-amt--net">
+                  <span class="process-line-amt-label">Net</span>
+                  <span class="mono">{{ line.netSalary | number : '1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="runLines.length > 0 && processRunLinesDisplay.length === 0" class="process-lines-empty muted">
+            No lines match your filter.
+          </div>
+          <div *ngIf="runLines.length === 0" class="process-lines-empty panel soft">
+            No payroll lines in this run. Add active employees with a matching salary structure, then generate again for the current month.
+          </div>
+
+          <div class="process-approve-bar" *ngIf="isRunDraft(selectedRun)">
+            <button
+              type="button"
+              class="btn btn-primary btn-approve-large"
+              [disabled]="runLoading || runLines.length === 0"
+              (click)="approveSelectedRun()"
+            >
+              {{ runLoading ? 'Working…' : 'Approve & generate payslips' }}
+            </button>
+            <p class="muted process-approve-hint">Creates PDFs and moves the run toward payment. Use <strong>Mark paid</strong> in your workflow if applicable.</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="muted process-footer-hint" *ngIf="!selectedRun && !payslipRunDetailLoading">
+        Tip: pick a run above to review lines, or generate a new run for <strong>{{ processMonthLabel }} {{ process.year }}</strong>.
+      </p>
+    </div>
+
+    <!-- ---------------- Payslips (modern) ---------------- -->
+    <div *ngIf="tab==='payslips'" class="tab-panel payslips-page payslips-page--modern">
+      <div class="payslips-hero">
+        <div class="payslips-hero-text">
+          <h2 class="payslips-hero-title">Payslips</h2>
+          <p class="payslips-hero-desc">
+            Pick a payroll run, preview PDFs in a new tab, and download after approval. Search runs and employees to move faster.
+          </p>
+        </div>
+        <div class="payslips-hero-actions">
+          <button type="button" class="btn btn-secondary btn-compact" (click)="copyPayslipPageLink()" title="Copy this page URL">
+            Copy link
+          </button>
+          <button type="button" class="btn btn-back-outline" (click)="navigateToTab('overview')">← Back</button>
+        </div>
+      </div>
+      <div class="payslips-copy-toast" *ngIf="payslipCopyLinkMessage">{{ payslipCopyLinkMessage }}</div>
+
+      <div class="panel payslips-toolbar">
+        <div class="payslips-toolbar-grid">
+          <div class="payslips-field">
+            <label>Search runs</label>
+            <input
+              type="search"
+              [(ngModel)]="payslipRunSearch"
+              name="payslipRunSearch"
+              placeholder="Period, status, year…"
+              autocomplete="off"
+            />
+          </div>
+          <div class="payslips-field payslips-field-grow">
+            <label>Payroll run</label>
+            <div class="payslips-select-wrap">
+              <select
+                class="payslips-run-select payslips-run-select--modern"
+                [(ngModel)]="payslipRunSelectId"
+                name="payslipRunSelect"
+                (ngModelChange)="onPayslipRunChange($event)"
+                [disabled]="payslipRunsListLoading"
+              >
+                <option [ngValue]="null">— Select a run —</option>
+                <ng-container *ngFor="let g of payslipRunYearGroups">
+                  <optgroup [label]="g.year">
+                    <option *ngFor="let r of g.runs" [ngValue]="r.id">
+                      {{ r.periodLabel }} · {{ r.status }}
+                    </option>
+                  </optgroup>
+                </ng-container>
+              </select>
+              <span class="payslips-run-loading" *ngIf="payslipRunsListLoading">Loading…</span>
+            </div>
+          </div>
+          <div class="payslips-toolbar-btns">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="refreshPayslipRunsList()"
+              [disabled]="payslipRunsListLoading"
+              title="Reload run list"
+            >
+              Refresh list
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="refreshPayslips()"
+              [disabled]="!selectedRun?.id || payslipsListLoading"
+            >
+              {{ payslipsListLoading ? 'Refreshing…' : 'Refresh payslips' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI strip -->
+      <div class="payslips-kpi-row" *ngIf="selectedRun && !payslipRunDetailLoading">
+        <div class="payslips-kpi-card">
+          <span class="payslips-kpi-label">Period</span>
+          <span class="payslips-kpi-value mono">{{ selectedRun.periodLabel }}</span>
+          <span [ngClass]="runStatusClass(selectedRun.status)">{{ selectedRun.status }}</span>
+        </div>
+        <div class="payslips-kpi-card">
+          <span class="payslips-kpi-label">Employees</span>
+          <span class="payslips-kpi-value">{{ runLines.length }}</span>
+        </div>
+        <div class="payslips-kpi-card payslips-kpi-card--accent">
+          <span class="payslips-kpi-label">Total net (run)</span>
+          <span class="payslips-kpi-value">{{ formatMoney(payslipTotalNetForRun) }}</span>
+        </div>
+        <div class="payslips-kpi-card">
+          <span class="payslips-kpi-label">Payslips on file</span>
+          <span class="payslips-kpi-value">{{ payslips.length }}</span>
+        </div>
+      </div>
+
+      <div class="payslips-quick-links" *ngIf="selectedRun && !payslipRunDetailLoading">
+        <a [routerLink]="payrollSegments('process')" [queryParams]="{ runId: selectedRun.id }" class="payslips-chip-link">Process Payroll</a>
+        <button type="button" class="payslips-chip-link payslips-chip-btn" (click)="openReportsForSelectedRun()">
+          Payroll report (this period)
+        </button>
+      </div>
+
+      <div class="payslips-emp-search panel" *ngIf="selectedRun && !payslipRunDetailLoading">
+        <label class="payslips-emp-search-label">Filter employees</label>
+        <input
+          type="search"
+          [(ngModel)]="payslipEmployeeSearch"
+          name="payslipEmpSearch"
+          placeholder="Name or employee number…"
+          autocomplete="off"
+        />
+        <span class="payslips-emp-search-meta" *ngIf="payslipEmployeeSearch.trim()">
+          Showing
+          {{ isRunDraft(selectedRun) ? payslipDraftLinesDisplay.length : payslipsDisplay.length }}
+          match(es)
+        </span>
+      </div>
+
+      <div class="payslips-skeleton panel" *ngIf="selectedRun && payslipRunDetailLoading">
+        <div class="payslips-skeleton-line w-50"></div>
+        <div class="payslips-skeleton-line w-80"></div>
+        <div class="payslips-skeleton-cards">
+          <div class="payslips-skeleton-card" *ngFor="let _ of reportSkeletonSlots"></div>
+        </div>
+      </div>
+
+      <div class="payslips-main" *ngIf="selectedRun && !payslipRunDetailLoading">
+        <div class="payslips-panel-full">
+          <div class="payslips-list-loading" *ngIf="payslipsListLoading && !isRunDraft(selectedRun)">
+            <span class="payslips-spinner" aria-hidden="true"></span> Loading payslip records…
+          </div>
+
+          <!-- Draft: preview cards -->
+          <div *ngIf="isRunDraft(selectedRun) && runLines.length > 0" class="payslip-section">
+            <div class="payslip-section-head">
+              <h3 class="payslip-section-title">Draft — preview only</h3>
+              <p class="payslip-section-desc muted">
+                PDF layout matches post-approval. Approve on <strong>Process Payroll</strong> to save files and enable downloads.
+              </p>
+            </div>
+            <div class="payslip-card-grid">
+              <div class="payslip-card" *ngFor="let line of payslipDraftLinesDisplay">
+                <div class="payslip-card-main">
+                  <div class="payslip-card-name">{{ line.employeeName || '—' }}</div>
+                  <div class="mono payslip-card-num">{{ line.employeeNumber || line.id }}</div>
+                  <div class="payslip-card-net">Net {{ formatMoney(line.netSalary) }}</div>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-primary btn-compact btn-payslip-preview"
+                  (click)="previewPayslipLine(line.id)"
+                  [disabled]="previewingLineId === line.id"
+                >
+                  {{ previewingLineId === line.id ? 'Opening…' : 'Preview' }}
+                </button>
+              </div>
+            </div>
+            <p class="payslips-empty-inline muted" *ngIf="payslipDraftLinesDisplay.length === 0 && payslipEmployeeSearch.trim()">
+              No employees match this filter.
+            </p>
+          </div>
+
+          <div class="payslips-empty soft" *ngIf="isRunDraft(selectedRun) && runLines.length === 0">
+            No lines in this run yet. Generate lines from <strong>Process Payroll</strong>.
+          </div>
+
+          <!-- Approved / paid: generated payslips -->
+          <div *ngIf="!isRunDraft(selectedRun)" class="payslip-section">
+            <div class="payslip-section-head payslip-section-head--row">
+              <div>
+                <h3 class="payslip-section-title">Generated payslips</h3>
+                <p class="payslip-section-desc muted" *ngIf="payslips.length > 0">
+                  {{ payslipsDisplay.length }} shown · PDFs stored when the run was approved
+                </p>
+              </div>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                *ngIf="payslipsDisplay.length > 0"
+                (click)="downloadAllPayslipsForRun()"
+                [disabled]="payslipsListLoading"
+              >
+                Download all ({{ payslipsDisplay.length }})
+              </button>
+            </div>
+
+            <div class="payslip-card-grid" *ngIf="payslipsDisplay.length > 0">
+              <div class="payslip-card payslip-card--generated" *ngFor="let p of payslipsDisplay">
+                <div class="payslip-card-main">
+                  <div class="payslip-card-name">{{ p.employeeName || '—' }}</div>
+                  <div class="mono payslip-card-num">{{ p.employeeNumber || p.payrollRunLineId }}</div>
+                  <div class="payslip-card-date muted" *ngIf="p.generatedAt">
+                    Generated {{ p.generatedAt | date : 'medium' }}
+                  </div>
+                </div>
+                <div class="payslip-card-actions">
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-compact btn-payslip-preview"
+                    (click)="previewPayslipLine(p.payrollRunLineId)"
+                    [disabled]="previewingLineId === p.payrollRunLineId"
+                  >
+                    {{ previewingLineId === p.payrollRunLineId ? '…' : 'Preview' }}
+                  </button>
+                  <button type="button" class="btn btn-primary btn-compact btn-payslip-download" (click)="downloadPayslip(p)">
+                    Download
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="payslips-empty soft" *ngIf="payslips.length === 0 && !payslipsListLoading">
+              No payslip PDFs yet. Use <strong>Refresh payslips</strong> or re-approve from Process Payroll.
+            </div>
+            <p class="payslips-empty-inline muted" *ngIf="payslips.length > 0 && payslipsDisplay.length === 0">
+              No employees match this filter.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="!selectedRun" class="payslips-zero panel">
+        <div class="payslips-zero-icon" aria-hidden="true">📄</div>
+        <h3 class="payslips-zero-title">Select a payroll run</h3>
+        <p class="payslips-zero-text">Choose a period from the list above to preview or download payslips.</p>
+        <button type="button" class="btn btn-primary" *ngIf="!payslipRuns.length && !payslipRunsListLoading" (click)="navigateToTab('process')">
+          Go to Process Payroll
+        </button>
+      </div>
+    </div>
+
+    <!-- ---------------- Leave (integrated) ---------------- -->
+    <div *ngIf="tab==='leave'" class="tab-panel leave-page">
+      <div class="leave-hero">
+        <h2 class="leave-title">Staff Leave Management</h2>
+        <p class="leave-subtitle">
+          Unified leave balances from existing teacher + ancillary staff records (Zimbabwe Labour Act minimum: 30 days/year).
+        </p>
+      </div>
+
+      <div class="panel leave-filter-panel">
+        <div class="leave-filter-grid">
+          <div class="leave-field">
+            <label>As of date</label>
+            <input type="date" [(ngModel)]="leaveFilters.asOfDate" name="leaveAsOfDate" />
+          </div>
+          <div class="leave-field">
+            <label>From</label>
+            <input type="date" [(ngModel)]="leaveFilters.from" name="leaveFromDate" />
+          </div>
+          <div class="leave-field">
+            <label>To</label>
+            <input type="date" [(ngModel)]="leaveFilters.to" name="leaveToDate" />
+          </div>
+          <div class="leave-field">
+            <label>Staff category</label>
+            <select [(ngModel)]="leaveFilters.category" name="leaveCategory">
+              <option value="all">All</option>
+              <option value="teaching">Teaching</option>
+              <option value="ancillary">Ancillary</option>
+            </select>
+          </div>
+          <div class="leave-field leave-field-wide">
+            <label>Employee (optional)</label>
+            <select [(ngModel)]="leaveFilters.employeeId" name="leaveEmployeeFilter">
+              <option value="">All employees</option>
+              <option *ngFor="let s of leaveStaffOptions" [value]="s.staffId">{{ s.fullName }} ({{ s.staffType }})</option>
+            </select>
+          </div>
+        </div>
+        <div class="leave-actions">
+          <button type="button" class="btn btn-primary" (click)="loadLeaveDashboard()" [disabled]="leaveLoading">
+            {{ leaveLoading ? 'Loading…' : 'Refresh leave balances' }}
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="exportLeaveCsv('balances')" [disabled]="leaveRows.length===0">Export Excel (CSV)</button>
+          <button type="button" class="btn btn-secondary" (click)="exportLeavePdf('balances')" [disabled]="leaveRows.length===0">Export PDF</button>
+        </div>
+      </div>
+
+      <div class="alert alert-error" *ngIf="leaveError">{{ leaveError }}</div>
+      <div class="alert alert-success" *ngIf="leaveSuccess">{{ leaveSuccess }}</div>
+
+      <div class="panel leave-policy-panel">
+        <div class="leave-summary-head">
+          <h3 class="leave-section-title">Compliance policy (Zimbabwe Labour Act)</h3>
+          <button type="button" class="btn btn-primary btn-compact" (click)="saveLeavePolicy()" [disabled]="!canEditLeaveCompliance">Save policy</button>
+        </div>
+        <p class="muted" *ngIf="!canEditLeaveCompliance">View-only mode: only admin/superadmin can edit policy and create payout audit snapshots.</p>
+        <div class="leave-record-grid">
+          <div class="leave-field">
+            <label>Annual leave days / year (min 30)</label>
+            <input type="number" min="30" step="0.5" [(ngModel)]="leavePolicy.annualLeaveDaysPerYear" name="leavePolicyAnnual" [disabled]="!canEditLeaveCompliance" />
+          </div>
+          <div class="leave-field">
+            <label>Excess accrued alert threshold</label>
+            <input type="number" min="1" step="1" [(ngModel)]="leavePolicy.excessAccruedThresholdDays" name="leavePolicyExcess" [disabled]="!canEditLeaveCompliance" />
+          </div>
+          <div class="leave-field">
+            <label>Max accrual cap (optional)</label>
+            <input type="number" min="0" step="0.5" [(ngModel)]="leavePolicy.maxAccrualDays" name="leavePolicyMaxAccrual" [disabled]="!canEditLeaveCompliance" />
+          </div>
+          <div class="leave-field">
+            <label>Carry-forward cap (optional)</label>
+            <input type="number" min="0" step="0.5" [(ngModel)]="leavePolicy.carryForwardCapDays" name="leavePolicyCarry" [disabled]="!canEditLeaveCompliance" />
+          </div>
+          <div class="leave-field leave-field-wide">
+            <label>Teaching term months (comma separated, 1-12)</label>
+            <input type="text" [(ngModel)]="leavePolicy.teachingTermMonthsText" name="leavePolicyMonths" placeholder="1,2,3,4,5,6,7,8,9,10,11" [disabled]="!canEditLeaveCompliance" />
+          </div>
+          <div class="leave-field leave-field-wide">
+            <label>Policy notes</label>
+            <input type="text" [(ngModel)]="leavePolicy.notes" name="leavePolicyNotes" placeholder="e.g. Carry-forward applies from Jan payroll close" [disabled]="!canEditLeaveCompliance" />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel leave-record-panel">
+        <h3 class="leave-section-title">Record leave taken</h3>
+        <div class="leave-record-grid">
+          <div class="leave-field">
+            <label>Staff type</label>
+            <select [(ngModel)]="leaveForm.staffType" name="leaveRecordType" (ngModelChange)="onLeaveStaffTypeChange()">
+              <option value="teaching">Teaching</option>
+              <option value="ancillary">Ancillary</option>
+            </select>
+          </div>
+          <div class="leave-field leave-field-wide">
+            <label>Employee</label>
+            <select [(ngModel)]="leaveForm.staffId" name="leaveRecordStaff">
+              <option value="">Select employee</option>
+              <option *ngFor="let s of leaveStaffOptions" [value]="s.staffId" [hidden]="s.staffType!==leaveForm.staffType">{{ s.fullName }} ({{ s.employeeNumber }})</option>
+            </select>
+          </div>
+          <div class="leave-field">
+            <label>Date</label>
+            <input type="date" [(ngModel)]="leaveForm.leaveDate" name="leaveRecordDate" />
+          </div>
+          <div class="leave-field">
+            <label>Days taken</label>
+            <input type="number" min="0.5" step="0.5" [(ngModel)]="leaveForm.days" name="leaveRecordDays" />
+          </div>
+          <div class="leave-field leave-field-wide">
+            <label>Reason (optional)</label>
+            <input type="text" [(ngModel)]="leaveForm.reason" name="leaveRecordReason" placeholder="Annual leave, compassionate leave, etc." />
+          </div>
+        </div>
+        <div class="leave-actions">
+          <button type="button" class="btn btn-primary" (click)="recordLeave()" [disabled]="leaveLoading">Save leave record</button>
+        </div>
+      </div>
+
+      <div class="panel leave-summary-panel">
+        <div class="leave-summary-head">
+          <h3 class="leave-section-title">Leave balances dashboard</h3>
+          <span class="muted">{{ leaveRows.length }} employee(s)</span>
+        </div>
+        <div class="table-wrap">
+          <table class="leave-table" *ngIf="leaveRows.length>0">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Category</th>
+                <th>Department</th>
+                <th class="col-num">Accrued</th>
+                <th class="col-num">Taken</th>
+                <th class="col-num">Remaining</th>
+                <th class="col-num">Payout</th>
+                <th>Flag</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of leaveRows">
+                <td>{{ r.fullName }}</td>
+                <td>{{ r.staffType }}</td>
+                <td>{{ r.department || 'Unassigned' }}</td>
+                <td class="col-num">{{ r.accruedDays }}</td>
+                <td class="col-num">{{ r.takenDays }}</td>
+                <td class="col-num">{{ r.remainingDays }}</td>
+                <td class="col-num">{{ formatMoney(r.leaveLiabilityPayout || 0) }}</td>
+                <td><span class="run-pill run-pill-warn" *ngIf="r.excessAccrued">Excess accrued</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty-state" *ngIf="leaveRows.length===0">No leave data for selected filters.</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="leave-summary-head">
+            <h3 class="leave-section-title">Department summary</h3>
+            <button type="button" class="btn btn-secondary btn-compact" (click)="exportLeaveCsv('department')" [disabled]="leaveDeptRows.length===0">Export Excel</button>
+          </div>
+          <div class="table-wrap">
+            <table class="leave-table" *ngIf="leaveDeptRows.length>0">
+              <thead><tr><th>Category</th><th>Department</th><th class="col-num">Employees</th><th class="col-num">Used</th><th class="col-num">Outstanding</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let r of leaveDeptRows">
+                  <td>{{ r.category }}</td>
+                  <td>{{ r.department }}</td>
+                  <td class="col-num">{{ r.employees }}</td>
+                  <td class="col-num">{{ r.usedDays }}</td>
+                  <td class="col-num">{{ r.outstandingDays }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="leave-summary-head">
+            <h3 class="leave-section-title">Leave liability report</h3>
+            <div class="leave-actions-inline">
+              <button type="button" class="btn btn-secondary btn-compact" (click)="exportLeaveCsv('liability')" [disabled]="leaveLiabilityRows.length===0">Export Excel</button>
+              <button type="button" class="btn btn-secondary btn-compact" (click)="exportLeavePdf('liability')" [disabled]="leaveLiabilityRows.length===0">Export PDF</button>
+              <button type="button" class="btn btn-primary btn-compact" (click)="createLiabilityAuditSnapshot()" [disabled]="leaveLiabilityRows.length===0 || !canEditLeaveCompliance">Audit snapshot</button>
+            </div>
+          </div>
+          <div class="leave-liability-totals" *ngIf="leaveLiabilityTotals">
+            <span><strong>{{ leaveLiabilityTotals.employees }}</strong> staff</span>
+            <span><strong>{{ leaveLiabilityTotals.totalOutstandingDays }}</strong> outstanding days</span>
+            <span><strong>{{ formatMoney(leaveLiabilityTotals.totalPayout || 0) }}</strong> estimated payout</span>
+          </div>
+          <div class="table-wrap">
+            <table class="leave-table" *ngIf="leaveLiabilityRows.length>0">
+              <thead><tr><th>Name</th><th>Category</th><th class="col-num">Remaining</th><th class="col-num">Daily rate</th><th class="col-num">Payout</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let r of leaveLiabilityRows">
+                  <td>{{ r.fullName }}</td>
+                  <td>{{ r.staffType }}</td>
+                  <td class="col-num">{{ r.remainingDays }}</td>
+                  <td class="col-num">{{ formatMoney(r.dailyRate || 0) }}</td>
+                  <td class="col-num">{{ formatMoney(r.payoutAmount || 0) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="leave-summary-head">
+          <h3 class="leave-section-title">Employee leave history</h3>
+          <button type="button" class="btn btn-secondary btn-compact" (click)="exportLeaveCsv('history')" [disabled]="leaveHistoryRows.length===0">Export Excel</button>
+        </div>
+        <div class="table-wrap">
+          <table class="leave-table" *ngIf="leaveHistoryRows.length>0">
+            <thead><tr><th>Date</th><th>Name</th><th>Category</th><th>Department</th><th class="col-num">Days</th><th>Reason</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let r of leaveHistoryRows">
+                <td>{{ r.leaveDate | date:'yyyy-MM-dd' }}</td>
+                <td>{{ r.staffName }}</td>
+                <td>{{ r.staffType }}</td>
+                <td>{{ r.department || 'Unassigned' }}</td>
+                <td class="col-num">{{ r.days }}</td>
+                <td>{{ r.reason || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="leave-summary-head">
+          <h3 class="leave-section-title">Termination payout audit trail</h3>
+          <span class="muted">{{ leaveLiabilityAuditRows.length }} snapshot row(s)</span>
+        </div>
+        <div class="table-wrap">
+          <table class="leave-table" *ngIf="leaveLiabilityAuditRows.length>0">
+            <thead><tr><th>Snapshot date</th><th>Name</th><th>Category</th><th class="col-num">Remaining</th><th class="col-num">Daily rate</th><th class="col-num">Payout</th><th>Captured</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let r of leaveLiabilityAuditRows">
+                <td>{{ r.asOfDate | date:'yyyy-MM-dd' }}</td>
+                <td>{{ r.fullName }}</td>
+                <td>{{ r.staffType }}</td>
+                <td class="col-num">{{ r.remainingDays }}</td>
+                <td class="col-num">{{ formatMoney(r.dailyRate || 0) }}</td>
+                <td class="col-num">{{ formatMoney(r.payoutAmount || 0) }}</td>
+                <td>{{ r.createdAt | date:'yyyy-MM-dd HH:mm' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------- Reports (modern) ---------------- -->
+    <div *ngIf="tab==='reports'" class="tab-panel payroll-reports-page">
+      <div class="reports-hero">
+        <div class="reports-hero-text">
+          <h2 class="reports-title">Payroll reports</h2>
+          <p class="reports-subtitle">
+            Period insights, cost breakdown by department, and CSV export — aligned with your payroll runs.
+          </p>
+        </div>
+      </div>
+
+      <div class="reports-toolbar panel reports-toolbar-panel">
+        <div class="reports-toolbar-grid">
+          <div class="reports-field">
+            <label>Month</label>
+            <select [(ngModel)]="reportFilters.month" name="reportMonth" [disabled]="reportLoading">
+              <option *ngFor="let m of monthOptions" [ngValue]="m.value">{{ m.label }}</option>
+            </select>
+          </div>
+          <div class="reports-field">
+            <label>Year</label>
+            <input
+              type="number"
+              [(ngModel)]="reportFilters.year"
+              name="reportYear"
+              min="2000"
+              max="2100"
+              [disabled]="reportLoading"
+            />
+          </div>
+          <div class="reports-field reports-field-wide">
+            <label>Department filter</label>
+            <input
+              type="text"
+              [(ngModel)]="reportFilters.department"
+              name="reportDept"
+              list="report-dept-suggestions"
+              placeholder="All departments (optional)"
+              [disabled]="reportLoading"
+              class="reports-dept-input"
+              autocomplete="off"
+            />
+            <datalist id="report-dept-suggestions">
+              <option *ngFor="let d of reportDepartmentOptions" [value]="d"></option>
+            </datalist>
+            <p class="reports-field-hint">Optional: restrict the department breakdown. Suggestions appear after you load a full report.</p>
+          </div>
+        </div>
+        <div class="reports-toolbar-actions">
+          <div class="reports-presets">
+            <span class="reports-presets-label">Quick period</span>
+            <button type="button" class="btn btn-secondary btn-compact" [disabled]="reportLoading" (click)="setReportPreset('this_month')">
+              This month
+            </button>
+            <button type="button" class="btn btn-secondary btn-compact" [disabled]="reportLoading" (click)="setReportPreset('last_month')">
+              Last month
+            </button>
+          </div>
+          <div class="reports-primary-actions">
+            <button type="button" class="btn btn-primary" [disabled]="reportLoading" (click)="loadAllReports()">
+              {{ reportLoading ? 'Loading…' : 'Load report' }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              [disabled]="reportLoading || (!monthlySummary && departmentRows.length === 0)"
+              (click)="exportReportsCsv()"
+            >
+              Export CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-error" *ngIf="reportError">{{ reportError }}</div>
+
+      <div class="reports-skeleton panel" *ngIf="reportLoading">
+        <div class="reports-skeleton-line w-40"></div>
+        <div class="reports-skeleton-line w-70"></div>
+        <div class="reports-skeleton-cards">
+          <div class="reports-skeleton-card" *ngFor="let _ of reportSkeletonSlots"></div>
+        </div>
+      </div>
+
+      <ng-container *ngIf="!reportLoading">
+        <!-- Summary KPIs -->
+        <div class="reports-kpi-grid" *ngIf="monthlySummary">
+          <div class="reports-kpi-card">
+            <div class="reports-kpi-icon" aria-hidden="true">📅</div>
+            <div class="reports-kpi-body">
+              <div class="reports-kpi-label">Period</div>
+              <div class="reports-kpi-value mono">{{ monthlySummary.periodLabel }}</div>
+              <span [ngClass]="runStatusClass(monthlySummary.status)">{{ monthlySummary.status }}</span>
+            </div>
+          </div>
+          <div class="reports-kpi-card">
+            <div class="reports-kpi-icon" aria-hidden="true">👥</div>
+            <div class="reports-kpi-body">
+              <div class="reports-kpi-label">Employees paid</div>
+              <div class="reports-kpi-value">{{ monthlySummary.employeeCount }}</div>
+            </div>
+          </div>
+          <div class="reports-kpi-card reports-kpi-accent">
+            <div class="reports-kpi-icon" aria-hidden="true">💰</div>
+            <div class="reports-kpi-body">
+              <div class="reports-kpi-label">Total net salary</div>
+              <div class="reports-kpi-value">{{ formatMoney(monthlySummary.totalNetSalary) }}</div>
+            </div>
+          </div>
+          <div class="reports-kpi-card">
+            <div class="reports-kpi-icon" aria-hidden="true">📊</div>
+            <div class="reports-kpi-body">
+              <div class="reports-kpi-label">Allowances / Deductions</div>
+              <div class="reports-kpi-value-sm">
+                +{{ formatMoney(monthlySummary.totalAllowances) }} / −{{ formatMoney(monthlySummary.totalDeductions) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="reports-empty panel" *ngIf="!monthlySummary && !reportError">
+          <div class="reports-empty-icon" aria-hidden="true">📭</div>
+          <h3 class="reports-empty-title">No payroll run for {{ reportPeriodLabel }}</h3>
+          <p class="reports-empty-text">Choose another period or generate a run under <strong>Process Payroll</strong>.</p>
+        </div>
+
+        <!-- Mix strip -->
+        <div class="panel reports-mix-panel" *ngIf="monthlySummary">
+          <h3 class="reports-section-title">Payroll mix</h3>
+          <p class="muted reports-mix-desc">Visual share of net vs. allowances vs. deductions (same period totals).</p>
+          <div class="reports-mix-bar" role="img" [attr.aria-label]="'Payroll mix for ' + monthlySummary.periodLabel">
+            <div
+              class="reports-mix-seg reports-mix-net"
+              [style.flex]="summaryMixParts.net || 0.001"
+              [title]="'Net: ' + formatMoney(monthlySummary.totalNetSalary)"
+            ></div>
+            <div
+              class="reports-mix-seg reports-mix-allow"
+              [style.flex]="summaryMixParts.allowances || 0.001"
+              [title]="'Allowances: ' + formatMoney(monthlySummary.totalAllowances)"
+            ></div>
+            <div
+              class="reports-mix-seg reports-mix-deduct"
+              [style.flex]="summaryMixParts.deductions || 0.001"
+              [title]="'Deductions: ' + formatMoney(monthlySummary.totalDeductions)"
+            ></div>
+          </div>
+          <ul class="reports-mix-legend">
+            <li><span class="dot dot-net"></span> Net {{ formatMoney(monthlySummary.totalNetSalary) }}</li>
+            <li><span class="dot dot-allow"></span> Allowances {{ formatMoney(monthlySummary.totalAllowances) }}</li>
+            <li><span class="dot dot-deduct"></span> Deductions {{ formatMoney(monthlySummary.totalDeductions) }}</li>
+          </ul>
+          <a
+            *ngIf="monthlySummary?.runId"
+            class="reports-link-process"
+            [routerLink]="payrollSegments('process')"
+            [queryParams]="{ runId: monthlySummary.runId }"
+          >
+            Open this run in Process Payroll →
+          </a>
+        </div>
+
+        <!-- Department (only when a run exists for the period) -->
+        <div class="panel reports-dept-panel" *ngIf="monthlySummary">
+          <div class="reports-dept-header">
+            <div>
+              <h3 class="reports-section-title">By department</h3>
+              <p class="muted reports-dept-sub">Ranked by net payroll; bar length shows relative share within the period.</p>
+            </div>
+            <div class="reports-dept-totals" *ngIf="departmentRows.length">
+              <span class="reports-dept-total-pill"
+                ><strong>{{ departmentReportTotals.headcount }}</strong> staff</span
+              >
+              <span class="reports-dept-total-pill mono"
+                ><strong>{{ formatMoney(departmentReportTotals.net) }}</strong> net</span
+              >
+            </div>
+          </div>
+
+          <div class="reports-dept-chart" *ngIf="departmentRowsSorted.length > 0">
+            <div class="reports-dept-chart-row" *ngFor="let r of departmentRowsSorted">
+              <div class="reports-dept-name" [title]="r.department">{{ r.department }}</div>
+              <div class="reports-dept-bar-wrap">
+                <div class="reports-dept-bar" [style.width.%]="departmentBarPercent(r.netSalaryTotal)"></div>
+              </div>
+              <div class="reports-dept-meta">
+                <span class="mono">{{ formatMoney(r.netSalaryTotal) }}</span>
+                <span class="reports-dept-pct">{{ departmentSharePercent(r.netSalaryTotal) }}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrap reports-dept-table-wrap" *ngIf="departmentRowsSorted.length > 0">
+            <table class="reports-dept-table">
+              <thead>
+                <tr>
+                  <th>Department</th>
+                  <th class="col-num">Employees</th>
+                  <th class="col-num">Net total</th>
+                  <th class="col-num">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of departmentRowsSorted">
+                  <td>{{ r.department }}</td>
+                  <td class="col-num">{{ r.employeeCount }}</td>
+                  <td class="col-num mono">{{ formatMoney(r.netSalaryTotal) }}</td>
+                  <td class="col-num">{{ departmentSharePercent(r.netSalaryTotal) }}%</td>
+                </tr>
+              </tbody>
+              <tfoot *ngIf="departmentRowsSorted.length">
+                <tr>
+                  <td><strong>Total</strong></td>
+                  <td class="col-num"><strong>{{ departmentReportTotals.headcount }}</strong></td>
+                  <td class="col-num mono"><strong>{{ formatMoney(departmentReportTotals.net) }}</strong></td>
+                  <td class="col-num">100%</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div *ngIf="departmentRowsSorted.length === 0" class="reports-empty soft">
+            No department lines for this filter — try clearing the department filter or check employee departments.
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
+

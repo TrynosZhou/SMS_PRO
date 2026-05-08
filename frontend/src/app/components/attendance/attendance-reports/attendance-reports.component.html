@@ -1,0 +1,365 @@
+<div class="attendance-reports-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-title">
+        <h1>📊 Attendance Insights</h1>
+        <p class="subtitle">Generate visual analytics to understand classroom attendance performance in real time.</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn btn-icon" (click)="toggleViewMode()" [disabled]="!hasReportData" title="Toggle View">
+          <span class="btn-icon-text">{{ viewMode === 'table' ? '📋' : '📊' }}</span>
+        </button>
+        <button type="button" class="btn btn-icon" (click)="showCharts = !showCharts" [disabled]="!hasReportData" title="Toggle Charts">
+          <span class="btn-icon-text">{{ showCharts ? '📈' : '📉' }}</span>
+        </button>
+        <button type="button" class="btn btn-light" (click)="resetFilters()" [disabled]="!hasReportData">
+          <span>🔄</span> Reset
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="printReport()" [disabled]="!filteredReport.length">
+          <span>🖨️</span> Print
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="exportToPDF()" [disabled]="!filteredReport.length">
+          <span>📄</span> PDF
+        </button>
+        <button type="button" class="btn btn-success" (click)="exportToCSV()" [disabled]="!filteredReport.length">
+          <span>⬇️</span> CSV
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    
+    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+    <div class="filters-section">
+      <div class="filters-header">
+        <h2>📋 Report Filters</h2>
+        <p class="filters-subtitle">Select class and date range to generate attendance report</p>
+      </div>
+      <form #f="ngForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Class *</label>
+          <select [(ngModel)]="selectedClassId" name="classId" required>
+            <option value="">Select Class</option>
+            <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Term</label>
+          <select [(ngModel)]="selectedTerm" name="term">
+            <option value="">All Terms</option>
+            <option *ngFor="let term of availableTerms" [value]="term">{{ term }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date Range Presets</label>
+          <div class="preset-buttons">
+            <button type="button" class="preset-btn" [class.active]="dateRangePreset === 'today'" (click)="applyDateRangePreset('today')">Today</button>
+            <button type="button" class="preset-btn" [class.active]="dateRangePreset === 'last7days'" (click)="applyDateRangePreset('last7days')">Last 7 Days</button>
+            <button type="button" class="preset-btn" [class.active]="dateRangePreset === 'last30days'" (click)="applyDateRangePreset('last30days')">Last 30 Days</button>
+            <button type="button" class="preset-btn" [class.active]="dateRangePreset === 'thisMonth'" (click)="applyDateRangePreset('thisMonth')">This Month</button>
+            <button type="button" class="preset-btn" [class.active]="dateRangePreset === 'lastMonth'" (click)="applyDateRangePreset('lastMonth')">Last Month</button>
+            <button type="button" class="preset-btn" [class.active]="dateRangePreset === 'thisTerm'" (click)="applyDateRangePreset('thisTerm')">This Term</button>
+            <button type="button" class="preset-btn" [class.active]="dateRangePreset === 'custom'" (click)="applyDateRangePreset('custom')">Custom</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" *ngIf="dateRangePreset === 'custom' || (!dateRangePreset && (startDate || endDate))">
+        <div class="form-group">
+          <label>Start Date (Optional)</label>
+          <input type="date" [(ngModel)]="startDate" name="startDate">
+        </div>
+
+        <div class="form-group">
+          <label>End Date (Optional)</label>
+          <input type="date" [(ngModel)]="endDate" name="endDate">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary btn-generate" (click)="generateReport()" [disabled]="loading || !selectedClassId">
+          <span *ngIf="!loading">📊</span>
+          <span *ngIf="loading" class="spinner"></span>
+          <span>{{ loading ? 'Generating...' : 'Generate Report' }}</span>
+        </button>
+      </div>
+      </form>
+    </div>
+
+    <div *ngIf="hasReportData" class="filters-advanced">
+      <div class="search-box">
+        <label>Search Students</label>
+        <div class="search-input">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Type name or student number..."
+            [(ngModel)]="searchTerm"
+            name="searchTerm"
+            (ngModelChange)="onSearchChange()"
+          >
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-header">
+          <label>Minimum Attendance</label>
+          <span class="slider-value">{{ minAttendance }}%</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          [ngModel]="minAttendance"
+          (ngModelChange)="onMinAttendanceChange($event)"
+        >
+      </div>
+
+      <div class="toggle-group">
+        <label class="toggle">
+          <input type="checkbox" [checked]="showOnlyConcerns" (change)="toggleConcerns()">
+          <span class="toggle-slider"></span>
+        </label>
+        <div class="toggle-text">
+          <strong>Show Only At-Risk Students</strong>
+          <small>Students below {{ concernThreshold }}% attendance</small>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="loading">Generating report...</div>
+
+    <div *ngIf="report && !loading" class="report-section">
+      <div class="report-meta" *ngIf="lastGeneratedAt">
+        <span>Last generated: <strong>{{ lastGeneratedAt | date:'medium' }}</strong></span>
+        <span>Total records: <strong>{{ filteredReport.length }}</strong> of {{ rawReportRows.length }}</span>
+      </div>
+
+      <div class="insights-grid" *ngIf="hasReportData">
+        <div class="insight-card primary">
+          <span class="insight-label">Average Attendance</span>
+          <h3>{{ averageAttendanceRate | number:'1.1-2' }}%</h3>
+          <p>{{ getAttendanceStatus(averageAttendanceRate) }}</p>
+          <div class="trend-indicator" [class.trend-up]="trendDirection === 'up'" [class.trend-down]="trendDirection === 'down'">
+            <span>{{ getTrendIcon() }}</span>
+            <span>{{ getTrendText() }}</span>
+          </div>
+        </div>
+        <div class="insight-card success">
+          <span class="insight-label">Top Performer</span>
+          <h3 *ngIf="topPerformer; else noTop">
+            {{ topPerformer.firstName }} {{ topPerformer.lastName }}
+          </h3>
+          <p *ngIf="topPerformer">Attendance: {{ topPerformer.attendanceRateNumber | number:'1.1-2' }}%</p>
+          <ng-template #noTop><p>No data available</p></ng-template>
+        </div>
+        <div class="insight-card warning">
+          <span class="insight-label">Needs Attention</span>
+          <h3>{{ concernCount }}</h3>
+          <p>Students below {{ concernThreshold }}% attendance</p>
+        </div>
+        <div class="insight-card neutral" *ngIf="lowestPerformer">
+          <span class="insight-label">Lowest Attendance</span>
+          <h3>
+            {{ lowestPerformer.firstName }} {{ lowestPerformer.lastName }}
+          </h3>
+          <p>Attendance: {{ lowestPerformer.attendanceRateNumber | number:'1.1-2' }}%</p>
+        </div>
+        <div class="insight-card info">
+          <span class="insight-label">Total Records</span>
+          <h3>{{ getTotalRecords() }}</h3>
+          <p>Attendance entries</p>
+        </div>
+      </div>
+
+      <!-- Charts Section -->
+      <div class="charts-section" *ngIf="hasReportData && showCharts">
+        <div class="chart-container">
+          <h3>Attendance by Status</h3>
+          <div class="status-chart">
+            <div class="status-item">
+              <div class="status-bar present" [style.width.%]="getStatusPercentage('present')"></div>
+              <div class="status-info">
+                <span class="status-label">Present</span>
+                <span class="status-value">{{ attendanceByStatus.present }} ({{ getStatusPercentage('present') | number:'1.1-1' }}%)</span>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="status-bar absent" [style.width.%]="getStatusPercentage('absent')"></div>
+              <div class="status-info">
+                <span class="status-label">Absent</span>
+                <span class="status-value">{{ attendanceByStatus.absent }} ({{ getStatusPercentage('absent') | number:'1.1-1' }}%)</span>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="status-bar late" [style.width.%]="getStatusPercentage('late')"></div>
+              <div class="status-info">
+                <span class="status-label">Late</span>
+                <span class="status-value">{{ attendanceByStatus.late }} ({{ getStatusPercentage('late') | number:'1.1-1' }}%)</span>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="status-bar excused" [style.width.%]="getStatusPercentage('excused')"></div>
+              <div class="status-info">
+                <span class="status-label">Excused</span>
+                <span class="status-value">{{ attendanceByStatus.excused }} ({{ getStatusPercentage('excused') | number:'1.1-1' }}%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <h3>Attendance Distribution</h3>
+          <div class="distribution-visual">
+            <div class="distribution-bar">
+              <div class="bar-segment excellent" [style.width.%]="attendanceDistribution.excellent" title="Excellent (≥95%)">
+                <span *ngIf="attendanceDistribution.excellent > 5">{{ attendanceDistribution.excellent }}%</span>
+              </div>
+              <div class="bar-segment good" [style.width.%]="attendanceDistribution.good" title="Good (≥{{ concernThreshold }}%)">
+                <span *ngIf="attendanceDistribution.good > 5">{{ attendanceDistribution.good }}%</span>
+              </div>
+              <div class="bar-segment attention" [style.width.%]="attendanceDistribution.attention" title="Needs Attention (<{{ concernThreshold }}%)">
+                <span *ngIf="attendanceDistribution.attention > 5">{{ attendanceDistribution.attention }}%</span>
+              </div>
+            </div>
+            <div class="distribution-legend">
+              <div class="legend-item">
+                <span class="legend-color excellent"></span>
+                <span>Excellent (≥95%)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color good"></span>
+                <span>Good (≥{{ concernThreshold }}%)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color attention"></span>
+                <span>Needs Attention (<{{ concernThreshold }}%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="no-data" *ngIf="!hasReportData">
+        <div class="no-data-icon">📊</div>
+        <h3>No attendance data available for the selected filters.</h3>
+        <p>Choose a class and term, then generate a report to view analytics.</p>
+      </div>
+
+      <div class="no-results" *ngIf="hasReportData && !filteredReport.length">
+        <div class="no-results-icon">🕵️‍♀️</div>
+        <h3>No students match the current filters.</h3>
+        <p>Adjust the search or attendance threshold to broaden your results.</p>
+      </div>
+
+      <!-- Cards View -->
+      <div class="report-cards" *ngIf="filteredReport.length && viewMode === 'cards'">
+        <div class="student-card" *ngFor="let item of filteredReport; trackBy: trackByStudent">
+          <div class="card-header-mini">
+            <div>
+              <h4>{{ item.firstName }} {{ item.lastName }}</h4>
+              <span class="student-number">#{{ item.studentNumber }}</span>
+            </div>
+            <span class="badge" [ngClass]="getAttendanceBadgeClass(item.attendanceRateNumber ?? 0)">
+              {{ (item.attendanceRateNumber ?? 0) | number:'1.1-2' }}%
+            </span>
+          </div>
+          <div class="card-stats">
+            <div class="stat-item">
+              <span class="stat-label">Present</span>
+              <span class="stat-value present">{{ item.present }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Absent</span>
+              <span class="stat-value absent">{{ item.absent }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Late</span>
+              <span class="stat-value late">{{ item.late }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Excused</span>
+              <span class="stat-value excused">{{ item.excused }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Total</span>
+              <span class="stat-value total">{{ item.total }}</span>
+            </div>
+          </div>
+          <div class="card-progress">
+            <div class="progress-bar" [ngStyle]="getProgressStyle(item.attendanceRateNumber ?? 0)"></div>
+          </div>
+          <div class="card-status">
+            <span class="status-chip" [ngClass]="getAttendanceBadgeClass(item.attendanceRateNumber ?? 0)">
+              {{ getAttendanceStatus(item.attendanceRateNumber ?? 0) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table View -->
+      <div class="report-table" *ngIf="filteredReport.length && viewMode === 'table'">
+        <table>
+          <thead>
+            <tr>
+              <th (click)="changeSort('studentNumber')" class="sortable">
+                Student #
+                <span class="sort-indicator" [class.asc]="getSortDirection('studentNumber') === 'asc'" [class.desc]="getSortDirection('studentNumber') === 'desc'"></span>
+              </th>
+              <th (click)="changeSort('firstName')" class="sortable">
+                Student Name
+                <span class="sort-indicator" [class.asc]="getSortDirection('firstName') === 'asc'" [class.desc]="getSortDirection('firstName') === 'desc'"></span>
+              </th>
+              <th>Present</th>
+              <th>Absent</th>
+              <th>Late</th>
+              <th>Excused</th>
+              <th>Total</th>
+              <th (click)="changeSort('attendanceRateNumber')" class="sortable">
+                Attendance
+                <span class="sort-indicator" [class.asc]="getSortDirection('attendanceRateNumber') === 'asc'" [class.desc]="getSortDirection('attendanceRateNumber') === 'desc'"></span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of filteredReport; trackBy: trackByStudent">
+              <td>{{ item.studentNumber }}</td>
+              <td>
+                <div class="name-cell">
+                  <span class="name">{{ item.firstName }} {{ item.lastName }}</span>
+                  <small class="status-chip" [ngClass]="getAttendanceBadgeClass(item.attendanceRateNumber ?? 0)">
+                    {{ getAttendanceStatus(item.attendanceRateNumber ?? 0) }}
+                  </small>
+                </div>
+              </td>
+              <td class="present">{{ item.present }}</td>
+              <td class="absent">{{ item.absent }}</td>
+              <td class="late">{{ item.late }}</td>
+              <td class="excused">{{ item.excused }}</td>
+              <td><strong>{{ item.total }}</strong></td>
+              <td>
+                <div class="attendance-cell">
+                  <span class="badge" [ngClass]="getAttendanceBadgeClass(item.attendanceRateNumber ?? 0)">
+                    {{ (item.attendanceRateNumber ?? 0) | number:'1.1-2' }}%
+                  </span>
+                  <div class="progress">
+                    <div class="progress-bar" [ngStyle]="getProgressStyle(item.attendanceRateNumber ?? 0)"></div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,246 @@
+<div class="assign-classes-container">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <span class="icon">📋</span>
+        Assign Classes to Teachers
+      </h1>
+      <p class="subtitle">
+        Choose a teacher, assign whole classes in bulk, or pick one class and one subject so that teacher must teach that subject in that class (required for timetables).
+      </p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-secondary" (click)="goToTeachersList()">
+        <span>←</span> Back to Teachers
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div class="alert alert-success" *ngIf="success">
+    <span class="alert-icon">✓</span>
+    {{ success }}
+  </div>
+  <div class="alert alert-error" *ngIf="error">
+    <span class="alert-icon">⚠</span>
+    {{ error }}
+  </div>
+
+  <!-- Teacher Selection Section -->
+  <div class="card">
+    <div class="card-header">
+      <h2>
+        <span class="section-icon">👨‍🏫</span>
+        Select Teacher
+      </h2>
+    </div>
+    <div class="card-body">
+      <div class="search-box">
+        <input 
+          type="text" 
+          [(ngModel)]="teacherSearchQuery" 
+          (input)="filterTeachers()"
+          placeholder="Search teachers by name or ID..."
+          class="search-input">
+        <span class="search-icon">🔍</span>
+      </div>
+
+      <div *ngIf="loading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading teachers...</p>
+      </div>
+
+      <div class="teachers-grid" *ngIf="!loading && filteredTeachers.length > 0">
+        <div 
+          *ngFor="let teacher of filteredTeachers" 
+          class="teacher-card"
+          [class.selected]="selectedTeacher?.id === teacher.id"
+          (click)="selectTeacher(teacher)">
+          <div class="teacher-avatar">
+            <span class="avatar-icon">👨‍🏫</span>
+          </div>
+          <div class="teacher-info">
+            <h3>{{ teacher.firstName }} {{ teacher.lastName }}</h3>
+            <p class="teacher-id">{{ teacher.teacherId }}</p>
+            <p class="teacher-qualification" *ngIf="teacher.qualification">{{ teacher.qualification }}</p>
+          </div>
+          <div class="teacher-badge" *ngIf="selectedTeacher?.id === teacher.id">
+            Selected
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="!loading && filteredTeachers.length === 0">
+        <div class="empty-icon">👨‍🏫</div>
+        <h3>No Teachers Found</h3>
+        <p>No teachers match your search criteria.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Class Assignment Section -->
+  <div class="card" *ngIf="selectedTeacher">
+    <div class="card-header">
+      <h2>
+        <span class="section-icon">🏫</span>
+        Assign Classes to {{ selectedTeacher.firstName }} {{ selectedTeacher.lastName }}
+      </h2>
+      <button class="btn btn-secondary btn-sm" (click)="clearSelection()">
+        <span>✕</span> Clear Selection
+      </button>
+    </div>
+    <div class="card-body">
+      <!-- Teacher Load Summary -->
+      <div class="load-summary" *ngIf="teacherLoad">
+        <div class="load-card">
+          <div class="load-icon">🏫</div>
+          <div class="load-info">
+            <div class="load-value">{{ teacherLoad.load.totalClasses }}</div>
+            <div class="load-label">Classes</div>
+          </div>
+        </div>
+        <div class="load-card">
+          <div class="load-icon">📚</div>
+          <div class="load-info">
+            <div class="load-value">{{ teacherLoad.load.totalSubjects }}</div>
+            <div class="load-label">Subjects</div>
+          </div>
+        </div>
+        <div class="load-card">
+          <div class="load-icon">👥</div>
+          <div class="load-info">
+            <div class="load-value">{{ teacherLoad.load.totalStudents }}</div>
+            <div class="load-label">Students</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teacher + class + subject (single link) -->
+      <div class="class-subject-link-section">
+        <h3>Assign subject in a class</h3>
+        <p class="section-intro">
+          Select the class and the subject this teacher must teach there. The system will link the teacher to the class,
+          add the subject to the teacher’s profile, and add the subject to the class offering if it is not already there.
+        </p>
+        <div class="link-form-row">
+          <div class="form-field">
+            <label for="linkClassSelect">Class</label>
+            <select
+              id="linkClassSelect"
+              name="linkClassSelect"
+              class="form-select"
+              [(ngModel)]="linkClassId">
+              <option value="">— Select class —</option>
+              <option *ngFor="let cls of availableClasses" [value]="cls.id">
+                {{ cls.name }}<span *ngIf="cls.form"> ({{ cls.form }})</span>
+              </option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="linkSubjectSelect">Subject</label>
+            <select
+              id="linkSubjectSelect"
+              name="linkSubjectSelect"
+              class="form-select"
+              [(ngModel)]="linkSubjectId">
+              <option value="">— Select subject —</option>
+              <option *ngFor="let sub of subjects" [value]="sub.id">
+                {{ sub.name }}<span *ngIf="sub.code"> — {{ sub.code }}</span>
+              </option>
+            </select>
+          </div>
+          <div class="form-field form-field-action">
+            <label class="label-spacer">&nbsp;</label>
+            <button
+              type="button"
+              class="btn btn-accent"
+              (click)="applyClassSubjectLink()"
+              [disabled]="linking || !linkClassId || !linkSubjectId">
+              <span *ngIf="!linking">➕ Apply link</span>
+              <span *ngIf="linking" class="spinner-inline"></span>
+              <span *ngIf="linking"> Saving…</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Classes -->
+      <div class="current-classes-section" *ngIf="teacherClasses.length > 0">
+        <h3>Currently Assigned Classes</h3>
+        <div class="classes-list">
+          <div *ngFor="let cls of teacherClasses" class="class-item assigned">
+            <span class="class-name">{{ cls.name }}</span>
+            <span class="class-form">{{ cls.form }}</span>
+            <span class="student-count" *ngIf="teacherLoad">
+              {{ getStudentCountForClass(cls.id) }} students
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Class Selection (bulk) -->
+      <div class="class-selection-section">
+        <h3>Bulk assign classes</h3>
+        <p class="section-intro muted">Tick every class this teacher should be linked to. Use “Assign subject in a class” above for each subject they teach in each class.</p>
+        <div class="search-box">
+          <input 
+            type="text" 
+            [(ngModel)]="classSearchQuery"
+            placeholder="Search classes..."
+            class="search-input">
+          <span class="search-icon">🔍</span>
+        </div>
+        <div class="checkbox-group">
+          <div 
+            *ngFor="let cls of getFilteredClasses()" 
+            class="checkbox-item"
+            [class.selected]="isClassSelected(cls.id)">
+            <label class="checkbox-label">
+              <input 
+                type="checkbox" 
+                [checked]="isClassSelected(cls.id)" 
+                (change)="toggleClass(cls.id)"
+                class="checkbox-input">
+              <span class="checkbox-custom"></span>
+              <span class="checkbox-text">{{ cls.name }} ({{ cls.form }})</span>
+            </label>
+          </div>
+        </div>
+        <div class="selection-summary">
+          <span class="summary-text">
+            <strong>{{ selectedClassIds.length }}</strong> class{{ selectedClassIds.length !== 1 ? 'es' : '' }} selected
+          </span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="form-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary" 
+          (click)="clearSelection()">
+          <span>❌</span> Cancel
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-primary"
+          (click)="saveAssignment()"
+          [disabled]="submitting">
+          <span *ngIf="!submitting">💾</span>
+          <span *ngIf="submitting" class="spinner"></span>
+          {{ submitting ? 'Saving...' : 'Save Assignment' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="card empty-state-card" *ngIf="!selectedTeacher && !loading">
+    <div class="empty-state">
+      <div class="empty-icon">👆</div>
+      <h3>Select a Teacher</h3>
+      <p>Choose a teacher from the list above to assign classes and view their workload.</p>
+    </div>
+  </div>
+</div>
+

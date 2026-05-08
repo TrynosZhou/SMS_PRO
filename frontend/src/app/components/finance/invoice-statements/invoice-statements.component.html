@@ -1,0 +1,343 @@
+<div class="container">
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h1>Invoice Statements</h1>
+      <button class="btn btn-secondary" (click)="router.navigate(['/invoices'])">
+        ⬅️ Back to Invoices
+      </button>
+    </div>
+    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+      <div class="form-group">
+        <label>Filter by Student</label>
+        <select [(ngModel)]="selectedStudent" [ngModelOptions]="{standalone: true}" (change)="onFilterChange()">
+          <option value="">All Students</option>
+          <option *ngFor="let student of students" [value]="student.id">
+            {{ student.firstName }} {{ student.lastName }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Filter by Status</label>
+        <select [(ngModel)]="selectedStatus" [ngModelOptions]="{standalone: true}" (change)="onFilterChange()">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+          <option value="partial">Partial</option>
+          <option value="overdue">Overdue</option>
+        </select>
+      </div>
+    </div>
+    <div *ngIf="loading">Loading...</div>
+    <table *ngIf="!loading">
+      <thead>
+        <tr>
+          <th>Invoice Number</th>
+          <th>Student</th>
+          <th style="text-align: right;">Base Amount</th>
+          <th style="text-align: right;">Uniform Total</th>
+          <th style="text-align: right;">Grand Total</th>
+          <th style="text-align: right;">Paid</th>
+          <th style="text-align: right;">Balance</th>
+          <th style="text-align: right;">Previous Balance</th>
+          <th style="text-align: right;">Prepaid Amount</th>
+          <th>Status</th>
+          <th>Due Date</th>
+          <th>Term</th>
+          <th style="text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let invoice of invoices">
+          <td>{{ invoice.invoiceNumber }}</td>
+          <td>{{ invoice.student?.firstName }} {{ invoice.student?.lastName }}</td>
+          <td style="text-align: right;">{{ currencySymbol }} {{ (invoice.amount - (invoice.uniformTotal || 0)) | number:'1.2-2' }}</td>
+          <td style="text-align: right;">{{ currencySymbol }} {{ invoice.uniformTotal || 0 | number:'1.2-2' }}</td>
+          <td style="text-align: right;">{{ currencySymbol }} {{ invoice.amount | number:'1.2-2' }}</td>
+          <td style="text-align: right;">{{ currencySymbol }} {{ invoice.paidAmount | number:'1.2-2' }}</td>
+          <td style="text-align: right;">{{ currencySymbol }} {{ invoice.balance | number:'1.2-2' }}</td>
+          <td style="text-align: right;">{{ currencySymbol }} {{ invoice.previousBalance | number:'1.2-2' }}</td>
+          <td style="text-align: right;">
+            <span *ngIf="invoice.prepaidAmount > 0" class="prepaid-amount">
+              {{ currencySymbol }} {{ invoice.prepaidAmount | number:'1.2-2' }}
+            </span>
+            <span *ngIf="!invoice.prepaidAmount || invoice.prepaidAmount === 0" class="no-prepayment">
+              {{ currencySymbol }} 0.00
+            </span>
+          </td>
+          <td>
+            <span [class]="getStatusClass(invoice.status)">
+              {{ invoice.status }}
+            </span>
+          </td>
+          <td>{{ invoice.dueDate | date }}</td>
+          <td>{{ invoice.term }}</td>
+          <td class="actions-cell">
+            <div class="action-buttons">
+              <button class="btn btn-primary action-btn" 
+                      type="button"
+                      (click)="viewInvoicePDF(invoice.id, $event)"
+                      title="View Invoice">
+                📄 Invoice
+              </button>
+              <button class="btn btn-secondary action-btn" 
+                      (click)="openPaymentForm(invoice)"
+                      *ngIf="authService.hasRole('admin')"
+                      title="Record Payment">
+                💳 Payment
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <!-- Payment Form Modal -->
+    <div *ngIf="showPaymentForm" class="modal-overlay" (click)="closePaymentForm()" [@fadeInOut]>
+      <div class="payment-modal" (click)="$event.stopPropagation()" [@slideInUp]>
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <div class="modal-header-content">
+            <h2>
+              <span class="modal-icon">💳</span>
+              Record Payment
+            </h2>
+            <p class="modal-subtitle">Enter payment details for this invoice</p>
+          </div>
+          <button class="modal-close-btn" (click)="closePaymentForm()" title="Close">
+            <span>&times;</span>
+          </button>
+        </div>
+
+        <!-- Invoice Summary Card -->
+        <div *ngIf="selectedInvoice" class="invoice-summary-card">
+          <div class="summary-header">
+            <span class="summary-icon">📋</span>
+            <h3>Invoice Summary</h3>
+          </div>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <span class="summary-label">Invoice Number</span>
+              <span class="summary-value">{{ selectedInvoice.invoiceNumber }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Student</span>
+              <span class="summary-value">{{ selectedInvoice.student?.firstName }} {{ selectedInvoice.student?.lastName }}</span>
+            </div>
+            <div class="summary-item highlight">
+              <span class="summary-label">Current Balance</span>
+              <span class="summary-value balance">{{ currencySymbol }} {{ selectedInvoice.balance | number:'1.2-2' }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Amount Paid So Far</span>
+              <span class="summary-value paid">{{ currencySymbol }} {{ selectedInvoice.paidAmount | number:'1.2-2' }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Uniform Total</span>
+              <span class="summary-value">{{ currencySymbol }} {{ (selectedInvoice.uniformTotal || 0) | number:'1.2-2' }}</span>
+            </div>
+            <div class="summary-item" *ngIf="selectedInvoice.prepaidAmount > 0">
+              <span class="summary-label">Prepaid Amount</span>
+              <span class="summary-value prepaid">{{ currencySymbol }} {{ selectedInvoice.prepaidAmount | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Form -->
+        <form (ngSubmit)="updatePayment()" class="payment-form">
+          <div class="form-section">
+            <h3 class="section-title">
+              <span class="section-icon">💰</span>
+              Payment Details
+            </h3>
+
+            <!-- Payment Amount -->
+            <div class="form-group" [class.has-error]="isFieldInvalid('amount')">
+              <label for="amount">
+                Payment Amount <span class="required">*</span>
+              </label>
+              <div class="amount-input-wrapper">
+                <input 
+                  type="number" 
+                  id="amount"
+                  [(ngModel)]="paymentForm.amount" 
+                  name="amount" 
+                  step="0.01" 
+                  min="0.01" 
+                  required
+                  [class.invalid]="isFieldInvalid('amount')"
+                  class="form-control amount-input"
+                  placeholder="0.00"
+                  (blur)="validateField('amount')"
+                  (input)="onAmountChange()">
+              </div>
+              <div class="field-hint">
+                <span class="hint-icon">💡</span>
+                Default is set to the remaining balance
+              </div>
+              <div class="field-error" *ngIf="isFieldInvalid('amount')">
+                {{ getFieldError('amount') }}
+              </div>
+              <div class="balance-preview" *ngIf="selectedInvoice && paymentForm.amount > 0">
+                <span class="preview-label">New Balance After Payment:</span>
+                <span class="preview-value" [class.warning]="getNewBalance() < 0" [class.success]="getNewBalance() === 0">
+                  {{ currencySymbol }} {{ getNewBalance() | number:'1.2-2' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Payment Date -->
+            <div class="form-group" [class.has-error]="isFieldInvalid('paymentDate')">
+              <label for="paymentDate">
+                Payment Date <span class="required">*</span>
+              </label>
+              <div class="date-input-wrapper">
+                <input 
+                  type="date" 
+                  id="paymentDate"
+                  [(ngModel)]="paymentForm.paymentDate" 
+                  name="paymentDate" 
+                  required
+                  [class.invalid]="isFieldInvalid('paymentDate')"
+                  class="form-control date-input"
+                  (blur)="validateField('paymentDate')">
+                <span class="date-icon">📅</span>
+              </div>
+              <div class="field-error" *ngIf="isFieldInvalid('paymentDate')">
+                {{ getFieldError('paymentDate') }}
+              </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="form-group" [class.has-error]="isFieldInvalid('paymentMethod')">
+              <label for="paymentMethod">
+                Payment Method <span class="required">*</span>
+              </label>
+              <select 
+                id="paymentMethod"
+                [(ngModel)]="paymentForm.paymentMethod" 
+                name="paymentMethod" 
+                required
+                [class.invalid]="isFieldInvalid('paymentMethod')"
+                class="form-control"
+                (blur)="validateField('paymentMethod')">
+                <option value="Cash">💵 Cash</option>
+                <option value="Bank Transfer">🏦 Bank Transfer</option>
+                <option value="Mobile Money">📱 Mobile Money</option>
+                <option value="Cheque">📝 Cheque</option>
+                <option value="Credit Card">💳 Credit Card</option>
+                <option value="Other">🔷 Other</option>
+              </select>
+              <div class="field-error" *ngIf="isFieldInvalid('paymentMethod')">
+                {{ getFieldError('paymentMethod') }}
+              </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-group">
+              <label for="notes">
+                Notes <span class="optional">(Optional)</span>
+              </label>
+              <textarea 
+                id="notes"
+                [(ngModel)]="paymentForm.notes" 
+                name="notes" 
+                placeholder="Additional notes about this payment (e.g., reference number, transaction ID)"
+                class="form-control notes-textarea"
+                rows="3"
+                maxlength="500"></textarea>
+              <div class="char-counter" *ngIf="paymentForm.notes">
+                {{ paymentForm.notes.length }}/500
+              </div>
+            </div>
+
+            <!-- Prepayment Checkbox -->
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  [(ngModel)]="paymentForm.isPrepayment" 
+                  name="isPrepayment"
+                  class="checkbox-input">
+                <span class="checkbox-text">
+                  <strong>Mark as Prepayment</strong>
+                  <span class="checkbox-hint">This payment is for future term(s). The prepaid amount will be applied to upcoming invoices.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button 
+              type="button" 
+              class="btn btn-secondary btn-cancel" 
+              (click)="closePaymentForm()"
+              [disabled]="submitting">
+              ❌ Cancel
+            </button>
+            <button 
+              type="submit" 
+              class="btn btn-primary btn-submit"
+              [disabled]="submitting || !isFormValid()">
+              <span *ngIf="!submitting">
+                💳 Record Payment
+              </span>
+              <span *ngIf="submitting" class="submit-loading">
+                <span class="spinner-small"></span>
+                Recording...
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Viewer Modal -->
+  <div *ngIf="showPdfViewer" class="pdf-viewer-overlay" (click)="closePdfViewer()" [@fadeInOut]>
+    <div class="pdf-viewer-modal" (click)="$event.stopPropagation()" [@slideInUp]>
+      <div class="pdf-viewer-header">
+        <h3>
+          <span>📄</span>
+          Invoice PDF - {{ currentInvoiceNumber }}
+        </h3>
+        <div class="pdf-viewer-actions">
+          <button 
+            type="button" 
+            class="btn btn-primary btn-sm" 
+            (click)="downloadInvoicePDF()"
+            title="Download PDF">
+            <span>💾</span> Download
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-secondary btn-sm" 
+            (click)="closePdfViewer()"
+            title="Close">
+            <span>✕</span> Close
+          </button>
+        </div>
+      </div>
+      <div class="pdf-viewer-content">
+        <iframe 
+          *ngIf="safePdfUrl && !loadingPdf" 
+          [src]="safePdfUrl" 
+          class="pdf-iframe"
+          title="Invoice PDF Viewer"
+          type="application/pdf">
+        </iframe>
+        <div *ngIf="loadingPdf" class="pdf-loading">
+          <div class="spinner-large"></div>
+          <p>Loading PDF...</p>
+        </div>
+        <div *ngIf="!safePdfUrl && !loadingPdf" class="pdf-loading">
+          <p>PDF not available</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

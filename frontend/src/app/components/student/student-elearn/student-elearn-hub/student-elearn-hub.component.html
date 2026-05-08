@@ -1,0 +1,24 @@
+<div class="el-hub">
+  <nav class="el-hub-tabs" aria-label="E-Learn sections">
+    <a
+      routerLink="view-task"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="el-hub-tab"
+    >
+      <span aria-hidden="true">👁️</span> View Tasks
+    </a>
+    <a
+      routerLink="submit-task"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="el-hub-tab"
+    >
+      <span aria-hidden="true">📤</span> Submit Task
+    </a>
+  </nav>
+
+  <div class="el-hub-outlet">
+    <router-outlet></router-outlet>
+  </div>
+</div>

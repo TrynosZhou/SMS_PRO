@@ -1,0 +1,167 @@
+<div class="ca-shell">
+  <aside class="ca-rail" aria-label="Sections">
+    <button type="button" class="ca-rail-btn is-active" title="Classes">
+      <span class="ca-rail-ico">📚</span>
+    </button>
+    <button type="button" class="ca-rail-btn" disabled title="Coming soon">
+      <span class="ca-rail-ico">📅</span>
+    </button>
+    <button type="button" class="ca-rail-btn" disabled title="Coming soon">
+      <span class="ca-rail-ico">⚙️</span>
+    </button>
+    <button type="button" class="ca-rail-btn" disabled title="Coming soon">
+      <span class="ca-rail-ico">📁</span>
+    </button>
+  </aside>
+
+  <div class="ca-main">
+    <div class="ca-toolbar">
+      <h2 class="ca-heading">Classes</h2>
+      <span class="ca-hint">
+        Click a class to select it and use the actions on the right. Double-click a row or use
+        <strong>Lessons</strong> to open the lesson list.
+      </span>
+    </div>
+
+    <div class="ca-msg ca-err" *ngIf="error">{{ error }}</div>
+    <div class="ca-msg ca-loading" *ngIf="loading">Loading classes…</div>
+
+    <div class="ca-table-wrap" *ngIf="!loading">
+      <table class="ca-table">
+        <thead>
+          <tr>
+            <th class="th-ico"></th>
+            <th>Name</th>
+            <th>Short</th>
+            <th class="th-num">Count</th>
+            <th class="th-grid">Time</th>
+            <th class="th-num">All.</th>
+            <th class="th-num">Subj.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let c of classes"
+            (click)="onRowClick(c)"
+            (dblclick)="openLessons(c)"
+            [class.is-selected]="selected?.id === c.id"
+          >
+            <td class="td-ico"><span class="ca-avatar">🏫</span></td>
+            <td>{{ c.name }}</td>
+            <td class="ca-muted">{{ c.name }}</td>
+            <td class="td-num">{{ studentCount(c) }}</td>
+            <td class="td-grid">
+              <span class="ca-mini-grid" aria-hidden="true">
+                <span *ngFor="let i of miniGridIdx" [class.on]="i % 4 !== 2"></span>
+              </span>
+            </td>
+            <td class="td-num">5</td>
+            <td class="td-num">{{ subjectCount(c) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <aside class="ca-actions" aria-label="Actions">
+    <div class="ca-act-group">
+      <button type="button" class="ca-act" (click)="goNew()">
+        <span class="ca-act-ico">➕</span> New
+      </button>
+      <button type="button" class="ca-act" (click)="goEdit()" [disabled]="!selected">
+        <span class="ca-act-ico">👤</span> Edit
+      </button>
+      <button type="button" class="ca-act ca-danger" (click)="removeSelected()" [disabled]="!selected">
+        <span class="ca-act-ico">➖</span> Remove
+      </button>
+    </div>
+    <div class="ca-act-group">
+      <button type="button" class="ca-act ca-primary" (click)="selected && openLessons(selected)" [disabled]="!selected">
+        <span class="ca-act-ico">📐</span> Lessons
+      </button>
+      <button type="button" class="ca-act" (click)="openTimeOff()" [disabled]="!selected">
+        <span class="ca-act-ico">🕐</span> Time off
+      </button>
+      <button type="button" class="ca-act" disabled title="Coming soon">
+        <span class="ca-act-ico">#</span> Constraints
+      </button>
+    </div>
+    <div class="ca-act-group">
+      <button type="button" class="ca-act" disabled title="Coming soon">
+        <span class="ca-act-ico">⑂</span> Divisions
+      </button>
+    </div>
+  </aside>
+</div>
+
+<div class="ctf-overlay" *ngIf="timeOffOpen" (click)="closeTimeOff()">
+  <div class="ctf-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <header class="ctf-head">
+      <h2 class="ctf-title">Time off — {{ selected?.name }}</h2>
+      <button type="button" class="ctf-x" (click)="closeTimeOff()" aria-label="Close">×</button>
+    </header>
+
+    <div class="ctf-body">
+      <div class="ctf-msg ctf-err" *ngIf="timeOffError">{{ timeOffError }}</div>
+      <div class="ctf-msg" *ngIf="timeOffLoading">Loading…</div>
+      <div class="ctf-msg ctf-ok" *ngIf="timeOffFlash">{{ timeOffFlash }}</div>
+
+      <div class="ctf-grid-wrap" *ngIf="!timeOffLoading && timeOffCells.length">
+        <table class="ctf-grid">
+          <thead>
+            <tr>
+              <th class="ctf-corner"></th>
+              <th
+                *ngFor="let pl of timeOffPeriodLabels; let p = index"
+                class="ctf-h-p"
+                (click)="toggleTimeOffColumn(p)"
+                title="Click to toggle whole period column (time off / available)"
+              >
+                {{ pl }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of timeOffCells; let d = index">
+              <th
+                class="ctf-h-d"
+                (click)="toggleTimeOffRow(d)"
+                title="Click to toggle whole day row (time off / available)"
+              >
+                {{ timeOffDayLabels[d] || '' }}
+              </th>
+              <td
+                *ngFor="let cell of row; let p = index"
+                class="ctf-cell"
+                [ngClass]="timeOffCellClass(cell)"
+                (click)="onTimeOffCellClick(d, p)"
+                (contextmenu)="onTimeOffCellContextMenu($event, d, p)"
+                title="Left-click: cycle forward. Right-click: cycle backward."
+              >
+                <span class="ctf-sym">{{ timeOffCellLabel(cell) }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ctf-legend">
+        <span><span class="ctf-leg ctf-ok">✓</span> Available</span>
+        <span><span class="ctf-leg ctf-q">?</span> Conditional</span>
+        <span><span class="ctf-leg ctf-x">✗</span> Not available</span>
+      </div>
+      <p class="ctf-hint">
+        Use left and right mouse buttons to set. The gray background shows the actual timetable.
+      </p>
+    </div>
+
+    <footer class="ctf-foot">
+      <button type="button" class="ctf-btn" (click)="saveTimeOff(false)" [disabled]="timeOffSaving || timeOffLoading">
+        Set for more
+      </button>
+      <button type="button" class="ctf-btn ctf-ok-btn" (click)="saveTimeOff(true)" [disabled]="timeOffSaving || timeOffLoading">
+        OK
+      </button>
+    </footer>
+  </div>
+</div>

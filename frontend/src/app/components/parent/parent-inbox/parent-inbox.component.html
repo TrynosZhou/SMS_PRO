@@ -1,0 +1,293 @@
+<div class="pi-page" [class.pi-page--hub]="hubMode">
+  <aside class="pi-sidebar" *ngIf="!hubMode">
+    <div class="pi-sidebar-brand">
+      <span class="pi-logo" aria-hidden="true">✉️</span>
+      <div>
+        <h2>Parent Portal</h2>
+        <p class="pi-user">{{ parentName }}</p>
+      </div>
+    </div>
+    <nav class="pi-nav">
+      <a routerLink="/parent/dashboard" routerLinkActive="active" class="pi-nav-link">
+        <span class="pi-nav-ico">📊</span>
+        Dashboard
+      </a>
+      <a
+        routerLink="/parent/communications/view"
+        [class.active]="communicationsNavActive()"
+        class="pi-nav-link"
+      >
+        <span class="pi-nav-ico">📧</span>
+        Communications
+        <span class="pi-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+      </a>
+      <a routerLink="/parent/link-students" class="pi-nav-link">
+        <span class="pi-nav-ico">🔗</span>
+        Link students
+      </a>
+    </nav>
+    <button type="button" class="pi-logout" (click)="logout()">Logout</button>
+  </aside>
+
+  <main class="pi-main">
+    <div class="pi-hub-bar" *ngIf="hubMode && activeTab === 'inbox'">
+      <button type="button" class="pi-btn pi-btn-ghost" (click)="refresh()" [disabled]="loading" title="Refresh">
+        <span [class.pi-spin]="loading">↻</span>
+        Refresh
+      </button>
+    </div>
+
+    <header class="pi-toolbar" *ngIf="!hubMode">
+      <div class="pi-toolbar-text">
+        <p class="pi-kicker">School messages</p>
+        <h1>{{ toolbarTitle }}</h1>
+        <p class="pi-sub">{{ toolbarSub }}</p>
+      </div>
+      <div class="pi-toolbar-actions">
+        <button type="button" class="pi-btn pi-btn-ghost" (click)="refresh()" [disabled]="loading && activeTab === 'inbox'" title="Refresh">
+          <span [class.pi-spin]="loading && activeTab === 'inbox'">↻</span>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <nav class="pi-tabs" *ngIf="!hubMode" role="tablist" aria-label="Message views">
+      <button
+        type="button"
+        role="tab"
+        class="pi-tab"
+        [class.pi-tab-active]="activeTab === 'inbox'"
+        [attr.aria-selected]="activeTab === 'inbox'"
+        (click)="setTab('inbox')"
+      >
+        Inbox
+        <span class="pi-tab-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="pi-tab"
+        [class.pi-tab-active]="activeTab === 'compose'"
+        [attr.aria-selected]="activeTab === 'compose'"
+        (click)="setTab('compose')"
+      >
+        Compose
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="pi-tab"
+        [class.pi-tab-active]="activeTab === 'outbox'"
+        [attr.aria-selected]="activeTab === 'outbox'"
+        (click)="setTab('outbox')"
+      >
+        Sent
+      </button>
+    </nav>
+
+    <!-- INBOX -->
+    <ng-container *ngIf="activeTab === 'inbox'">
+      <div class="pi-stats" *ngIf="!loading && messages.length > 0">
+        <div class="pi-stat">
+          <span class="pi-stat-label">Total</span>
+          <strong>{{ messages.length }}</strong>
+        </div>
+        <div class="pi-stat pi-stat-accent">
+          <span class="pi-stat-label">Unread</span>
+          <strong>{{ unreadCount }}</strong>
+        </div>
+        <div class="pi-stat">
+          <span class="pi-stat-label">Showing</span>
+          <strong>{{ filteredMessages.length }}</strong>
+        </div>
+      </div>
+
+      <div class="pi-search-wrap">
+        <label class="pi-search" [class.pi-search-disabled]="loading || messages.length === 0">
+          <span class="pi-search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="search"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchQueryChange()"
+            placeholder="Search subject, body, or sender…"
+            [disabled]="loading || messages.length === 0"
+            autocomplete="off"
+          />
+        </label>
+      </div>
+
+      <div class="alert alert-error pi-alert" *ngIf="error">{{ error }}</div>
+
+      <div class="pi-skeleton-grid" *ngIf="loading">
+        <div class="pi-skeleton-list">
+          <div class="pi-skel-row" *ngFor="let _ of [1,2,3,4,5]">
+            <div class="pi-skel-line pi-skel-w40"></div>
+            <div class="pi-skel-line pi-skel-w80"></div>
+            <div class="pi-skel-line pi-skel-w60"></div>
+          </div>
+        </div>
+        <div class="pi-skeleton-detail">
+          <div class="pi-skel-line pi-skel-w30"></div>
+          <div class="pi-skel-line pi-skel-w90"></div>
+          <div class="pi-skel-block"></div>
+        </div>
+      </div>
+
+      <div class="pi-empty" *ngIf="!loading && messages.length === 0">
+        <div class="pi-empty-card">
+          <div class="pi-empty-icon" aria-hidden="true">📭</div>
+          <h2>No messages yet</h2>
+          <p>When the school sends notices or announcements to parents, they will show up here.</p>
+          <button type="button" class="pi-btn pi-btn-primary" (click)="setTab('compose')">Write to the school</button>
+        </div>
+      </div>
+
+      <div class="pi-empty pi-empty-soft" *ngIf="!loading && messages.length > 0 && filteredMessages.length === 0">
+        <p><strong>No matches</strong> for “{{ searchQuery }}”. Try another search term.</p>
+        <button type="button" class="pi-btn pi-btn-ghost" (click)="searchQuery = ''">Clear search</button>
+      </div>
+
+      <div
+        class="pi-split"
+        *ngIf="!loading && messages.length > 0 && filteredMessages.length > 0"
+        [class.pi-mobile-list]="listPanelOpen"
+        [class.pi-mobile-detail]="!listPanelOpen"
+      >
+        <div class="pi-list-panel">
+          <div class="pi-list-head">
+            <span>Messages</span>
+            <span class="pi-muted">{{ filteredMessages.length }}</span>
+          </div>
+          <ul class="pi-msg-list" role="list">
+            <li *ngFor="let msg of filteredMessages">
+              <button
+                type="button"
+                class="pi-msg-item"
+                [class.pi-msg-item-active]="msg.id === selectedId"
+                [class.pi-msg-item-unread]="!msg.isRead"
+                (click)="selectMessage(msg)"
+              >
+                <span class="pi-msg-dot" *ngIf="!msg.isRead" aria-label="Unread"></span>
+                <div class="pi-msg-body">
+                  <div class="pi-msg-top">
+                    <span class="pi-msg-subject">{{ msg.subject || '(No subject)' }}</span>
+                    <time [attr.datetime]="msg.createdAt" [title]="formatDate(msg.createdAt)">{{
+                      relativeTime(msg.createdAt)
+                    }}</time>
+                  </div>
+                  <p class="pi-msg-preview">{{ previewText(msg.message) }}</p>
+                  <span class="pi-msg-from">{{ msg.senderName || 'School' }}</span>
+                </div>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="pi-detail-panel">
+          <button type="button" class="pi-back-mobile" *ngIf="selectedMessage" (click)="showListOnMobile()">
+            ← Messages
+          </button>
+
+          <ng-container *ngIf="selectedMessage as m">
+            <article class="pi-detail-card">
+              <header class="pi-detail-head">
+                <div class="pi-detail-meta">
+                  <span class="pi-chip" *ngIf="!m.isRead">New</span>
+                  <span class="pi-chip pi-chip-muted" *ngIf="m.isRead">Read</span>
+                  <time [attr.datetime]="m.createdAt">{{ formatDate(m.createdAt) }}</time>
+                </div>
+                <h2>{{ m.subject || '(No subject)' }}</h2>
+                <p class="pi-detail-from">
+                  <span class="pi-avatar" aria-hidden="true">{{ (m.senderName || 'S').charAt(0).toUpperCase() }}</span>
+                  From <strong>{{ m.senderName || 'School Administration' }}</strong>
+                </p>
+              </header>
+              <div class="pi-detail-content">
+                <p>{{ m.message }}</p>
+                <p class="pi-attachment" *ngIf="m.attachmentUrl">
+                  <a [href]="attachmentHref(m.attachmentUrl)" target="_blank" rel="noopener noreferrer">Download attachment</a>
+                </p>
+              </div>
+            </article>
+          </ng-container>
+
+          <div class="pi-detail-placeholder" *ngIf="!selectedMessage">
+            <span class="pi-placeholder-icon" aria-hidden="true">👈</span>
+            <p>Select a message to read</p>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- COMPOSE -->
+    <section class="pi-compose" *ngIf="activeTab === 'compose'" aria-labelledby="compose-title">
+      <div class="pi-compose-card">
+        <h2 id="compose-title" class="pi-sr-only">Compose message</h2>
+        <div class="pi-compose-alert pi-compose-success" *ngIf="composeSuccess" role="status">
+          {{ composeSuccess }}
+        </div>
+        <div class="pi-compose-alert pi-compose-error" *ngIf="composeError" role="alert">
+          {{ composeError }}
+        </div>
+
+        <label class="pi-field">
+          <span class="pi-field-label">Subject</span>
+          <input
+            type="text"
+            class="pi-input"
+            [(ngModel)]="composeSubject"
+            name="composeSubject"
+            placeholder="What is this about?"
+            [disabled]="sending"
+            maxlength="200"
+          />
+        </label>
+
+        <label class="pi-field">
+          <span class="pi-field-label">Message</span>
+          <textarea
+            class="pi-textarea"
+            [(ngModel)]="composeBody"
+            name="composeBody"
+            rows="8"
+            placeholder="Write your message to the school…"
+            [disabled]="sending"
+          ></textarea>
+        </label>
+
+        <div class="pi-compose-footer">
+          <p class="pi-compose-hint">Your message is sent to the school administrator. Replies may appear in your Inbox.</p>
+          <button type="button" class="pi-btn pi-btn-primary" (click)="sendToSchool()" [disabled]="sending">
+            <span *ngIf="!sending">Send to school</span>
+            <span *ngIf="sending" class="pi-linking"><span class="pi-spin">↻</span> Sending…</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- OUTBOX -->
+    <section class="pi-outbox" *ngIf="activeTab === 'outbox'" aria-labelledby="outbox-title">
+      <h2 id="outbox-title" class="pi-sr-only">Sent messages</h2>
+
+      <div class="pi-outbox-loading" *ngIf="loadingOutbox">
+        <span class="pi-spin">↻</span> Loading…
+      </div>
+
+      <div class="pi-empty pi-empty-soft" *ngIf="!loadingOutbox && outboxMessages.length === 0">
+        <p>You have not sent any messages to the school yet.</p>
+        <button type="button" class="pi-btn pi-btn-primary" (click)="setTab('compose')">Compose a message</button>
+      </div>
+
+      <ul class="pi-outbox-list" *ngIf="!loadingOutbox && outboxMessages.length > 0">
+        <li *ngFor="let msg of outboxMessages" class="pi-outbox-item">
+          <div class="pi-outbox-head">
+            <h3>{{ msg.subject || '(No subject)' }}</h3>
+            <time [attr.datetime]="msg.createdAt">{{ formatDate(msg.createdAt) }}</time>
+          </div>
+          <p class="pi-outbox-body">{{ msg.message }}</p>
+          <div class="pi-outbox-meta">To: <strong>School administration</strong></div>
+        </li>
+      </ul>
+    </section>
+  </main>
+</div>

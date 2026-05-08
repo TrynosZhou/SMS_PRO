@@ -1,0 +1,211 @@
+<div class="inv-page">
+  <header class="inv-hero">
+    <div class="inv-hero-text">
+      <h1 class="inv-title">Unpaid invoices</h1>
+      <p class="inv-lead">
+        Active students with an outstanding balance on their
+        <strong>{{ activeTerm || 'current term' }}</strong> invoice, sorted highest balance first.
+        Filter, sort, and open <strong>Record payment</strong> prefilled for the selected student.
+      </p>
+      <p class="inv-hint inv-term-badge" *ngIf="activeTerm">
+        <span class="inv-term-ico" aria-hidden="true">📅</span>
+        Showing balances for: <strong>{{ activeTerm }}</strong>
+      </p>
+      <p class="inv-hint inv-term-warn" *ngIf="!activeTerm && !loading">
+        No active term is configured in Settings — showing latest invoice per student.
+      </p>
+      <p class="inv-hint">
+        Risk labels are relative to the <strong>highest balance in the full list</strong> (high / medium / low).
+      </p>
+    </div>
+    <button type="button" class="inv-btn inv-btn-ghost inv-refresh" (click)="loadOutstandingBalances()" [disabled]="loading">
+      <span class="inv-spinner" *ngIf="loading" aria-hidden="true"></span>
+      {{ loading ? 'Refreshing…' : '↻ Refresh' }}
+    </button>
+  </header>
+
+  <div class="inv-alert inv-alert-error" *ngIf="error" role="alert">
+    <span class="inv-alert-ico">!</span>
+    {{ error }}
+  </div>
+
+  <!-- KPIs -->
+  <div class="inv-stats" *ngIf="!loading && outstandingBalances.length > 0">
+    <div class="inv-stat">
+      <span class="inv-stat-ico" aria-hidden="true">👤</span>
+      <div class="inv-stat-body">
+        <span class="inv-stat-label">Matching students</span>
+        <span class="inv-stat-value">{{ filteredBalances.length }}</span>
+      </div>
+    </div>
+    <div class="inv-stat inv-stat-accent">
+      <span class="inv-stat-ico" aria-hidden="true">📉</span>
+      <div class="inv-stat-body">
+        <span class="inv-stat-label">Total outstanding</span>
+        <span class="inv-stat-value inv-amount-warn">{{ currencySymbol }} {{ formatCurrency(getTotalOutstanding()) }}</span>
+      </div>
+    </div>
+    <div class="inv-stat">
+      <span class="inv-stat-ico" aria-hidden="true">📊</span>
+      <div class="inv-stat-body">
+        <span class="inv-stat-label">Average balance</span>
+        <span class="inv-stat-value">{{ currencySymbol }} {{ formatCurrency(getAverageOutstanding()) }}</span>
+      </div>
+    </div>
+    <div class="inv-stat">
+      <span class="inv-stat-ico" aria-hidden="true">⬆</span>
+      <div class="inv-stat-body">
+        <span class="inv-stat-label">Highest (filtered)</span>
+        <span class="inv-stat-value">{{ currencySymbol }} {{ formatCurrency(getHighestOutstanding()) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <section class="inv-toolbar" *ngIf="!loading && outstandingBalances.length > 0">
+    <div class="inv-search">
+      <span class="inv-search-ico" aria-hidden="true">🔍</span>
+      <input
+        type="search"
+        [(ngModel)]="searchQuery"
+        (input)="filterBalances()"
+        (keyup.enter)="filterBalances()"
+        placeholder="Search number, name, phone…"
+        class="inv-search-input"
+      />
+      <button
+        type="button"
+        class="inv-search-clear"
+        *ngIf="searchQuery"
+        (click)="searchQuery = ''; filterBalances()"
+        title="Clear search"
+      >
+        ×
+      </button>
+    </div>
+
+    <div class="inv-toolbar-row">
+      <div class="inv-field">
+        <span class="inv-field-label">Sort by</span>
+        <select [(ngModel)]="sortBy" (ngModelChange)="page = 1; applySortingAndPagination()" class="inv-select">
+          <option value="invoiceBalance">Balance</option>
+          <option value="studentNumber">Student #</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
+      <div class="inv-field">
+        <span class="inv-field-label">Order</span>
+        <select [(ngModel)]="sortDirection" (ngModelChange)="page = 1; applySortingAndPagination()" class="inv-select">
+          <option value="desc">High → Low</option>
+          <option value="asc">Low → High</option>
+        </select>
+      </div>
+      <div class="inv-field inv-field-grow">
+        <span class="inv-field-label">Risk</span>
+        <div class="inv-seg" role="group" aria-label="Risk filter">
+          <button type="button" class="inv-seg-btn" [class.active]="riskFilter === 'all'" (click)="setRiskFilter('all')">All</button>
+          <button type="button" class="inv-seg-btn" [class.active]="riskFilter === 'high'" (click)="setRiskFilter('high')">High</button>
+          <button type="button" class="inv-seg-btn" [class.active]="riskFilter === 'medium'" (click)="setRiskFilter('medium')">Med</button>
+          <button type="button" class="inv-seg-btn" [class.active]="riskFilter === 'low'" (click)="setRiskFilter('low')">Low</button>
+        </div>
+      </div>
+      <div class="inv-field">
+        <span class="inv-field-label">Rows</span>
+        <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange($event)" class="inv-select inv-select-narrow">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="100">100</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Loading skeleton -->
+  <div class="inv-card inv-skeleton-wrap" *ngIf="loading">
+    <div class="inv-shimmer inv-sh-row" *ngFor="let _ of [1, 2, 3, 4, 5, 6]"></div>
+  </div>
+
+  <!-- All clear -->
+  <div class="inv-empty inv-empty-success" *ngIf="!loading && outstandingBalances.length === 0">
+    <span class="inv-empty-ico" aria-hidden="true">✓</span>
+    <h2 class="inv-empty-title">No unpaid invoices</h2>
+    <p class="inv-empty-text">Every student’s latest invoice shows a zero balance. Great work.</p>
+  </div>
+
+  <!-- Table -->
+  <section class="inv-table-card" *ngIf="!loading && outstandingBalances.length > 0">
+    <div class="inv-table-head">
+      <div>
+        <span class="inv-table-count">{{ filteredBalances.length }}</span>
+        <span class="inv-table-muted"> student(s) in view</span>
+      </div>
+      <div class="inv-table-total">
+        Total outstanding:
+        <strong>{{ currencySymbol }} {{ formatCurrency(getTotalOutstanding()) }}</strong>
+      </div>
+    </div>
+
+    <div class="inv-empty inv-empty-filtered" *ngIf="filteredBalances.length === 0">
+      <span class="inv-empty-ico">🔎</span>
+      <h2 class="inv-empty-title">No rows match</h2>
+      <p class="inv-empty-text">Adjust search or risk filters to see results.</p>
+    </div>
+
+    <div class="inv-table-scroll" *ngIf="filteredBalances.length > 0">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Student #</th>
+            <th>First name</th>
+            <th>Last name</th>
+            <th>Phone</th>
+            <th class="inv-th-num">Balance</th>
+            <th class="inv-th-action" *ngIf="canManageFinance()">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let balance of pagedBalances; trackBy: trackByBalance">
+            <td>
+              <span class="inv-mono">{{ balance.studentNumber || balance.studentId }}</span>
+            </td>
+            <td>{{ balance.firstName }}</td>
+            <td>{{ balance.lastName }}</td>
+            <td class="inv-muted">{{ balance.phoneNumber || '—' }}</td>
+            <td class="inv-td-num">
+              <span class="inv-balance-amt">{{ currencySymbol }} {{ formatCurrency(balance.invoiceBalance) }}</span>
+            </td>
+            <td class="inv-td-action" *ngIf="canManageFinance()">
+              <button type="button" class="inv-pay-btn" (click)="payInvoice(balance)" title="Open record payment">
+                Pay
+              </button>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot *ngIf="filteredBalances.length > 0">
+          <tr>
+            <td colspan="4" class="inv-foot-label">Total outstanding (filtered)</td>
+            <td class="inv-foot-num">{{ currencySymbol }} {{ formatCurrency(getTotalOutstanding()) }}</td>
+            <td *ngIf="canManageFinance()"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="inv-pagination" *ngIf="filteredBalances.length > pageSize">
+      <button type="button" class="inv-page-btn" (click)="changePage(page - 1)" [disabled]="page <= 1">
+        ← Previous
+      </button>
+      <div class="inv-page-meta">
+        <span class="inv-page-range">
+          Showing <strong>{{ getPageRange().from }}</strong>–<strong>{{ getPageRange().to }}</strong> of
+          <strong>{{ getPageRange().total }}</strong>
+        </span>
+        <span class="inv-page-num">Page {{ page }} / {{ getTotalPages() }}</span>
+      </div>
+      <button type="button" class="inv-page-btn" (click)="changePage(page + 1)" [disabled]="page >= getTotalPages()">
+        Next →
+      </button>
+    </div>
+  </section>
+</div>

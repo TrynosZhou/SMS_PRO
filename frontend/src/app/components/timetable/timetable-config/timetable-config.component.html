@@ -1,0 +1,150 @@
+<div class="timetable-config-container">
+  <div class="header">
+    <h2>Timetable Configuration</h2>
+    <p class="subtitle">Configure scheduling rules and preferences for timetable generation</p>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">
+    {{ error }}
+  </div>
+
+  <div class="alert alert-success" *ngIf="success">
+    {{ success }}
+  </div>
+
+  <div class="loading-spinner" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading configuration...</p>
+  </div>
+
+  <form *ngIf="!loading" (ngSubmit)="saveConfig()">
+    <!-- Basic Settings -->
+    <div class="config-section">
+      <h3>Basic Settings</h3>
+      
+      <div class="form-group">
+        <label for="periodsPerDay">Number of Periods per Day</label>
+        <input type="number" id="periodsPerDay" class="form-control" 
+               [(ngModel)]="config.periodsPerDay" name="periodsPerDay" 
+               min="1" max="12" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="schoolStartTime">School Start Time</label>
+          <input type="time" id="schoolStartTime" class="form-control" 
+                 [(ngModel)]="config.schoolStartTime" name="schoolStartTime" required>
+        </div>
+
+        <div class="form-group">
+          <label for="schoolEndTime">School End Time</label>
+          <input type="time" id="schoolEndTime" class="form-control" 
+                 [(ngModel)]="config.schoolEndTime" name="schoolEndTime" required>
+        </div>
+
+        <div class="form-group">
+          <label for="periodDurationMinutes">Period Duration (minutes)</label>
+          <input type="number" id="periodDurationMinutes" class="form-control" 
+                 [(ngModel)]="config.periodDurationMinutes" name="periodDurationMinutes" 
+                 min="15" max="120" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- Days of Week -->
+    <div class="config-section">
+      <h3>Days of Week</h3>
+      <div class="days-checkbox-group">
+        <label *ngFor="let day of daysOfWeekOptions" class="day-checkbox">
+          <input type="checkbox" 
+                 [checked]="config.daysOfWeek.includes(day)"
+                 (change)="toggleDay(day)">
+          <span>{{ day }}</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Break Periods -->
+    <div class="config-section">
+      <h3>Break Periods</h3>
+      <div *ngFor="let breakPeriod of config.breakPeriods; let i = index" class="break-period-item">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Break Name</label>
+            <input type="text" class="form-control" 
+                   [(ngModel)]="breakPeriod.name" 
+                   [name]="'breakName' + i" 
+                   placeholder="e.g., Tea Break, Lunch">
+          </div>
+          <div class="form-group">
+            <label>Start Time</label>
+            <input type="time" class="form-control" 
+                   [(ngModel)]="breakPeriod.startTime" 
+                   [name]="'breakStart' + i"
+                   (change)="calculateBreakDuration(i)">
+          </div>
+          <div class="form-group">
+            <label>End Time</label>
+            <input type="time" class="form-control" 
+                   [(ngModel)]="breakPeriod.endTime" 
+                   [name]="'breakEnd' + i"
+                   (change)="calculateBreakDuration(i)">
+          </div>
+          <div class="form-group">
+            <label>Duration (minutes)</label>
+            <input type="number" class="form-control" 
+                   [(ngModel)]="breakPeriod.durationMinutes" 
+                   [name]="'breakDuration' + i" 
+                   readonly>
+          </div>
+          <div class="form-group">
+            <button type="button" class="btn btn-danger btn-sm" 
+                    (click)="removeBreakPeriod(i)">
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary" (click)="addBreakPeriod()">
+        + Add Break Period
+      </button>
+    </div>
+
+    <!-- Lessons Per Week -->
+    <div class="config-section">
+      <h3>Lessons Per Week (by Subject)</h3>
+      <div class="lessons-per-week-table">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Code</th>
+              <th>Lessons Per Week</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let subject of subjects">
+              <td>{{ subject.name }}</td>
+              <td>{{ subject.code }}</td>
+              <td>
+                <input type="number" class="form-control form-control-sm" 
+                       [(ngModel)]="config.lessonsPerWeek[subject.id]" 
+                       [name]="'lessons' + subject.id" 
+                       min="1" max="10">
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="saving">
+        <span *ngIf="saving">Saving...</span>
+        <span *ngIf="!saving">Save Configuration</span>
+      </button>
+    </div>
+  </form>
+</div>
+
