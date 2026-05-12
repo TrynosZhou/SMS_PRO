@@ -668,6 +668,11 @@ body.sm-modal-open {
   overflow: hidden;
 }
 
+/* /students page add-student modal locks page scroll */
+body.ms-modal-open {
+  overflow: hidden;
+}
+
 /* ========================================
    PRINT STYLES
    ======================================== */

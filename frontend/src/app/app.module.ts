@@ -13,6 +13,7 @@ import { StudentFormComponent } from './components/students/student-form/student
 import { StudentsManageComponent } from './components/students/students-manage/students-manage.component';
 import { StudentManageAddNewRedirectComponent } from './components/students/student-manage-add-new-redirect/student-manage-add-new-redirect.component';
 import { TeacherListComponent } from './components/teachers/teacher-list/teacher-list.component';
+import { AddTeacherModalComponent } from './components/teachers/add-teacher-modal/add-teacher-modal.component';
 import { TeacherFormComponent } from './components/teachers/teacher-form/teacher-form.component';
 import { AssignClassesComponent } from './components/teachers/assign-classes/assign-classes.component';
 import { AllocateClassComponent } from './components/teachers/allocate-class/allocate-class.component';
@@ -26,6 +27,7 @@ import { MarksEntryComponent } from './components/exams/marks-entry/marks-entry.
 import { ReportCardComponent } from './components/exams/report-card/report-card.component';
 import { RankingsComponent } from './components/exams/rankings/rankings.component';
 import { MarkSheetComponent } from './components/exams/mark-sheet/mark-sheet.component';
+import { MarkDiagnosticComponent } from './components/exams/mark-diagnostic/mark-diagnostic.component';
 import { MarkInputProgressComponent } from './components/exams/mark-input-progress/mark-input-progress.component';
 import { PublishResultsComponent } from './components/exams/publish-results/publish-results.component';
 import { ResultsAnalysisComponent } from './components/exams/results-analysis/results-analysis.component';
@@ -122,6 +124,15 @@ import { SystemSettingsComponent } from './components/settings/system-settings/s
 import { RolesPermissionsComponent } from './components/settings/roles-permissions/roles-permissions.component';
 import { FinancialReportsShellComponent } from './components/finance/financial-reports/financial-reports-shell.component';
 import { FinancialReportsSectionComponent } from './components/finance/financial-reports/financial-reports-section.component';
+import { ManageStudentsComponent } from './components/registration/manage-students/manage-students.component';
+import { ManageTeachersComponent } from './components/registration/manage-teachers/manage-teachers.component';
+import { ManageClassesComponent } from './components/enrolment/manage-classes/manage-classes.component';
+import { ManageTermsComponent } from './components/enrolment/manage-terms/manage-terms.component';
+import { EnrolStudentsComponent } from './components/enrolment/enrol-students/enrol-students.component';
+import { ClassListsViewComponent } from './components/enrolment/class-lists-view/class-lists-view.component';
+import { MarkRegisterComponent } from './components/attendance/mark-register/mark-register.component';
+import { AttendanceReportsViewComponent } from './components/attendance/attendance-reports-view/attendance-reports-view.component';
+import { MarksInputComponent } from './components/exams/marks-input/marks-input.component';
 
 @NgModule({
   declarations: [
@@ -133,6 +144,7 @@ import { FinancialReportsSectionComponent } from './components/finance/financial
     StudentsManageComponent,
     StudentManageAddNewRedirectComponent,
     TeacherListComponent,
+    AddTeacherModalComponent,
     TeacherFormComponent,
     AssignClassesComponent,
     AllocateClassComponent,
@@ -145,6 +157,7 @@ import { FinancialReportsSectionComponent } from './components/finance/financial
     MarksEntryComponent,
     ReportCardComponent,
     MarkSheetComponent,
+    MarkDiagnosticComponent,
     MarkInputProgressComponent,
     PublishResultsComponent,
     ResultsAnalysisComponent,
@@ -240,7 +253,16 @@ import { FinancialReportsSectionComponent } from './components/finance/financial
     SystemSettingsComponent,
     RolesPermissionsComponent,
     FinancialReportsShellComponent,
-    FinancialReportsSectionComponent
+    FinancialReportsSectionComponent,
+    ManageStudentsComponent,
+    ManageTeachersComponent,
+    ManageClassesComponent,
+    ManageTermsComponent,
+    EnrolStudentsComponent,
+    ClassListsViewComponent,
+    MarkRegisterComponent,
+    AttendanceReportsViewComponent,
+    MarksInputComponent
   ],
   imports: [
     BrowserModule,

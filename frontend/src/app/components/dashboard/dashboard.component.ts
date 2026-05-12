@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { SettingsService } from '../../services/settings.service';
@@ -8,6 +8,42 @@ import { ClassService } from '../../services/class.service';
 import { FinanceService } from '../../services/finance.service';
 import { SubjectService } from '../../services/subject.service';
 import { ModuleAccessService } from '../../services/module-access.service';
+import { AddTeacherModalService } from '../../services/add-teacher-modal.service';
+
+interface CommandItem {
+  label: string;
+  icon: string;
+  route?: string;
+  action?: () => void;
+  group: string;
+  keywords?: string;
+}
+
+interface Insight {
+  id: string;
+  icon: string;
+  title: string;
+  detail: string;
+  severity: 'info' | 'success' | 'warning' | 'danger';
+  route?: string;
+  cta?: string;
+}
+
+interface NavChild {
+  label: string;
+  route?: string;
+  icon?: string;
+  action?: 'bulkMessage' | 'addTeacher';
+  queryParams?: Record<string, string>;
+}
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  route?: string;        // present when item is a direct link (no submenu)
+  children?: NavChild[]; // present when item has a submenu
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -46,8 +82,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
     totalPaid: 0,
     dayScholars: 0,
     boarders: 0,
+    staffChildren: 0,
+    maleStudents: 0,
+    femaleStudents: 0,
+    maleTeachers: 0,
+    femaleTeachers: 0
+  };
+
+  /** Animated display values that count up to the actual stat values. */
+  displayStats: any = {
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalClasses: 0,
+    totalSubjects: 0,
+    totalInvoices: 0,
+    totalBalance: 0,
     staffChildren: 0
   };
+  private countUpHandles: any = {};
 
   get collectionRatePercent(): number {
     if (!this.stats.totalInvoiced || this.stats.totalInvoiced <= 0) return 0;
@@ -62,6 +114,48 @@ export class DashboardComponent implements OnInit, OnDestroy {
   currentTerm = '';
   recentStudents: any[] = [];
   recentInvoices: any[] = [];
+  /** Cached full invoice list for insights/analytics. */
+  private allInvoices: any[] = [];
+  /** Cached full student list for command palette search. */
+  private allStudents: any[] = [];
+
+  // ── Modern feature state ────────────────────────────────────────────
+  /** Live clock (auto-refreshed every second). */
+  currentTime: Date = new Date();
+  private clockHandle: any;
+
+  /** Pull-to-refresh / auto-refresh. */
+  lastUpdated: Date | null = null;
+  refreshing = false;
+  autoRefresh = false;
+  private autoRefreshHandle: any;
+  /** Seconds remaining until next auto-refresh tick. */
+  autoRefreshCountdown = 60;
+  private autoRefreshTotalSec = 60;
+  private countdownHandle: any;
+
+  /** Dark mode (persisted to localStorage). */
+  darkMode = false;
+
+  /** Module favorites (persisted). Stores routerLink strings. */
+  favoriteModules: Set<string> = new Set();
+
+  /** Command palette (Ctrl+K / ⌘+K). */
+  commandPaletteOpen = false;
+  commandQuery = '';
+  commandActiveIndex = 0;
+
+  /** Smart insights computed from the loaded stats. */
+  insights: Insight[] = [];
+
+  // ── Sidebar / shell navigation ────────────────────────────────────────
+  /** Mobile drawer open state (visible on small screens). */
+  sidebarOpen = false;
+  /** Which submenu group is expanded — keyed by NavItem.id. Only one at a time. */
+  openSubmenu: string | null = null;
+
+  /** Top-level navigation items shown in the left sidebar. */
+  navItems: NavItem[] = [];
 
   constructor(
     private authService: AuthService,
@@ -72,7 +166,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private classService: ClassService,
     private financeService: FinanceService,
     private subjectService: SubjectService,
-    private moduleAccessService: ModuleAccessService
+    private moduleAccessService: ModuleAccessService,
+    private addTeacherModal: AddTeacherModalService
   ) { }
 
   ngOnInit() {
@@ -84,6 +179,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Load preferences first (theme, favorites, auto-refresh)
+    this.loadPreferences();
+
+    // Live clock — updates every second
+    this.clockHandle = setInterval(() => {
+      this.currentTime = new Date();
+    }, 1000);
+
+    // Build sidebar nav based on role
+    this.buildNavMenu();
+
     // Load module access from service
     this.moduleAccessService.loadModuleAccess();
     this.loadSettings();
@@ -92,28 +198,343 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Build the left sidebar menu based on the current user's role. */
+  private buildNavMenu() {
+    const items: NavItem[] = [
+      { id: 'dashboard', label: 'Dashboard', icon: '📊', route: '/dashboard' }
+    ];
+
+    if (this.isAdmin()) {
+      items.push(
+        {
+          id: 'registration', label: 'Registration', icon: '📝',
+          children: [
+            { label: 'Teachers', icon: '👨‍🏫', route: '/teachers' },
+            { label: 'Departments', icon: '🏢', route: '/departments' },
+            { label: 'Students', icon: '🎓', route: '/students' },
+            { label: 'Parents', icon: '👪', route: '/parents' }
+          ]
+        },
+        {
+          id: 'enrolment', label: 'Enrolment', icon: '🎒',
+          children: [
+            { label: 'Classes', icon: '📕', route: '/classes' },
+            { label: 'Terms', icon: '📆', route: '/terms' },
+            { label: 'Enrol', icon: '✅', route: '/enrol' },
+            { label: 'Class Lists', icon: '📋', route: '/class-lists' },
+            { label: 'Migrate Class', icon: '⬆️', route: '/migrate-class' }
+          ]
+        },
+        {
+          id: 'attendance', label: 'Attendance', icon: '🗓️',
+          children: [
+            { label: 'Mark Register', icon: '✏️', route: '/mark-register' },
+            { label: 'Attendance Reports', icon: '📈', route: '/attendance-reports' }
+          ]
+        },
+        {
+          id: 'marks', label: 'Marks', icon: '⭐',
+          children: [
+            { label: 'Subjects', icon: '📚', route: '/subjects' },
+            { label: 'Marks Input', icon: '📝', route: '/marks-input' },
+            { label: 'Marks Progress', icon: '📈', route: '/marks-progress' },
+            { label: 'Marks Diagnostics', icon: '📊', route: '/mark-diagnostic' }
+          ]
+        },
+        {
+          id: 'progress', label: 'Progress Reports', icon: '📑',
+          children: [
+            { label: 'Report Cards', icon: '🧾', route: '/reports' },
+            { label: 'Rankings', icon: '🏆', route: '/ranking' }
+          ]
+        },
+        {
+          id: 'results', label: 'Results Analysis', icon: '📊',
+          children: [
+            { label: 'Mark Sheets', icon: '📄', route: '/mark-sheets' },
+            { label: 'Termly Results', icon: '📊', route: '/termly-results' }
+          ]
+        },
+        {
+          id: 'finance', label: 'Finance', icon: '💰',
+          children: [
+            { label: 'Fees', icon: '🏷️', route: '/finance' },
+            { label: 'Receipting', icon: '🧾', route: '/record-payment' },
+            { label: 'Billing', icon: '💳', route: '/billing' },
+            { label: 'Invoices', icon: '📋', route: '/invoices/statements' },
+            { label: 'Exemptions', icon: '🪪', route: '/exemptions' },
+            { label: 'Student Balances', icon: '💼', route: '/balance-enquiry' }
+          ]
+        },
+        {
+          id: 'financial-reports', label: 'Financial Reports', icon: '📊',
+          children: [
+            { label: 'Student Ledgers', icon: '📒', route: '/student-ledgers' },
+            { label: 'Fees Collection', icon: '💵', route: '/fees-collection' },
+            { label: 'Outstanding Fees', icon: '💲', route: '/outstanding-fees' },
+            { label: 'Exemptions', icon: '🪪', route: '/exemptions-report' },
+            { label: 'Aged Debtors', icon: '⏳', route: '/aged-debtors' },
+            { label: 'Enrolment vs Billing', icon: '📈', route: '/enrolment-vs-billing' },
+            { label: 'Revenue Recognition', icon: '💹', route: '/revenue-recognition' },
+            { label: 'Student Reconciliation', icon: '⚖️', route: '/student-reconciliation' },
+            { label: 'Analytics & Forecasts', icon: '🔮', route: '/analytics-forecasts' },
+            { label: 'Class Reconciliation', icon: '🏫', route: '/class-reconciliation' }
+          ]
+        },
+        {
+          id: 'payroll', label: 'Payroll', icon: '🧮',
+          children: [
+            { label: 'Overview', icon: '🗂️', route: '/payroll/manage/overview' },
+            { label: 'Employees', icon: '👥', route: '/payroll/manage/employees' },
+            { label: 'Structures', icon: '🏛️', route: '/payroll/manage/structures' },
+            { label: 'Assignments', icon: '🔗', route: '/payroll/manage/assignments' },
+            { label: 'Process', icon: '⚙️', route: '/payroll/manage/process' },
+            { label: 'Leave', icon: '🌴', route: '/payroll/manage/leave' },
+            { label: 'Payslips', icon: '🧾', route: '/payroll/manage/payslips' },
+            { label: 'Reports', icon: '📊', route: '/payroll/manage/reports' }
+          ]
+        },
+        {
+          id: 'timetable', label: 'Timetable', icon: '📅',
+          children: [
+            { label: 'Configure', icon: '⚙️', route: '/timetable/manage/config' },
+            { label: 'Subject Periods', icon: '⏱️', route: '/subject-periods' },
+            { label: 'Assign Subjects to Classes', icon: '📚', route: '/assign-subject' },
+            { label: 'Assign Subjects to Teachers', icon: '👨‍🏫', route: '/teacher_subject' },
+            { label: 'Assign Teachers to Classes', icon: '🔗', route: '/assign-teachers' },
+            { label: 'Assign Classes to Teachers', icon: '🎯', route: '/assign-classes' },
+            { label: 'Allocate Class Teachers', icon: '🧑‍🏫', route: '/allocate_class' },
+            { label: 'Class Teachers', icon: '📋', route: '/class-teachers' },
+            { label: 'Generate Timetable', icon: '🗓️', route: '/view' },
+            { label: 'View Timetable', icon: '👁️', route: '/view_timetable' },
+            { label: 'Manual Adjustments', icon: '✏️', route: '/manual' }
+          ]
+        },
+        {
+          id: 'communication', label: 'Communication', icon: '💬',
+          children: [
+            { label: 'Send Message', icon: '📤', route: '/communication_manage/send' },
+            { label: 'View Messages', icon: '📥', route: '/communication_manage/view' },
+            { label: 'Bulk Message', icon: '📧', action: 'bulkMessage' }
+          ]
+        },
+        {
+          id: 'reports', label: 'Misc Reports', icon: '📈',
+          children: [
+            { label: 'Transport Services', icon: '🚌', route: '/reports/manage/transport-services' },
+            { label: 'Student ID Cards', icon: '🪪', route: '/reports/manage/student-id-cards' },
+            { label: 'DH Services', icon: '🛏️', route: '/reports/dh-services' }
+          ]
+        },
+        { id: 'elearning', label: 'E-Learning', icon: '💻', route: '/elearning' }
+      );
+
+      if (this.isInventoryStaff()) {
+        items.push({
+          id: 'inventory', label: 'Inventory', icon: '📦',
+          children: [
+            { label: 'Stock', icon: '📚', route: '/inventory/manage', queryParams: { tab: 'stock' } },
+            { label: 'Textbook Allocation', icon: '📘', route: '/inventory/manage', queryParams: { tab: 'custody' } },
+            { label: 'Furniture Allocation', icon: '🪑', route: '/inventory/manage', queryParams: { tab: 'furnitureAllocation' } },
+            { label: 'Report Furniture', icon: '🛋️', route: '/inventory/manage', queryParams: { tab: 'reportsFurniture' } },
+            { label: 'Report Textbook', icon: '📕', route: '/inventory/manage', queryParams: { tab: 'reportsTextbooksHod' } },
+            { label: 'Audit', icon: '📋', route: '/inventory/manage', queryParams: { tab: 'audit' } }
+          ]
+        });
+      }
+
+      items.push(
+        {
+          id: 'system-administration', label: 'System Administration', icon: '🛠️',
+          children: [
+            { label: 'User Management', icon: '👥', route: '/user-management' },
+            { label: 'Departments', icon: '🏢', route: '/departments' },
+            { label: 'Role & Permissions', icon: '🔐', route: '/roles-permissions' },
+            { label: 'Academic Settings', icon: '🎓', route: '/academic-settings' },
+            { label: 'System Settings', icon: '⚙️', route: '/system-settings' },
+            { label: 'Audit Logs', icon: '📜', route: '/audit-logs' },
+            { label: 'Analytics & Reports', icon: '📊', route: '/analytics-reports' },
+            { label: 'Integrations', icon: '🔗', route: '/integrations' }
+          ]
+        }
+      );
+    } else if (this.isAccountant()) {
+      items.push(
+        {
+          id: 'registration', label: 'Students', icon: '👥',
+          children: [
+            { label: 'All Students', icon: '📋', route: '/students' }
+          ]
+        },
+        {
+          id: 'finance', label: 'Finance', icon: '💰',
+          children: [
+            { label: 'Fees', icon: '🏷️', route: '/finance' },
+            { label: 'Receipting', icon: '🧾', route: '/record-payment' },
+            { label: 'Billing', icon: '💳', route: '/billing' },
+            { label: 'Invoices', icon: '📋', route: '/invoices/statements' },
+            { label: 'Exemptions', icon: '🪪', route: '/exemptions' },
+            { label: 'Student Balances', icon: '💼', route: '/balance-enquiry' }
+          ]
+        },
+        {
+          id: 'financial-reports', label: 'Financial Reports', icon: '📊',
+          children: [
+            { label: 'Student Ledgers', icon: '📒', route: '/student-ledgers' },
+            { label: 'Fees Collection', icon: '💵', route: '/fees-collection' },
+            { label: 'Outstanding Fees', icon: '💲', route: '/outstanding-fees' },
+            { label: 'Exemptions', icon: '🪪', route: '/exemptions-report' },
+            { label: 'Aged Debtors', icon: '⏳', route: '/aged-debtors' },
+            { label: 'Enrolment vs Billing', icon: '📈', route: '/enrolment-vs-billing' },
+            { label: 'Revenue Recognition', icon: '💹', route: '/revenue-recognition' },
+            { label: 'Student Reconciliation', icon: '⚖️', route: '/student-reconciliation' },
+            { label: 'Analytics & Forecasts', icon: '🔮', route: '/analytics-forecasts' },
+            { label: 'Class Reconciliation', icon: '🏫', route: '/class-reconciliation' }
+          ]
+        },
+        {
+          id: 'payroll', label: 'Payroll', icon: '🧮',
+          children: [
+            { label: 'Overview', icon: '🗂️', route: '/payroll/manage/overview' },
+            { label: 'Payslips', icon: '🧾', route: '/payroll/manage/payslips' },
+            { label: 'Reports', icon: '📊', route: '/payroll/manage/reports' }
+          ]
+        }
+      );
+    } else if (this.isParent()) {
+      items.push(
+        { id: 'parent-dash', label: 'My Dashboard', icon: '🏠', route: '/parent/dashboard' },
+        { id: 'parent-invoices', label: 'Invoices', icon: '💰', route: '/parent/invoices' },
+        { id: 'parent-reports', label: 'Report Cards', icon: '📊', route: '/parent/reports' },
+        { id: 'parent-inbox', label: 'Inbox', icon: '✉️', route: '/parent/inbox' },
+        {
+          id: 'parent-comm', label: 'Communications', icon: '💬',
+          children: [
+            { label: 'Inbox', icon: '📥', route: '/parent/communications/view' },
+            { label: 'Compose', icon: '📤', route: '/parent/communications/send' },
+            { label: 'Sent', icon: '📬', route: '/parent/communications/sent' }
+          ]
+        },
+        { id: 'parent-link', label: 'Link Students', icon: '🔗', route: '/parent/link-students' }
+      );
+    } else if (this.isInventoryStaff()) {
+      items.push({
+        id: 'inventory', label: 'Inventory', icon: '📦',
+        children: [
+          { label: 'Stock', icon: '📚', route: '/inventory/manage', queryParams: { tab: 'stock' } },
+          { label: 'Textbook Allocation', icon: '📘', route: '/inventory/manage', queryParams: { tab: 'custody' } },
+          { label: 'Furniture Allocation', icon: '🪑', route: '/inventory/manage', queryParams: { tab: 'furnitureAllocation' } },
+          { label: 'Report Furniture', icon: '🛋️', route: '/inventory/manage', queryParams: { tab: 'reportsFurniture' } },
+          { label: 'Report Textbook', icon: '📕', route: '/inventory/manage', queryParams: { tab: 'reportsTextbooksHod' } },
+          { label: 'Audit', icon: '📋', route: '/inventory/manage', queryParams: { tab: 'audit' } }
+        ]
+      });
+    }
+
+    this.navItems = items;
+  }
+
+  // ── Sidebar interactions ──────────────────────────────────────────────
+  toggleSidebar() {
+    this.sidebarOpen = !this.sidebarOpen;
+  }
+
+  closeSidebar() {
+    this.sidebarOpen = false;
+  }
+
+  toggleSubmenu(id: string) {
+    this.openSubmenu = this.openSubmenu === id ? null : id;
+  }
+
+  isSubmenuOpen(id: string): boolean {
+    return this.openSubmenu === id;
+  }
+
+  /** Handle clicks on submenu items that map to component actions (e.g. bulk message). */
+  runNavAction(action: string | undefined) {
+    if (!action) return;
+    if (action === 'bulkMessage') this.openBulkMessage();
+    if (action === 'addTeacher') this.addTeacherModal.open();
+    this.closeSidebar();
+  }
+
+  openAddTeacherModal(): void {
+    this.addTeacherModal.open();
+  }
+
   ngOnDestroy() {
     if (this.headlineRotateInterval) {
       clearInterval(this.headlineRotateInterval);
+    }
+    if (this.clockHandle) {
+      clearInterval(this.clockHandle);
+    }
+    if (this.autoRefreshHandle) {
+      clearInterval(this.autoRefreshHandle);
+    }
+    if (this.countdownHandle) {
+      clearInterval(this.countdownHandle);
+    }
+    Object.values(this.countUpHandles).forEach((h: any) => h && clearInterval(h));
+    // Remove any global dark mode class so other components are unaffected on leave
+    try { document.body.classList.remove('db-dark-body'); } catch { /* ignore */ }
+  }
+
+  // ── Global keyboard shortcuts ─────────────────────────────────────────
+  @HostListener('document:keydown', ['$event'])
+  handleKeydown(ev: KeyboardEvent) {
+    const isCmdK = (ev.ctrlKey || ev.metaKey) && (ev.key === 'k' || ev.key === 'K');
+    if (isCmdK) {
+      ev.preventDefault();
+      this.toggleCommandPalette();
+      return;
+    }
+    if (this.commandPaletteOpen) {
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        this.closeCommandPalette();
+      } else if (ev.key === 'ArrowDown') {
+        ev.preventDefault();
+        const list = this.filteredCommandItems();
+        if (list.length) this.commandActiveIndex = (this.commandActiveIndex + 1) % list.length;
+      } else if (ev.key === 'ArrowUp') {
+        ev.preventDefault();
+        const list = this.filteredCommandItems();
+        if (list.length) this.commandActiveIndex = (this.commandActiveIndex - 1 + list.length) % list.length;
+      } else if (ev.key === 'Enter') {
+        ev.preventDefault();
+        const list = this.filteredCommandItems();
+        const item = list[this.commandActiveIndex];
+        if (item) this.runCommand(item);
+      }
     }
   }
   
   loadStatistics() {
     this.loadingStats = true;
+    this.refreshing = true;
     this.statsLoadRemaining = 5;
     const done = () => {
       this.statsLoadRemaining--;
       if (this.statsLoadRemaining <= 0) {
         this.loadingStats = false;
+        this.refreshing = false;
+        this.lastUpdated = new Date();
+        this.animateStats();
+        this.computeInsights();
       }
     };
 
     this.studentService.getStudents().subscribe({
       next: (students: any[]) => {
+        this.allStudents = students || [];
         this.stats.totalStudents = students.length;
         this.stats.dayScholars = students.filter(s => s.studentType === 'Day Scholar').length;
         this.stats.boarders = students.filter(s => s.studentType === 'Boarder').length;
         this.stats.staffChildren = students.filter(s => s.isStaffChild).length;
+        this.stats.maleStudents = students.filter(s => (s.gender || '').toLowerCase() === 'male').length;
+        this.stats.femaleStudents = students.filter(s => (s.gender || '').toLowerCase() === 'female').length;
         this.recentStudents = students
           .sort((a, b) => new Date(b.enrollmentDate || b.createdAt || 0).getTime() - new Date(a.enrollmentDate || a.createdAt || 0).getTime())
           .slice(0, 5);
@@ -128,6 +549,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.teacherService.getTeachers().subscribe({
       next: (teachers: any[]) => {
         this.stats.totalTeachers = teachers.length;
+        this.stats.maleTeachers = teachers.filter((t: any) => (t.gender || '').toLowerCase() === 'male').length;
+        this.stats.femaleTeachers = teachers.filter((t: any) => (t.gender || '').toLowerCase() === 'female').length;
         done();
       },
       error: (err) => {
@@ -164,6 +587,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.financeService.getInvoices().subscribe({
         next: (invoices: any) => {
           const list = Array.isArray(invoices) ? invoices : invoices?.data || [];
+          this.allInvoices = list;
           this.stats.totalInvoices = list.length;
           this.stats.totalBalance = list.reduce((sum: number, inv: any) => sum + (parseFloat(String(inv.balance)) || 0), 0);
           this.stats.totalInvoiced = list.reduce((sum: number, inv: any) => sum + (parseFloat(String(inv.amount)) || 0), 0);
@@ -178,7 +602,61 @@ export class DashboardComponent implements OnInit, OnDestroy {
           done();
         }
       });
+    } else {
+      // Skip the 5th loader when not admin/accountant
+      done();
     }
+  }
+
+  /** Manual refresh button. */
+  refreshNow() {
+    if (this.refreshing) return;
+    if (this.isAdmin() || this.isAccountant()) {
+      this.loadStatistics();
+    }
+    this.resetAutoRefreshCountdown();
+  }
+
+  /** Animate displayed counters from current value to target over ~900ms. */
+  private animateStats() {
+    const targets: any = {
+      totalStudents: this.stats.totalStudents,
+      totalTeachers: this.stats.totalTeachers,
+      totalClasses: this.stats.totalClasses,
+      totalSubjects: this.stats.totalSubjects,
+      totalInvoices: this.stats.totalInvoices,
+      totalBalance: this.stats.totalBalance,
+      staffChildren: this.stats.staffChildren
+    };
+    const durationMs = 900;
+    const steps = 30;
+    const interval = durationMs / steps;
+    Object.keys(targets).forEach((key) => {
+      const start = Number(this.displayStats[key]) || 0;
+      const end = Number(targets[key]) || 0;
+      if (this.countUpHandles[key]) clearInterval(this.countUpHandles[key]);
+      let i = 0;
+      this.countUpHandles[key] = setInterval(() => {
+        i++;
+        const t = i / steps;
+        const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+        this.displayStats[key] = start + (end - start) * eased;
+        if (i >= steps) {
+          this.displayStats[key] = end;
+          clearInterval(this.countUpHandles[key]);
+          this.countUpHandles[key] = null;
+        }
+      }, interval);
+    });
+  }
+
+  /** Format a counter value for display (rounded for ints, fixed for currency). */
+  fmtCount(key: string, currency = false): string {
+    const v = Number(this.displayStats[key]) || 0;
+    if (currency) {
+      return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return Math.round(v).toLocaleString();
   }
 
   getRoleLabel(): string {
@@ -459,6 +937,375 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // For other roles, return email or username
     return user.email || user.username || 'User';
+  }
+
+  // ── Greeting & live clock helpers ─────────────────────────────────────
+  /** Returns time-of-day-aware greeting: morning / afternoon / evening. */
+  getGreeting(): string {
+    const h = this.currentTime.getHours();
+    if (h < 5) return 'Good evening';
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    if (h < 21) return 'Good evening';
+    return 'Good night';
+  }
+
+  getGreetingIcon(): string {
+    const h = this.currentTime.getHours();
+    if (h >= 5 && h < 12) return '☀️';
+    if (h >= 12 && h < 17) return '🌤️';
+    if (h >= 17 && h < 21) return '🌇';
+    return '🌙';
+  }
+
+  /** Pretty-formatted live time (HH:MM:SS). */
+  getLiveTime(): string {
+    return this.currentTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  /** Pretty-formatted live date (weekday, month day). */
+  getLiveDate(): string {
+    return this.currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+
+  /** Relative time string like "2 min ago". */
+  getLastUpdatedLabel(): string {
+    if (!this.lastUpdated) return 'never';
+    const sec = Math.floor((Date.now() - this.lastUpdated.getTime()) / 1000);
+    if (sec < 5) return 'just now';
+    if (sec < 60) return `${sec}s ago`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min} min ago`;
+    const hr = Math.floor(min / 60);
+    return `${hr}h ago`;
+  }
+
+  // ── Auto-refresh ──────────────────────────────────────────────────────
+  toggleAutoRefresh() {
+    this.autoRefresh = !this.autoRefresh;
+    this.persistPreferences();
+    if (this.autoRefresh) {
+      this.startAutoRefresh();
+    } else {
+      this.stopAutoRefresh();
+    }
+  }
+
+  private startAutoRefresh() {
+    this.stopAutoRefresh();
+    this.resetAutoRefreshCountdown();
+    this.autoRefreshHandle = setInterval(() => {
+      if (this.isAdmin() || this.isAccountant()) {
+        this.loadStatistics();
+      }
+      this.resetAutoRefreshCountdown();
+    }, this.autoRefreshTotalSec * 1000);
+    this.countdownHandle = setInterval(() => {
+      if (this.autoRefreshCountdown > 0) this.autoRefreshCountdown--;
+    }, 1000);
+  }
+
+  private stopAutoRefresh() {
+    if (this.autoRefreshHandle) { clearInterval(this.autoRefreshHandle); this.autoRefreshHandle = null; }
+    if (this.countdownHandle) { clearInterval(this.countdownHandle); this.countdownHandle = null; }
+  }
+
+  private resetAutoRefreshCountdown() {
+    this.autoRefreshCountdown = this.autoRefreshTotalSec;
+  }
+
+  // ── Dark mode ─────────────────────────────────────────────────────────
+  toggleDarkMode() {
+    this.darkMode = !this.darkMode;
+    this.applyDarkMode();
+    this.persistPreferences();
+  }
+
+  private applyDarkMode() {
+    try {
+      if (this.darkMode) {
+        document.body.classList.add('db-dark-body');
+      } else {
+        document.body.classList.remove('db-dark-body');
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── Preferences (dark mode, favorites, auto-refresh) ─────────────────
+  private loadPreferences() {
+    try {
+      const raw = localStorage.getItem('db_prefs_v1');
+      if (raw) {
+        const p = JSON.parse(raw);
+        this.darkMode = !!p.darkMode;
+        this.autoRefresh = !!p.autoRefresh;
+        if (Array.isArray(p.favorites)) {
+          this.favoriteModules = new Set(p.favorites);
+        }
+      }
+      this.applyDarkMode();
+      if (this.autoRefresh) this.startAutoRefresh();
+    } catch { /* ignore */ }
+  }
+
+  private persistPreferences() {
+    try {
+      const p = {
+        darkMode: this.darkMode,
+        autoRefresh: this.autoRefresh,
+        favorites: Array.from(this.favoriteModules)
+      };
+      localStorage.setItem('db_prefs_v1', JSON.stringify(p));
+    } catch { /* ignore */ }
+  }
+
+  // ── Module favorites ──────────────────────────────────────────────────
+  isFavorite(routerLink: string): boolean {
+    return this.favoriteModules.has(routerLink);
+  }
+
+  toggleFavorite(routerLink: string, ev?: Event) {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    if (this.favoriteModules.has(routerLink)) {
+      this.favoriteModules.delete(routerLink);
+    } else {
+      this.favoriteModules.add(routerLink);
+    }
+    this.persistPreferences();
+  }
+
+  // ── Student distribution donut chart helpers ──────────────────────────
+  /** SVG circumference for r=40 donut: 2 * PI * r ≈ 251.327. */
+  readonly DONUT_C = 251.327;
+
+  getDonutSegment(value: number): { dasharray: string; dashoffset: number; pct: number } {
+    const total = this.stats.totalStudents || 0;
+    const pct = total > 0 ? (value / total) : 0;
+    const filled = this.DONUT_C * pct;
+    const empty = this.DONUT_C - filled;
+    return { dasharray: `${filled} ${empty}`, dashoffset: 0, pct: Math.round(pct * 100) };
+  }
+
+  /** Pre-computed offsets so donut segments don't overlap. */
+  getDonutOffset(index: 0 | 1 | 2): number {
+    const total = this.stats.totalStudents || 0;
+    if (!total) return 0;
+    if (index === 0) return 0;
+    if (index === 1) return -(this.DONUT_C * (this.stats.dayScholars / total));
+    return -(this.DONUT_C * ((this.stats.dayScholars + this.stats.boarders) / total));
+  }
+
+  // ── Smart insights ────────────────────────────────────────────────────
+  private computeInsights() {
+    const out: Insight[] = [];
+
+    // Overdue invoices
+    const today = new Date();
+    const overdue = (this.allInvoices || []).filter((inv: any) => {
+      const bal = parseFloat(String(inv.balance)) || 0;
+      const due = inv.dueDate ? new Date(inv.dueDate) : null;
+      return bal > 0 && due && due < today;
+    });
+    if (overdue.length > 0) {
+      out.push({
+        id: 'overdue',
+        icon: '⏰',
+        title: `${overdue.length} overdue invoice${overdue.length === 1 ? '' : 's'}`,
+        detail: `${this.currencySymbol} ${overdue.reduce((s: number, i: any) => s + (parseFloat(String(i.balance)) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} outstanding past due date.`,
+        severity: 'danger',
+        route: '/billing',
+        cta: 'Open billing'
+      });
+    }
+
+    // New enrolments this week
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const newThisWeek = (this.allStudents || []).filter((s: any) => {
+      const d = s.enrollmentDate || s.createdAt;
+      return d && new Date(d) >= weekAgo;
+    });
+    if (newThisWeek.length > 0) {
+      out.push({
+        id: 'enrol',
+        icon: '🎉',
+        title: `${newThisWeek.length} new student${newThisWeek.length === 1 ? '' : 's'} this week`,
+        detail: 'Enrolments recorded in the past 7 days.',
+        severity: 'success',
+        route: '/students',
+        cta: 'View students'
+      });
+    }
+
+    // Collection rate alert
+    if (this.stats.totalInvoiced > 0) {
+      const rate = this.collectionRatePercent;
+      if (rate < 50) {
+        out.push({
+          id: 'rate-low',
+          icon: '📉',
+          title: `Collection rate is ${rate}%`,
+          detail: 'Below the 50% healthy threshold — consider following up.',
+          severity: 'warning',
+          route: '/billing',
+          cta: 'Review balances'
+        });
+      } else if (rate >= 90) {
+        out.push({
+          id: 'rate-high',
+          icon: '🏆',
+          title: `Collection rate is ${rate}%`,
+          detail: 'Excellent! Most invoices have been paid.',
+          severity: 'success'
+        });
+      }
+    }
+
+    // Class size pressure
+    if (this.stats.totalClasses > 0 && this.stats.totalStudents > 0) {
+      const avg = Math.round(this.stats.totalStudents / this.stats.totalClasses);
+      if (avg >= 40) {
+        out.push({
+          id: 'class-size',
+          icon: '🏫',
+          title: `Avg ${avg} students / class`,
+          detail: 'Class density is high — consider adding sections.',
+          severity: 'warning',
+          route: '/classes/manage',
+          cta: 'Manage classes'
+        });
+      } else {
+        out.push({
+          id: 'class-size-ok',
+          icon: '📈',
+          title: `Avg ${avg} students / class`,
+          detail: 'Healthy class size across the school.',
+          severity: 'info'
+        });
+      }
+    }
+
+    // Staff coverage
+    if (this.stats.totalTeachers > 0 && this.stats.totalStudents > 0) {
+      const ratio = Math.round(this.stats.totalStudents / this.stats.totalTeachers);
+      out.push({
+        id: 'student-teacher',
+        icon: '👨‍🏫',
+        title: `1 teacher per ${ratio} students`,
+        detail: ratio > 25 ? 'Ratio is on the high side — consider hiring.' : 'Solid student-teacher ratio.',
+        severity: ratio > 25 ? 'warning' : 'info'
+      });
+    }
+
+    this.insights = out;
+  }
+
+  // ── Command palette (Ctrl+K) ──────────────────────────────────────────
+  toggleCommandPalette() {
+    if (this.commandPaletteOpen) {
+      this.closeCommandPalette();
+    } else {
+      this.openCommandPalette();
+    }
+  }
+
+  openCommandPalette() {
+    this.commandPaletteOpen = true;
+    this.commandQuery = '';
+    this.commandActiveIndex = 0;
+    setTimeout(() => {
+      const input = document.getElementById('db-cmd-input');
+      if (input) (input as HTMLInputElement).focus();
+    }, 50);
+  }
+
+  closeCommandPalette() {
+    this.commandPaletteOpen = false;
+    this.commandQuery = '';
+    this.commandActiveIndex = 0;
+  }
+
+  onCommandQueryChange() {
+    this.commandActiveIndex = 0;
+  }
+
+  /** Master list of commands. Filtered against the search query. */
+  private getAllCommandItems(): CommandItem[] {
+    const items: CommandItem[] = [];
+
+    if (this.isAdmin()) {
+      items.push(
+        { label: 'Students', icon: '👥', route: '/students', group: 'Modules', keywords: 'pupil learner' },
+        { label: 'Add Student', icon: '➕', route: '/students/manage/add-new', group: 'Actions' },
+        { label: 'Teachers', icon: '👨‍🏫', route: '/teachers/manage', group: 'Modules' },
+        { label: 'Add Teacher', icon: '➕', action: () => this.addTeacherModal.open(), group: 'Actions' },
+        { label: 'Classes', icon: '🏫', route: '/classes/manage', group: 'Modules' },
+        { label: 'Add Class', icon: '➕', route: '/classes/manage/add-new', group: 'Actions' },
+        { label: 'Subjects', icon: '📚', route: '/subjects/new', group: 'Actions' },
+        { label: 'Mark Register', icon: '✅', route: '/mark-register', group: 'Actions', keywords: 'attendance' },
+        { label: 'Attendance Reports', icon: '📋', route: '/attendance-reports', group: 'Reports' },
+        { label: 'Reports Hub', icon: '📊', route: '/reports/manage', group: 'Reports' },
+        { label: 'Timetable', icon: '📅', route: '/timetable/manage', group: 'Modules' },
+        { label: 'E-learning', icon: '💻', route: '/elearning', group: 'Modules' },
+        { label: 'Messages', icon: '💬', route: '/communication_manage', group: 'Modules' },
+        { label: 'Bulk Message', icon: '📧', action: () => this.openBulkMessage(), group: 'Actions' },
+        { label: 'Settings', icon: '⚙️', route: '/settings', group: 'Modules' },
+        { label: 'Academic Settings', icon: '🎓', route: '/academic-settings', group: 'Modules' },
+        { label: 'Manage Accounts', icon: '👤', route: '/admin/manage-accounts', group: 'Admin' },
+        { label: 'Parent Management', icon: '👨‍👩‍👧', route: '/admin/parent-management', group: 'Admin' },
+        { label: 'Class Promotion', icon: '⬆️', route: '/admin/class-promotion', group: 'Admin' }
+      );
+    }
+    if (this.isAdmin() || this.isAccountant()) {
+      items.push(
+        { label: 'Billing', icon: '💳', route: '/billing', group: 'Finance' },
+        { label: 'New Invoice', icon: '📝', route: '/invoices/new', group: 'Finance' },
+        { label: 'Statements', icon: '📋', route: '/invoices/statements', group: 'Finance' }
+      );
+    }
+    if (this.isInventoryStaff()) {
+      items.push({ label: 'Inventory Manager', icon: '📦', route: '/inventory/manage', group: 'Modules' });
+    }
+
+    // Utility commands
+    items.push(
+      { label: this.darkMode ? 'Switch to light mode' : 'Switch to dark mode', icon: this.darkMode ? '☀️' : '🌙', action: () => this.toggleDarkMode(), group: 'Preferences' },
+      { label: this.autoRefresh ? 'Disable auto-refresh' : 'Enable auto-refresh', icon: '🔄', action: () => this.toggleAutoRefresh(), group: 'Preferences' },
+      { label: 'Refresh data now', icon: '⟳', action: () => this.refreshNow(), group: 'Preferences' },
+      { label: 'Sign out', icon: '🚪', action: () => this.logout(), group: 'Account' }
+    );
+
+    // Recent students as quick jump targets
+    (this.recentStudents || []).slice(0, 5).forEach((s: any) => {
+      items.push({
+        label: `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Student',
+        icon: '🧑‍🎓',
+        route: `/students/manage/edit/${s.id}`,
+        group: 'Students',
+        keywords: `${s.studentNumber || ''} ${s.class?.name || ''}`
+      });
+    });
+
+    return items;
+  }
+
+  filteredCommandItems(): CommandItem[] {
+    const all = this.getAllCommandItems();
+    const q = (this.commandQuery || '').trim().toLowerCase();
+    if (!q) return all;
+    return all.filter(it => {
+      const hay = `${it.label} ${it.group} ${it.keywords || ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  runCommand(item: CommandItem) {
+    this.closeCommandPalette();
+    if (item.route) {
+      this.router.navigate([item.route]);
+    } else if (item.action) {
+      item.action();
+    }
   }
 
   /**

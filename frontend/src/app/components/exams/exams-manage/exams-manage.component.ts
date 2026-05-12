@@ -15,10 +15,11 @@ export class ExamsManageComponent {
     public moduleAccessService: ModuleAccessService
   ) {}
 
-  /** Active for exam list, new exam, and marks entry. */
+  /** Active for the redesigned Marks Input page (and legacy marks-entry sub-pages). */
   isMarksCapturingSectionActive(): boolean {
     const u = this.router.url.split('?')[0];
     return (
+      u.startsWith('/marks-input') ||
       u.includes('/exams/manage/marks-capturing') ||
       u.includes('/exams/manage/new') ||
       /\/exams\/manage\/[^/]+\/marks$/.test(u)

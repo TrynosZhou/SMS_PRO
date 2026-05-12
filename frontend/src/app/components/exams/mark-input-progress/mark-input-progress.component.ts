@@ -13,12 +13,15 @@ export class MarkInputProgressComponent implements OnInit {
   readonly ALL_CLASSES_VALUE = '__ALL__';
 
   classes: any[] = [];
+  terms: Array<{ label: string; status?: string; termNumber?: number | string; year?: number | string; id?: string }> = [];
   selectedClassId = '';
   selectedTerm = '';
-  selectedExamType: 'mid_term' | 'end_term' = 'mid_term';
+  selectedExamType: 'mid_term' | 'end_term' | '' = '';
 
   progressData: any = null;
   loading = false;
+  loadingTerms = false;
+  loadingClasses = false;
   error = '';
 
   viewMode: 'cards' | 'table' = 'cards';
@@ -32,8 +35,8 @@ export class MarkInputProgressComponent implements OnInit {
   readonly allowedExamTypeValues = ['mid_term', 'end_term'] as const;
 
   examTypes = [
-    { value: 'mid_term', label: 'MidTerm' },
-    { value: 'end_term', label: 'EndOfTerm' }
+    { value: 'mid_term', label: 'Mid Term' },
+    { value: 'end_term', label: 'End of Term' }
   ];
 
   constructor(
@@ -43,14 +46,37 @@ export class MarkInputProgressComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.loadTerms();
     this.loadSettings();
     this.loadClasses();
+  }
+
+  loadTerms() {
+    this.loadingTerms = true;
+    this.settingsService.getTerms().subscribe({
+      next: (data: any) => {
+        const raw: any[] = Array.isArray(data) ? data : data?.terms || [];
+        this.terms = raw.map((t: any) => ({
+          ...t,
+          label: `Term ${t.termNumber} ${t.year}`
+        }));
+        this.loadingTerms = false;
+        if (!this.selectedTerm) {
+          const active = this.terms.find((t: any) => t.status === 'active');
+          if (active) this.selectedTerm = active.label;
+        }
+      },
+      error: () => {
+        this.terms = [];
+        this.loadingTerms = false;
+      }
+    });
   }
 
   loadSettings() {
     this.settingsService.getSettings().subscribe({
       next: (settings: any) => {
-        if (settings) {
+        if (settings && !this.selectedTerm) {
           this.selectedTerm = settings.activeTerm || settings.currentTerm || '';
         }
       },
@@ -59,17 +85,30 @@ export class MarkInputProgressComponent implements OnInit {
   }
 
   loadClasses() {
+    this.loadingClasses = true;
     this.classService.getClasses().subscribe(
       (data: any) => {
         const classesList = Array.isArray(data) ? data : (data?.data || []);
         const activeClasses = classesList.filter((c: any) => c.isActive);
         this.classes = this.classService.sortClasses(activeClasses);
+        this.loadingClasses = false;
       },
       (error: any) => {
         console.error('Error loading classes:', error);
         this.error = 'Failed to load classes';
+        this.loadingClasses = false;
       }
     );
+  }
+
+  get canLoad(): boolean {
+    return !!this.selectedTerm && !!this.selectedExamType && !!this.selectedClassId;
+  }
+
+  getSelectedClassName(): string {
+    if (!this.selectedClassId) return '';
+    if (this.selectedClassId === this.ALL_CLASSES_VALUE) return 'All classes';
+    return this.classes.find((c) => c.id === this.selectedClassId)?.name || '';
   }
 
   formatExamTypeLabel(type: string): string {
@@ -83,8 +122,9 @@ export class MarkInputProgressComponent implements OnInit {
   }
 
   loadProgress() {
-    if (!this.selectedClassId) {
-      this.error = 'Please select a class or All classes';
+    if (!this.canLoad) {
+      this.error = 'Please choose Term, Exam Type, and Class.';
+      setTimeout(() => (this.error = ''), 4000);
       return;
     }
     this.loading = true;
@@ -92,7 +132,7 @@ export class MarkInputProgressComponent implements OnInit {
     this.progressData = null;
 
     const term = this.selectedTerm || undefined;
-    const examType = this.selectedExamType;
+    const examType = (this.selectedExamType || undefined) as 'mid_term' | 'end_term' | undefined;
 
     const req =
       this.selectedClassId === this.ALL_CLASSES_VALUE
@@ -350,14 +390,15 @@ export class MarkInputProgressComponent implements OnInit {
 
   resetFilters() {
     this.selectedClassId = '';
-    this.selectedExamType = 'mid_term';
+    this.selectedExamType = '';
     this.subjectSearch = '';
     this.viewMode = 'cards';
     this.autoLoadProgress = false;
     this.statusFilter = 'all';
     this.sortKey = 'completion';
     this.sortDir = 'desc';
-    this.loadSettings();
+    this.selectedTerm = '';
+    this.loadTerms();
     this.progressData = null;
   }
 

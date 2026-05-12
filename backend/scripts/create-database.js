@@ -2,11 +2,12 @@
  * Script to automatically create the database if it doesn't exist
  * Usage: node scripts/create-database.js
  * 
- * This script connects to PostgreSQL and creates the sms_db database
- * if it doesn't already exist.
+ * This script connects to PostgreSQL and creates the database named DB_NAME
+ * (default sms_db) if it doesn't already exist.
  */
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { Client } = require('pg');
 
 async function createDatabase() {
@@ -20,6 +21,7 @@ async function createDatabase() {
   });
 
   const dbName = process.env.DB_NAME || 'sms_db';
+  const quoteIdent = (name) => `"${String(name).replace(/"/g, '""')}"`;
 
   try {
     console.log('Connecting to PostgreSQL...');
@@ -36,7 +38,7 @@ async function createDatabase() {
       console.log(`Database '${dbName}' already exists.`);
     } else {
       // Create the database
-      await adminClient.query(`CREATE DATABASE ${dbName}`);
+      await adminClient.query(`CREATE DATABASE ${quoteIdent(dbName)}`);
       console.log(`Database '${dbName}' created successfully!`);
     }
 

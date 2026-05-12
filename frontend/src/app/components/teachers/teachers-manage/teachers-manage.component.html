@@ -5,14 +5,14 @@
   </header>
 
   <nav class="sm-tabs" aria-label="Teacher manager sections">
-    <a
-      routerLink="/teachers/manage/add-new"
-      routerLinkActive="active"
-      class="sm-tab"
+    <button
+      type="button"
+      (click)="openAddTeacher()"
+      class="sm-tab sm-tab--btn"
     >
       <span class="sm-tab-ico" aria-hidden="true">📝</span>
       Add New
-    </a>
+    </button>
     <a
       routerLink="/teachers/manage/teachers"
       [class.active]="isTeachersSectionActive()"
@@ -22,7 +22,7 @@
       Teachers
     </a>
     <a
-      routerLink="/teachers/manage/assign-classes"
+      routerLink="/assign-classes"
       routerLinkActive="active"
       class="sm-tab"
     >
@@ -30,7 +30,7 @@
       Assign Classes
     </a>
     <a
-      routerLink="/teachers/manage/teacher_subject"
+      routerLink="/teacher_subject"
       routerLinkActive="active"
       [routerLinkActiveOptions]="{ exact: false }"
       class="sm-tab"

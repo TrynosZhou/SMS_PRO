@@ -65,6 +65,15 @@
   line-height: 1;
 }
 
+.sm-tab--btn {
+  font-family: inherit;
+  cursor: pointer;
+}
+.sm-tab--btn:focus-visible {
+  outline: 2px solid #81c784;
+  outline-offset: 1px;
+}
+
 .sm-outlet {
   background: #fafafa;
   border-radius: 10px;

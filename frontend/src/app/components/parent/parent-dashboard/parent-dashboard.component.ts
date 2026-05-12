@@ -121,7 +121,7 @@ export class ParentDashboardComponent implements OnInit {
       return;
     }
 
-    this.router.navigate(['/report-cards'], {
+    this.router.navigate(['/reports'], {
       queryParams: { studentId: student.id }
     });
   }

@@ -1,0 +1,148 @@
+<div class="mc-page">
+  <div class="mc-shell">
+    <!-- Banner -->
+    <header class="mc-banner">
+      <h1 class="mc-banner-title">
+        <span class="mc-banner-ico" aria-hidden="true">📚</span>
+        Manage Classes
+      </h1>
+      <div class="mc-banner-actions">
+        <button
+          type="button"
+          class="mc-banner-refresh"
+          (click)="refresh()"
+          [disabled]="loading"
+          aria-label="Refresh"
+          title="Refresh">
+          <span class="mc-banner-refresh-ico" aria-hidden="true" [class.spin]="loading">↻</span>
+        </button>
+        <button type="button" class="mc-add-btn" (click)="openAddClass()">
+          <span class="mc-add-ico" aria-hidden="true">+</span>
+          Add Class
+        </button>
+      </div>
+    </header>
+
+    <!-- Alerts -->
+    <div class="mc-alert mc-alert-success" *ngIf="success">
+      <span aria-hidden="true">✓</span>
+      <span>{{ success }}</span>
+    </div>
+    <div class="mc-alert mc-alert-error" *ngIf="error">
+      <span aria-hidden="true">⚠</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="mc-toolbar">
+      <div class="mc-field mc-field-search">
+        <input
+          type="text"
+          class="mc-input"
+          placeholder="Search classes"
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
+          aria-label="Search classes" />
+        <span class="mc-input-ico" aria-hidden="true">🔍</span>
+      </div>
+
+      <div class="mc-field mc-field-select">
+        <label class="mc-select-label">Filter by Form</label>
+        <select
+          class="mc-select"
+          [(ngModel)]="selectedForm"
+          (ngModelChange)="onFormFilterChange()"
+          aria-label="Filter by form">
+          <option value="">All Forms</option>
+          <option *ngFor="let f of formOptions" [value]="f.value">{{ f.label }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="mc-table-card">
+      <table class="mc-table">
+        <thead>
+          <tr>
+            <th class="mc-th-num"><span class="mc-th-ico">≡</span> #</th>
+            <th><span class="mc-th-ico">📕</span> Class Name</th>
+            <th><span class="mc-th-ico">★</span> Form</th>
+            <th><span class="mc-th-ico">👥</span> Students</th>
+            <th><span class="mc-th-ico">⚙</span> Actions</th>
+          </tr>
+        </thead>
+        <tbody *ngIf="!loading && filteredClasses.length > 0">
+          <tr *ngFor="let c of filteredClasses; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td><strong>{{ c.name || '—' }}</strong></td>
+            <td>{{ c.form || c.gradeLevel || c.level || '—' }}</td>
+            <td>
+              <span class="mc-count-pill">{{ countOf(c) }}</span>
+            </td>
+            <td>
+              <div class="mc-row-actions">
+                <button type="button" class="mc-icon-btn" (click)="openEditClass(c)" title="Edit" aria-label="Edit class">
+                  ✏️
+                </button>
+                <button type="button" class="mc-icon-btn mc-icon-btn-danger" (click)="deleteClass(c)" title="Delete" aria-label="Delete class">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Loading -->
+      <div class="mc-empty" *ngIf="loading">
+        <div class="mc-spinner"></div>
+        <p>Loading classes…</p>
+      </div>
+
+      <!-- Empty -->
+      <div class="mc-empty" *ngIf="!loading && filteredClasses.length === 0">
+        <div class="mc-empty-ico" aria-hidden="true">🔎</div>
+        <h3 class="mc-empty-title">No Classes Found</h3>
+        <p class="mc-empty-sub">No classes match your current search criteria.</p>
+        <button type="button" class="mc-add-first-btn" (click)="openAddClass()" *ngIf="classes.length === 0">
+          ➕ Add First Class
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form modal -->
+  <div class="mc-modal-backdrop" *ngIf="showFormModal" (click)="closeFormModal()" role="dialog" aria-modal="true">
+    <div class="mc-modal-panel" (click)="$event.stopPropagation()">
+      <header class="mc-modal-head">
+        <h2 class="mc-modal-title">{{ editingClassId ? 'Edit Class' : 'Add Class' }}</h2>
+        <button type="button" class="mc-modal-close" (click)="closeFormModal()" aria-label="Close">×</button>
+      </header>
+      <div class="mc-modal-body">
+        <div class="mc-form-error" *ngIf="formError">{{ formError }}</div>
+        <label class="mc-form-row">
+          <span class="mc-form-label">Class Name <span class="req">*</span></span>
+          <input type="text" class="mc-form-input" [(ngModel)]="formData.name" placeholder="e.g. Form 1A" />
+        </label>
+        <label class="mc-form-row">
+          <span class="mc-form-label">Form / Grade level</span>
+          <input type="text" class="mc-form-input" [(ngModel)]="formData.form" placeholder="e.g. Form 1" />
+        </label>
+        <label class="mc-form-row">
+          <span class="mc-form-label">Capacity</span>
+          <input type="number" min="1" class="mc-form-input" [(ngModel)]="formData.capacity" placeholder="40" />
+        </label>
+        <label class="mc-form-row mc-form-row-inline">
+          <input type="checkbox" [(ngModel)]="formData.isActive" />
+          <span>Active</span>
+        </label>
+      </div>
+      <footer class="mc-modal-foot">
+        <button type="button" class="mc-btn mc-btn-cancel" (click)="closeFormModal()" [disabled]="saving">Cancel</button>
+        <button type="button" class="mc-btn mc-btn-save" (click)="saveClass()" [disabled]="saving">
+          {{ saving ? 'Saving…' : (editingClassId ? 'Save Changes' : 'Add Class') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+</div>

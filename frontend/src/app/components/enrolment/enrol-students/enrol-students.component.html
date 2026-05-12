@@ -1,0 +1,146 @@
+<div class="es-page">
+  <div class="es-shell">
+    <!-- Banner -->
+    <header class="es-banner">
+      <h1 class="es-banner-title">
+        <span class="es-banner-ico" aria-hidden="true">🎓</span>
+        Enrol Students
+      </h1>
+      <p class="es-banner-sub">Choose a class and term to view or manage enrollments</p>
+    </header>
+
+    <!-- Alerts -->
+    <div class="es-alert es-alert-success" *ngIf="success"><span aria-hidden="true">✓</span><span>{{ success }}</span></div>
+    <div class="es-alert es-alert-error" *ngIf="error"><span aria-hidden="true">⚠</span><span>{{ error }}</span></div>
+
+    <!-- Selector card -->
+    <div class="es-selector">
+      <div class="es-field">
+        <label class="es-field-label">Choose Term<span class="req">*</span></label>
+        <div class="es-field-input-wrap">
+          <select class="es-select" [(ngModel)]="selectedTermId">
+            <option value="" disabled hidden>Choose Term*</option>
+            <option *ngFor="let t of terms" [value]="t.id">{{ termLabel(t) }}</option>
+          </select>
+          <span class="es-field-icon" aria-hidden="true">📅</span>
+        </div>
+        <p class="es-field-hint">Select the academic term</p>
+      </div>
+
+      <div class="es-field">
+        <label class="es-field-label">Choose Class<span class="req">*</span></label>
+        <div class="es-field-input-wrap">
+          <select class="es-select" [(ngModel)]="selectedClassId">
+            <option value="" disabled hidden>Choose Class*</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+          <span class="es-field-icon" aria-hidden="true">📚</span>
+        </div>
+        <p class="es-field-hint">Select the class</p>
+      </div>
+
+      <button
+        type="button"
+        class="es-fetch-btn"
+        (click)="fetchList()"
+        [disabled]="loadingList || !selectedClassId">
+        <span class="es-fetch-ico" aria-hidden="true">≡</span>
+        {{ loadingList ? 'Loading…' : 'Fetch List' }}
+      </button>
+    </div>
+
+    <!-- Currently enrolled -->
+    <section class="es-section" *ngIf="hasFetched">
+      <header class="es-section-head">
+        <h2><span aria-hidden="true">👥</span> Currently enrolled
+          <span class="es-count">{{ enrolledStudents.length }}</span>
+        </h2>
+      </header>
+      <div class="es-section-body">
+        <div class="es-empty" *ngIf="loadingList">
+          <div class="es-spinner"></div>
+          <p>Loading class list…</p>
+        </div>
+
+        <div class="es-empty" *ngIf="!loadingList && enrolledStudents.length === 0">
+          <div class="es-empty-ico" aria-hidden="true">🎓</div>
+          <p class="es-empty-title">No Students Enrolled</p>
+          <p class="es-empty-sub">No students are currently enrolled in this class.</p>
+        </div>
+
+        <table class="es-table" *ngIf="!loadingList && enrolledStudents.length > 0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Student ID</th>
+              <th>Surname</th>
+              <th>Name</th>
+              <th>Gender</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of enrolledStudents; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td><strong>{{ s.studentNumber || '—' }}</strong></td>
+              <td>{{ s.lastName || '—' }}</td>
+              <td>{{ s.firstName || '—' }}</td>
+              <td>{{ s.gender || '—' }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="es-withdraw-btn"
+                  (click)="withdraw(s)"
+                  [disabled]="enrolling[s.id]">
+                  {{ enrolling[s.id] ? 'Working…' : 'Withdraw' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Unenrolled list (visible after Fetch List or always after first interaction) -->
+    <section class="es-section" *ngIf="hasFetched && selectedClassId && unenrolledStudents.length > 0">
+      <header class="es-section-head">
+        <h2><span aria-hidden="true">📝</span> Unenrolled students
+          <span class="es-count">{{ unenrolledStudents.length }}</span>
+        </h2>
+        <p class="es-section-hint">Pick a student to enrol into the selected class.</p>
+      </header>
+      <div class="es-section-body">
+        <table class="es-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Student ID</th>
+              <th>Surname</th>
+              <th>Name</th>
+              <th>Gender</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of unenrolledStudents; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td><strong>{{ s.studentNumber || '—' }}</strong></td>
+              <td>{{ s.lastName || '—' }}</td>
+              <td>{{ s.firstName || '—' }}</td>
+              <td>{{ s.gender || '—' }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="es-enrol-btn"
+                  (click)="enrol(s)"
+                  [disabled]="enrolling[s.id]">
+                  {{ enrolling[s.id] ? 'Working…' : 'Enrol' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>

@@ -33,6 +33,9 @@ export class MarkSheetComponent implements OnInit {
     { value: 'end_term', label: 'End Term' }
   ];
 
+  availableTerms: string[] = [];
+  loadingTerms = false;
+
   markSheetData: any = null;
   filteredMarkSheet: any[] = [];
   loading = false;
@@ -94,7 +97,33 @@ export class MarkSheetComponent implements OnInit {
     }
     
     this.loadActiveTerm();
+    this.loadTerms();
     this.loadSettings();
+  }
+
+  loadTerms() {
+    this.loadingTerms = true;
+    this.settingsService.getTerms().subscribe({
+      next: (data: any) => {
+        const raw: any[] = Array.isArray(data) ? data : data?.terms || [];
+        const labels = raw.map((t: any) => `Term ${t.termNumber} ${t.year}`);
+        this.availableTerms = labels.length > 0 ? labels : this.fallbackTermLabels();
+        this.loadingTerms = false;
+      },
+      error: () => {
+        this.availableTerms = this.fallbackTermLabels();
+        this.loadingTerms = false;
+      }
+    });
+  }
+
+  private fallbackTermLabels(): string[] {
+    const y = new Date().getFullYear();
+    return [`Term 1 ${y}`, `Term 2 ${y}`, `Term 3 ${y}`, `Term 1 ${y + 1}`, `Term 2 ${y + 1}`, `Term 3 ${y + 1}`];
+  }
+
+  get canGenerate(): boolean {
+    return !!this.selectedTerm && !!this.selectedClassId && !!this.selectedExamType;
   }
 
   loadSettings() {

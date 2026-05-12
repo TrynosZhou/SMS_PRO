@@ -1,0 +1,116 @@
+<div class="cl-page">
+  <div class="cl-shell">
+    <!-- Top purple banner -->
+    <header class="cl-banner">
+      <h1 class="cl-banner-title">
+        <span class="cl-banner-ico" aria-hidden="true">📋</span>
+        Class Lists
+      </h1>
+    </header>
+
+    <!-- Alerts -->
+    <div class="cl-alert cl-alert-success" *ngIf="success"><span aria-hidden="true">✓</span><span>{{ success }}</span></div>
+    <div class="cl-alert cl-alert-error" *ngIf="error"><span aria-hidden="true">⚠</span><span>{{ error }}</span></div>
+
+    <!-- Teal selector card -->
+    <section class="cl-selector-card">
+      <header class="cl-selector-head">
+        <h2><span aria-hidden="true">≡</span> Select Class &amp; Term</h2>
+        <p>Choose a class and term to view the student list</p>
+      </header>
+      <div class="cl-selector-body">
+        <div class="cl-field">
+          <label class="cl-field-label">Choose Term<span class="req">*</span></label>
+          <div class="cl-field-wrap">
+            <select class="cl-select" [(ngModel)]="selectedTermId">
+              <option value="" disabled hidden>Choose Term*</option>
+              <option *ngFor="let t of terms" [value]="t.id">{{ termLabel(t) }}</option>
+            </select>
+            <span class="cl-field-icon" aria-hidden="true">📅</span>
+          </div>
+          <p class="cl-field-hint">Select the academic term</p>
+        </div>
+
+        <div class="cl-field">
+          <label class="cl-field-label">Choose Class<span class="req">*</span></label>
+          <div class="cl-field-wrap">
+            <select class="cl-select" [(ngModel)]="selectedClassId">
+              <option value="" disabled hidden>Choose Class*</option>
+              <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+            </select>
+            <span class="cl-field-icon" aria-hidden="true">📚</span>
+          </div>
+          <p class="cl-field-hint">Select the class</p>
+        </div>
+
+        <div class="cl-actions">
+          <button
+            type="button"
+            class="cl-btn cl-btn-fetch"
+            [class.is-enabled]="canSubmit()"
+            (click)="fetchList()"
+            [disabled]="!canSubmit()">
+            <span aria-hidden="true">≡</span>
+            Fetch<br/>List
+          </button>
+          <button
+            type="button"
+            class="cl-btn cl-btn-pdf"
+            [class.is-enabled]="canDownload()"
+            (click)="downloadPdf()"
+            [disabled]="!canDownload()">
+            <span aria-hidden="true">⬇</span>
+            Download<br/>PDF
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Class list -->
+    <section class="cl-list-card" *ngIf="hasFetched">
+      <header class="cl-list-head">
+        <h2><span aria-hidden="true">🎓</span> Class list
+          <span class="cl-list-meta" *ngIf="selectedClassName()">— {{ selectedClassName() }}<span *ngIf="selectedTermName()"> · {{ selectedTermName() }}</span></span>
+        </h2>
+        <span class="cl-list-count">{{ students.length }} students</span>
+      </header>
+      <div class="cl-list-body">
+        <div class="cl-empty" *ngIf="loadingList">
+          <div class="cl-spinner"></div>
+          <p>Loading class list…</p>
+        </div>
+
+        <div class="cl-empty" *ngIf="!loadingList && students.length === 0">
+          <div class="cl-empty-ico" aria-hidden="true">🎓</div>
+          <p class="cl-empty-title">No students found in this class</p>
+          <p class="cl-empty-sub">Once students are enrolled, they will appear here.</p>
+        </div>
+
+        <table class="cl-table" *ngIf="!loadingList && students.length > 0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Student ID</th>
+              <th>Surname</th>
+              <th>Name</th>
+              <th>Gender</th>
+              <th>Type</th>
+              <th>Phone</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of students; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td><strong>{{ s.studentNumber || '—' }}</strong></td>
+              <td>{{ s.lastName || '—' }}</td>
+              <td>{{ s.firstName || '—' }}</td>
+              <td>{{ s.gender || '—' }}</td>
+              <td>{{ s.studentType || 'Day Scholar' }}</td>
+              <td>{{ s.contactNumber || s.phoneNumber || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>

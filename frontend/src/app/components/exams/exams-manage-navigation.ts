@@ -8,11 +8,11 @@ export function isInExamsManageShell(router: Router): boolean {
 export function examsManageNav(router: Router) {
   const m = isInExamsManageShell(router);
   return {
-    marksCapturing: m ? '/exams/manage/marks-capturing' : '/exams',
-    markSheet: m ? '/exams/manage/mark-sheet' : '/mark-sheet',
-    markInputProgress: m ? '/exams/manage/mark-input-progress' : '/exams/mark-input-progress',
-    rankings: m ? '/exams/manage/rankings' : '/rankings',
-    reportCards: m ? '/exams/manage/report-cards' : '/report-cards',
+    marksCapturing: '/marks-input',
+    markSheet: '/mark-sheets',
+    markInputProgress: '/marks-progress',
+    rankings: '/ranking',
+    reportCards: '/reports',
     publishResults: m ? '/exams/manage/publish-results' : '/publish-results',
     newExam: m ? '/exams/manage/new' : '/exams/new',
     marksEntrySegments: (id: string) =>
@@ -20,11 +20,7 @@ export function examsManageNav(router: Router) {
   };
 }
 
-/** Back to Marks Capturing (exam list) — respects manage shell. */
+/** Back to Marks Capturing (the redesigned Marks Input page). */
 export function navigateToExamsList(router: Router): void {
-  if (isInExamsManageShell(router)) {
-    router.navigate(['/exams', 'manage', 'marks-capturing']);
-  } else {
-    router.navigate(['/exams']);
-  }
+  router.navigate(['/marks-input']);
 }

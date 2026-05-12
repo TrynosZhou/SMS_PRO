@@ -1,8 +1,12 @@
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm';
 import { safeCreateForeignKey } from '../utils/migrationHelpers';
 
-/** Run without a single wrapping transaction so duplicate FK errors can be ignored safely. */
-export class CreatePaymentTable1700000000000 implements MigrationInterface {
+/**
+ * Payments table (FKs to invoices / students). Timestamp is after base schema migrations
+ * so `migration:run` on an empty DB still runs after tables exist — fresh DBs should use
+ * `npm run db:bootstrap` (synchronize + migrations) first.
+ */
+export class CreatePaymentTable1776810000000 implements MigrationInterface {
   public transaction = false;
 
   public async up(queryRunner: QueryRunner): Promise<void> {

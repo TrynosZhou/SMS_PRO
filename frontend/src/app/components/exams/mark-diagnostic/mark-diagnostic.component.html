@@ -1,0 +1,462 @@
+<div class="md-page">
+  <!-- ── Banner / KPIs ─────────────────────────────────────────────────── -->
+  <header class="md-banner">
+    <div class="md-banner-text">
+      <p class="md-kicker">Diagnostics</p>
+      <h1 class="md-title">Marks Diagnostic</h1>
+      <p class="md-lead">
+        Drill into how students, classes and subjects are really performing — spot weak
+        assessments, flag at-risk learners, and compare across classes.
+      </p>
+    </div>
+    <div class="md-banner-actions">
+      <button type="button" class="md-btn md-btn--ghost" (click)="refresh()" [disabled]="loading">
+        <span *ngIf="!loading">↻ Refresh</span>
+        <span *ngIf="loading">Loading…</span>
+      </button>
+      <button type="button" class="md-btn md-btn--secondary" (click)="exportCSV()" [disabled]="!filteredMarks.length">
+        ⤓ Export Excel/CSV
+      </button>
+      <button type="button" class="md-btn md-btn--primary" (click)="exportPDF()" [disabled]="!filteredMarks.length">
+        🖨 Export PDF
+      </button>
+    </div>
+  </header>
+
+  <div class="md-kpi-grid">
+    <div class="md-kpi md-kpi--students">
+      <span class="md-kpi-label">Students analysed</span>
+      <span class="md-kpi-value">{{ kpi.studentsAnalysed }}</span>
+    </div>
+    <div class="md-kpi md-kpi--avg">
+      <span class="md-kpi-label">Average score</span>
+      <span class="md-kpi-value">{{ kpi.avgPct }}<small>%</small></span>
+    </div>
+    <div class="md-kpi md-kpi--pass">
+      <span class="md-kpi-label">Pass rate</span>
+      <span class="md-kpi-value">{{ kpi.passRate }}<small>%</small></span>
+      <span class="md-kpi-hint">at ≥ {{ filters.passMark }}%</span>
+    </div>
+    <div class="md-kpi md-kpi--risk">
+      <span class="md-kpi-label">At-risk students</span>
+      <span class="md-kpi-value">{{ kpi.atRiskCount }}</span>
+      <span class="md-kpi-hint">below threshold</span>
+    </div>
+  </div>
+
+  <!-- ── Filters ───────────────────────────────────────────────────────── -->
+  <section class="md-filters">
+    <div class="md-field">
+      <label class="md-label">Academic Year</label>
+      <select class="md-input" [(ngModel)]="filters.year" (ngModelChange)="onFilterChange()">
+        <option value="">All years</option>
+        <option *ngFor="let y of availableYears" [value]="y">{{ y }}</option>
+      </select>
+    </div>
+    <div class="md-field">
+      <label class="md-label">Term</label>
+      <select class="md-input" [(ngModel)]="filters.term" (ngModelChange)="onFilterChange()">
+        <option value="">All terms</option>
+        <option *ngFor="let t of terms" [value]="t.label">{{ t.label }}</option>
+      </select>
+    </div>
+    <div class="md-field">
+      <label class="md-label">Class / Grade</label>
+      <select class="md-input" [(ngModel)]="filters.classId" (ngModelChange)="onFilterChange()">
+        <option value="">All classes</option>
+        <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+      </select>
+    </div>
+    <div class="md-field">
+      <label class="md-label">Subject</label>
+      <select class="md-input" [(ngModel)]="filters.subjectId" (ngModelChange)="onFilterChange()">
+        <option value="">All subjects</option>
+        <option *ngFor="let s of subjects" [value]="s.id">{{ s.name }}</option>
+      </select>
+    </div>
+    <div class="md-field">
+      <label class="md-label">Assessment Type</label>
+      <select class="md-input" [(ngModel)]="filters.examType" (ngModelChange)="onFilterChange()">
+        <option value="">All types</option>
+        <option *ngFor="let t of examTypes" [value]="t.value">{{ t.label }}</option>
+      </select>
+    </div>
+    <div class="md-field md-field--narrow">
+      <label class="md-label">Pass mark</label>
+      <input
+        type="number"
+        class="md-input"
+        min="0"
+        max="100"
+        step="1"
+        [(ngModel)]="filters.passMark"
+        (ngModelChange)="onFilterChange()"
+      />
+    </div>
+  </section>
+
+  <!-- ── Section nav ───────────────────────────────────────────────────── -->
+  <nav class="md-tabs" aria-label="Diagnostic sections">
+    <button type="button" [class.active]="activeSection === 'overview'" (click)="setSection('overview')">
+      <span class="md-tab-ico" aria-hidden="true">📊</span> Overview
+    </button>
+    <button type="button" [class.active]="activeSection === 'student'" (click)="setSection('student')">
+      <span class="md-tab-ico" aria-hidden="true">👤</span> Student Performance
+    </button>
+    <button type="button" [class.active]="activeSection === 'risk'" (click)="setSection('risk')">
+      <span class="md-tab-ico" aria-hidden="true">⚠️</span> At-Risk Students
+    </button>
+    <button type="button" [class.active]="activeSection === 'distribution'" (click)="setSection('distribution')">
+      <span class="md-tab-ico" aria-hidden="true">📈</span> Score Distribution
+    </button>
+    <button type="button" [class.active]="activeSection === 'weakness'" (click)="setSection('weakness')">
+      <span class="md-tab-ico" aria-hidden="true">🔍</span> Subject Weakness
+    </button>
+    <button type="button" [class.active]="activeSection === 'comparative'" (click)="setSection('comparative')">
+      <span class="md-tab-ico" aria-hidden="true">⚖️</span> Comparative
+    </button>
+  </nav>
+
+  <!-- ── Error / loading ───────────────────────────────────────────────── -->
+  <div class="md-alert md-alert--error" *ngIf="error">{{ error }}</div>
+  <div class="md-loading" *ngIf="loading">
+    <span class="md-spinner"></span>
+    <span>Loading marks data…</span>
+  </div>
+
+  <div class="md-empty md-print-hide"
+    *ngIf="!loading && !filteredMarks.length && activeSection !== 'student'">
+    No marks match the current filters. Adjust the filters above or refresh.
+  </div>
+
+  <!-- ── 1. Performance Overview Dashboard ─────────────────────────────── -->
+  <section class="md-section" *ngIf="activeSection === 'overview' && filteredMarks.length">
+    <div class="md-section-head">
+      <h2>Performance overview by subject</h2>
+      <p class="md-section-sub">
+        Aggregated averages, highest/lowest marks and pass rates for the current filter set.
+      </p>
+    </div>
+    <div class="md-table-wrap md-print-block">
+      <table class="md-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th class="md-num">Marks</th>
+            <th class="md-num">Average</th>
+            <th>Trend</th>
+            <th class="md-num">Highest</th>
+            <th class="md-num">Lowest</th>
+            <th class="md-num">Pass rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of subjectOverview">
+            <td><strong>{{ s.subjectName }}</strong></td>
+            <td class="md-num">{{ s.count }}</td>
+            <td class="md-num">{{ s.avg }}%</td>
+            <td>
+              <div class="md-bar">
+                <div class="md-bar-fill"
+                  [style.width]="barWidth(s.avg)"
+                  [class.md-bar-fill--low]="s.avg < filters.passMark"
+                  [class.md-bar-fill--mid]="s.avg >= filters.passMark && s.avg < 70"
+                  [class.md-bar-fill--good]="s.avg >= 70 && s.avg < 90"
+                  [class.md-bar-fill--high]="s.avg >= 90">
+                </div>
+              </div>
+            </td>
+            <td class="md-num">{{ s.high }}%</td>
+            <td class="md-num">{{ s.low }}%</td>
+            <td class="md-num">{{ s.passRate }}%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 2. Student Performance Analysis ───────────────────────────────── -->
+  <section class="md-section" *ngIf="activeSection === 'student'">
+    <div class="md-section-head">
+      <h2>Student performance analysis</h2>
+      <p class="md-section-sub">
+        Pick a student to see marks across subjects and a trend over time.
+      </p>
+    </div>
+
+    <div class="md-student-pick">
+      <label class="md-label">Student</label>
+      <select class="md-input md-input--wide" [(ngModel)]="selectedStudentId" (ngModelChange)="onStudentChange()">
+        <option value="">Select a student…</option>
+        <option *ngFor="let s of studentList" [value]="s.id">{{ s.label }}</option>
+      </select>
+    </div>
+
+    <ng-container *ngIf="studentSummary">
+      <div class="md-student-header">
+        <div>
+          <h3 class="md-student-name">{{ studentSummary.studentName }}</h3>
+          <p class="md-student-class">{{ studentSummary.className }}</p>
+        </div>
+        <div class="md-student-stats">
+          <div class="md-student-stat">
+            <span class="md-stat-label">Overall average</span>
+            <span class="md-stat-value">{{ studentSummary.overallAvg }}%</span>
+          </div>
+          <span [class]="trendBadgeClass(studentSummary.direction)">
+            <ng-container [ngSwitch]="studentSummary.direction">
+              <span *ngSwitchCase="'up'">▲ Improving</span>
+              <span *ngSwitchCase="'down'">▼ Declining</span>
+              <span *ngSwitchDefault>● Stable</span>
+            </ng-container>
+          </span>
+        </div>
+      </div>
+
+      <div class="md-chart-card md-print-block">
+        <div class="md-chart-head">
+          <h4>Performance trend ({{ studentTrend.length }} assessment{{ studentTrend.length === 1 ? '' : 's' }})</h4>
+        </div>
+        <div class="md-chart-wrap">
+          <svg viewBox="0 0 640 200" preserveAspectRatio="none" class="md-trend-svg">
+            <!-- gridlines: 0/50/100 -->
+            <line x1="0" y1="0" x2="640" y2="0" class="md-trend-grid"></line>
+            <line x1="0" y1="90" x2="640" y2="90" class="md-trend-grid md-trend-grid--mid"></line>
+            <line x1="0" y1="180" x2="640" y2="180" class="md-trend-grid"></line>
+            <text x="4" y="12" class="md-trend-y">100</text>
+            <text x="4" y="96" class="md-trend-y">50</text>
+            <text x="4" y="194" class="md-trend-y">0</text>
+
+            <path *ngIf="trendPath()" [attr.d]="trendPath()" class="md-trend-line"></path>
+            <ng-container *ngFor="let pt of trendPoints(); let i = index">
+              <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="5" class="md-trend-dot">
+                <title>{{ pt.label }}</title>
+              </circle>
+            </ng-container>
+          </svg>
+        </div>
+      </div>
+
+      <div class="md-table-wrap md-print-block">
+        <table class="md-table">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th class="md-num">Assessments</th>
+              <th class="md-num">Average %</th>
+              <th>Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of studentSummary.subjects">
+              <td><strong>{{ s.subjectName }}</strong></td>
+              <td class="md-num">{{ s.count }}</td>
+              <td class="md-num">{{ s.avgPct }}%</td>
+              <td>
+                <span [class]="trendBadgeClass(s.trend)">
+                  <ng-container [ngSwitch]="s.trend">
+                    <span *ngSwitchCase="'up'">▲ Improving</span>
+                    <span *ngSwitchCase="'down'">▼ Declining</span>
+                    <span *ngSwitchDefault>● Stable</span>
+                  </ng-container>
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+
+    <div class="md-empty md-print-hide" *ngIf="!studentSummary && selectedStudentId">
+      No marks found for this student within the current filters.
+    </div>
+    <div class="md-empty md-print-hide" *ngIf="!selectedStudentId && studentList.length">
+      Choose a student above to see their performance and trend.
+    </div>
+    <div class="md-empty md-print-hide" *ngIf="!studentList.length && !loading">
+      No students with marks under the current filters.
+    </div>
+  </section>
+
+  <!-- ── 3. At-Risk Student Detection ──────────────────────────────────── -->
+  <section class="md-section" *ngIf="activeSection === 'risk'">
+    <div class="md-section-head">
+      <h2>At-risk students</h2>
+      <p class="md-section-sub">
+        Students whose overall average is below the pass mark
+        (<strong>{{ filters.passMark }}%</strong>) — early candidates for intervention.
+      </p>
+    </div>
+
+    <div class="md-empty" *ngIf="!atRiskStudents.length">
+      Nobody is currently at risk under the active filters. Great news.
+    </div>
+
+    <div class="md-table-wrap md-print-block" *ngIf="atRiskStudents.length">
+      <table class="md-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Class</th>
+            <th class="md-num">Avg %</th>
+            <th class="md-num">Subjects below</th>
+            <th class="md-num">Assessed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let a of atRiskStudents">
+            <td><strong>{{ a.fullName }}</strong></td>
+            <td>{{ a.className }}</td>
+            <td class="md-num">
+              <span class="md-pill md-pill--risk">{{ a.avgPct }}%</span>
+            </td>
+            <td class="md-num">{{ a.belowCount }}</td>
+            <td class="md-num">{{ a.totalCount }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 4. Score Distribution Report ──────────────────────────────────── -->
+  <section class="md-section" *ngIf="activeSection === 'distribution' && filteredMarks.length">
+    <div class="md-section-head">
+      <h2>Score distribution</h2>
+      <p class="md-section-sub">How many marks fall in each performance band.</p>
+    </div>
+
+    <div class="md-dist-grid">
+      <div class="md-dist-bar-card md-print-block">
+        <div class="md-dist-bars">
+          <div class="md-dist-bar" *ngFor="let d of distribution">
+            <div class="md-dist-track">
+              <div class="md-dist-fill" [style.height.%]="d.pct" [style.background]="d.color"></div>
+            </div>
+            <div class="md-dist-label">{{ d.label }}</div>
+            <div class="md-dist-count">{{ d.count }} · {{ d.pct }}%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="md-table-wrap md-print-block">
+        <table class="md-table">
+          <thead>
+            <tr>
+              <th>Range</th>
+              <th class="md-num">Count</th>
+              <th class="md-num">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of distribution">
+              <td>
+                <span class="md-dot" [style.background]="d.color" aria-hidden="true"></span>
+                {{ d.label }}
+              </td>
+              <td class="md-num">{{ d.count }}</td>
+              <td class="md-num">{{ d.pct }}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 5. Subject & Topic Weakness Identification ────────────────────── -->
+  <section class="md-section" *ngIf="activeSection === 'weakness'">
+    <div class="md-section-head">
+      <h2>Weak assessments</h2>
+      <p class="md-section-sub">
+        Assessments where the class average is below
+        <strong>{{ filters.passMark }}%</strong> — likely candidates for re-teaching.
+      </p>
+    </div>
+
+    <div class="md-empty" *ngIf="!weakAssessments.length">
+      No weak assessments under the active filters.
+    </div>
+
+    <div class="md-table-wrap md-print-block" *ngIf="weakAssessments.length">
+      <table class="md-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Term</th>
+            <th>Type</th>
+            <th class="md-num">Class avg</th>
+            <th>Strength</th>
+            <th class="md-num">Marks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let w of weakAssessments">
+            <td><strong>{{ w.subjectName }}</strong></td>
+            <td>{{ w.term }}</td>
+            <td>{{ examTypeLabel(w.type) }}</td>
+            <td class="md-num">{{ w.avgPct }}%</td>
+            <td>
+              <div class="md-bar">
+                <div class="md-bar-fill md-bar-fill--low" [style.width]="barWidth(w.avgPct)"></div>
+              </div>
+            </td>
+            <td class="md-num">{{ w.count }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 6. Comparative Analysis ───────────────────────────────────────── -->
+  <section class="md-section" *ngIf="activeSection === 'comparative'">
+    <div class="md-section-head">
+      <h2>Comparative analysis</h2>
+      <p class="md-section-sub">
+        Compare the same subject across classes for the active filters.
+        <span *ngIf="!filters.subjectId" class="md-hint">
+          (pick a Subject above to enable the comparison)
+        </span>
+      </p>
+    </div>
+
+    <div class="md-empty" *ngIf="!filters.subjectId">
+      Select a Subject filter to compare classes side-by-side.
+    </div>
+
+    <div class="md-empty" *ngIf="filters.subjectId && !comparative.length">
+      Not enough data for that subject under the current filters.
+    </div>
+
+    <div class="md-table-wrap md-print-block" *ngIf="filters.subjectId && comparative.length">
+      <table class="md-table">
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th class="md-num">Marks</th>
+            <th class="md-num">Average %</th>
+            <th>Strength</th>
+            <th class="md-num">Pass rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of comparative">
+            <td><strong>{{ c.className }}</strong></td>
+            <td class="md-num">{{ c.count }}</td>
+            <td class="md-num">{{ c.avgPct }}%</td>
+            <td>
+              <div class="md-bar">
+                <div class="md-bar-fill"
+                  [style.width]="barWidth(c.avgPct)"
+                  [class.md-bar-fill--low]="c.avgPct < filters.passMark"
+                  [class.md-bar-fill--mid]="c.avgPct >= filters.passMark && c.avgPct < 70"
+                  [class.md-bar-fill--good]="c.avgPct >= 70 && c.avgPct < 90"
+                  [class.md-bar-fill--high]="c.avgPct >= 90">
+                </div>
+              </div>
+            </td>
+            <td class="md-num">{{ c.passRate }}%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

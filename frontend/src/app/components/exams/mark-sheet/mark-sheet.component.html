@@ -1,73 +1,155 @@
-<div class="container">
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h1>📊 Generate Mark Sheet</h1>
-      <button type="button" class="btn btn-secondary" (click)="goToExamsList()">
-        ⬅️ Back to Exams
-      </button>
-    </div>
+<div class="ms-page">
+  <div class="ms-frame">
 
-    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
-    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
-    <div class="alert alert-error" *ngIf="pdfError">{{ pdfError }}</div>
-
-    <!-- Selection Form -->
-    <div class="selection-form">
-      <div class="form-row-single">
-        <div class="form-group">
-          <label for="class">Class <span class="required">*</span></label>
-          <select 
-            id="class"
-            [(ngModel)]="selectedClassId" 
-            [ngModelOptions]="{standalone: true}"
-            (change)="onClassChange()"
-            class="form-control">
-            <option value="">Select Class</option>
-            <option *ngFor="let cls of classes" [value]="cls.id">
-              {{ cls.name }}
-            </option>
-          </select>
-          <button 
-            class="btn btn-primary generate-btn" 
-            (click)="generateMarkSheet()" 
-            [disabled]="loading || !selectedClassId || !selectedExamType || !selectedTerm">
-            <span *ngIf="!loading">📊 Generate</span>
-            <span *ngIf="loading">⏳ Generating...</span>
-          </button>
-        </div>
-
-        <div class="form-group">
-          <label for="examType">Exam Type <span class="required">*</span></label>
-          <select 
-            id="examType"
-            [(ngModel)]="selectedExamType" 
-            [ngModelOptions]="{standalone: true}"
-            class="form-control">
-            <option value="">Select Exam Type</option>
-            <option *ngFor="let type of examTypes" [value]="type.value">
-              {{ type.label }}
-            </option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="term">Term</label>
-          <input 
-            type="text" 
-            id="term"
-            [ngModel]="selectedTerm || (loadingTerm ? 'Loading...' : 'Not set')" 
-            [ngModelOptions]="{standalone: true}"
-            readonly
-            [disabled]="loadingTerm"
-            class="form-control term-input">
-          <small class="text-muted">Term is automatically set from system settings</small>
-        </div>
+    <!-- Hero card -->
+    <section class="ms-hero ms-card">
+      <div class="ms-hero-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="9" y1="13" x2="15" y2="13"></line>
+          <line x1="9" y1="17" x2="15" y2="17"></line>
+          <line x1="9" y1="9" x2="11" y2="9"></line>
+        </svg>
       </div>
+      <h1 class="ms-hero-title">Mark Sheets</h1>
+      <p class="ms-hero-sub">Generate and download comprehensive mark sheets for classes</p>
+    </section>
+
+    <!-- Alerts -->
+    <div class="ms-alert ms-alert-success" *ngIf="success">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span>{{ success }}</span>
+    </div>
+    <div class="ms-alert ms-alert-error" *ngIf="error">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="13"></line>
+        <line x1="12" y1="16" x2="12" y2="16.01"></line>
+      </svg>
+      <span>{{ error }}</span>
+    </div>
+    <div class="ms-alert ms-alert-error" *ngIf="pdfError">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="13"></line>
+        <line x1="12" y1="16" x2="12" y2="16.01"></line>
+      </svg>
+      <span>{{ pdfError }}</span>
     </div>
 
-    <!-- Mark Sheet Display -->
-    <div *ngIf="markSheetData" class="mark-sheet-container">
-      <!-- Top Header with Gradient -->
+    <!-- Filter card -->
+    <section class="ms-filter ms-card">
+      <header class="ms-filter-head">
+        <span class="ms-filter-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="7" y1="12" x2="17" y2="12"></line>
+            <line x1="10" y1="18" x2="14" y2="18"></line>
+          </svg>
+        </span>
+        <div class="ms-filter-titles">
+          <h2 class="ms-filter-title">Generate Mark Sheet</h2>
+          <p class="ms-filter-sub">Select term, class, and exam type to generate the mark sheet</p>
+        </div>
+      </header>
+
+      <div class="ms-grid">
+
+        <div class="ms-field" [class.has-value]="!!selectedTerm">
+          <span class="ms-field-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </span>
+          <select id="msTerm" class="ms-input"
+            [(ngModel)]="selectedTerm"
+            [ngModelOptions]="{standalone: true}"
+            [disabled]="loadingTerms">
+            <option value="" disabled hidden></option>
+            <option *ngFor="let t of availableTerms" [value]="t">{{ t }}</option>
+          </select>
+          <label for="msTerm" class="ms-label">Term<span class="ms-req">*</span></label>
+          <span class="ms-caret" aria-hidden="true">▾</span>
+        </div>
+
+        <div class="ms-field" [class.has-value]="!!selectedClassId">
+          <span class="ms-field-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"></path>
+              <path d="M5 17h14"></path>
+            </svg>
+          </span>
+          <select id="msClass" class="ms-input"
+            [(ngModel)]="selectedClassId"
+            [ngModelOptions]="{standalone: true}"
+            (change)="onClassChange()">
+            <option value="" disabled hidden></option>
+            <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+          </select>
+          <label for="msClass" class="ms-label">Class<span class="ms-req">*</span></label>
+          <span class="ms-caret" aria-hidden="true">▾</span>
+        </div>
+
+        <div class="ms-field" [class.has-value]="!!selectedExamType">
+          <span class="ms-field-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="3" width="16" height="18" rx="2"></rect>
+              <path d="M9 9a3 3 0 1 1 4.5 2.6c-.9.5-1.5 1-1.5 2.4"></path>
+              <line x1="12" y1="17" x2="12" y2="17.5"></line>
+            </svg>
+          </span>
+          <select id="msExamType" class="ms-input"
+            [(ngModel)]="selectedExamType"
+            [ngModelOptions]="{standalone: true}">
+            <option value="" disabled hidden></option>
+            <option *ngFor="let type of examTypes" [value]="type.value">{{ type.label }}</option>
+          </select>
+          <label for="msExamType" class="ms-label">Exam Type<span class="ms-req">*</span></label>
+          <span class="ms-caret" aria-hidden="true">▾</span>
+        </div>
+
+      </div>
+
+      <div class="ms-actions">
+        <button type="button"
+          class="ms-btn ms-btn-primary"
+          (click)="generateMarkSheet()"
+          [disabled]="loading || !canGenerate">
+          <ng-container *ngIf="!loading">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span>Generate</span>
+          </ng-container>
+          <ng-container *ngIf="loading">
+            <span class="ms-spin" aria-hidden="true"></span>
+            <span>Generating…</span>
+          </ng-container>
+        </button>
+      </div>
+    </section>
+
+    <!-- Empty state -->
+    <section class="ms-empty ms-card" *ngIf="!markSheetData && !loading">
+      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="9" y1="13" x2="15" y2="13"></line>
+        <line x1="9" y1="17" x2="15" y2="17"></line>
+      </svg>
+      <h3>Ready to generate a mark sheet</h3>
+      <p>Choose <strong>Term</strong>, <strong>Class</strong>, and <strong>Exam Type</strong> above, then press <strong>Generate</strong>.</p>
+    </section>
+
+    <!-- Mark Sheet Display (preserves existing structure) -->
+    <div *ngIf="markSheetData" class="ms-results ms-card mark-sheet-container">
+      <!-- Top Header -->
       <div class="mark-sheet-top-header">
         <div class="header-left">
           <span class="header-icon">📊</span>
@@ -78,30 +160,15 @@
             <span class="student-count-pill">{{ markSheetData.markSheet.length }} students</span>
           </div>
           <div class="header-action-buttons">
-            <button
-              type="button"
-              class="action-btn"
-              (click)="downloadPDF()"
-              [disabled]="!!pdfBusy || loading"
-              title="Download mark sheet as PDF">
+            <button type="button" class="action-btn" (click)="downloadPDF()" [disabled]="!!pdfBusy || loading" title="Download mark sheet as PDF">
               <span *ngIf="pdfBusy !== 'download'">⬇️</span>
               <span *ngIf="pdfBusy === 'download'" class="action-btn-spinner" aria-hidden="true"></span>
             </button>
-            <button
-              type="button"
-              class="action-btn"
-              (click)="printMarkSheet()"
-              [disabled]="!!pdfBusy || loading"
-              title="Open PDF in a new tab — use the viewer Print button (Ctrl+P)">
+            <button type="button" class="action-btn" (click)="printMarkSheet()" [disabled]="!!pdfBusy || loading" title="Open PDF in a new tab">
               <span *ngIf="pdfBusy !== 'print'">🖨️</span>
               <span *ngIf="pdfBusy === 'print'" class="action-btn-spinner" aria-hidden="true"></span>
             </button>
-            <button
-              type="button"
-              class="action-btn"
-              (click)="generateMarkSheet()"
-              [disabled]="loading || !!pdfBusy"
-              title="Refresh data from server">
+            <button type="button" class="action-btn" (click)="generateMarkSheet()" [disabled]="loading || !!pdfBusy" title="Refresh data from server">
               <span>🔄</span>
             </button>
           </div>
@@ -121,18 +188,9 @@
             {{ getSelectedExamTypeLabel() }}, {{ selectedTerm }}. {{ markSheetData.class.name }} Mark Sheet
           </h2>
           <div class="info-pills">
-            <span class="info-pill">
-              <span class="pill-icon">📅</span>
-              Term: {{ selectedTerm }}
-            </span>
-            <span class="info-pill">
-              <span class="pill-icon">📚</span>
-              Class: {{ markSheetData.class.name }}
-            </span>
-            <span class="info-pill">
-              <span class="pill-icon">❓</span>
-              Exam Type: {{ getSelectedExamTypeLabel() }}
-            </span>
+            <span class="info-pill"><span class="pill-icon">📅</span> Term: {{ selectedTerm }}</span>
+            <span class="info-pill"><span class="pill-icon">📚</span> Class: {{ markSheetData.class.name }}</span>
+            <span class="info-pill"><span class="pill-icon">❓</span> Exam Type: {{ getSelectedExamTypeLabel() }}</span>
           </div>
         </div>
       </div>
@@ -198,6 +256,6 @@
         </div>
       </div>
     </div>
+
   </div>
 </div>
-

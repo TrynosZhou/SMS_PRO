@@ -1,172 +1,197 @@
-<div class="container">
-  <div class="report-card-wrapper">
-    <!-- Top banner: match Report Card PDF (no full-width Logo 1 image) -->
-    <div class="rc-pdf-banner" *ngIf="schoolName || schoolLogo">
-      <div class="rc-pdf-banner__text">
-        <div class="rc-pdf-banner__school">{{ schoolName || 'School' }}</div>
-        <div class="rc-pdf-banner__meta" *ngIf="schoolAddress">{{ schoolAddress }}</div>
-        <div class="rc-pdf-banner__meta" *ngIf="schoolEmail">Email: {{ schoolEmail }}</div>
-      </div>
-      <div class="rc-pdf-banner__logo" *ngIf="schoolLogo">
-        <img [src]="schoolLogo" alt="School logo" />
-      </div>
-    </div>
+<div class="rp-page">
+  <div class="rp-frame">
 
-    <!-- Header Section -->
-    <div class="form-header">
-      <div class="header-content">
-        <h1>
-          <span class="icon">📊</span>
-          Report Cards
-        </h1>
-        <p class="subtitle">Generate and view student report cards</p>
+    <!-- Hero card -->
+    <section class="rp-hero rp-card">
+      <div class="rp-hero-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="6" y1="20" x2="6" y2="12"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="18" y1="20" x2="18" y2="8"></line>
+        </svg>
       </div>
-    </div>
+      <h1 class="rp-hero-title">Reports Management</h1>
+      <p class="rp-hero-sub">Generate, view, and manage student academic reports</p>
+    </section>
 
-    <!-- Alert Messages -->
-    <div class="alert alert-success" *ngIf="success" [@fadeInOut]>
-      <span class="alert-icon">✓</span>
+    <!-- Inline alerts -->
+    <div class="rp-alert rp-alert-success" *ngIf="success" [@fadeInOut]>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
       <span>{{ success }}</span>
     </div>
-    <div class="alert alert-error" *ngIf="error" [@fadeInOut] [class.access-denied]="accessDenied">
-      <span class="alert-icon">✕</span>
+    <div class="rp-alert rp-alert-error" *ngIf="error" [@fadeInOut] [class.rp-alert-denied]="accessDenied">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="13"></line>
+        <line x1="12" y1="16" x2="12" y2="16.01"></line>
+      </svg>
       <span>{{ error }}</span>
     </div>
-    
-    <!-- Parent Access Denied Message -->
-    <div *ngIf="isParent && accessDenied && studentBalance !== null && studentBalance > 0" 
-         class="access-denied-card" 
+
+    <!-- Parent Access Denied -->
+    <div *ngIf="isParent && accessDenied && studentBalance !== null && studentBalance > 0"
+         class="rp-card rp-denied"
          [@fadeInOut]>
-      <div class="access-denied-icon">⚠️</div>
+      <div class="rp-denied-icon" aria-hidden="true">⚠️</div>
       <h3>Report Card Access Restricted</h3>
       <p>
-        Report card access is restricted. Please clear the outstanding balance of 
-        <strong>{{ currencySymbol }} {{ studentBalance | number:'1.2-2' }}</strong> 
+        Report card access is restricted. Please clear the outstanding balance of
+        <strong>{{ currencySymbol }} {{ studentBalance | number:'1.2-2' }}</strong>
         to view the report card.
       </p>
     </div>
-    
-    <!-- Selection Form Card -->
-    <div class="card selection-card">
-      <div class="card-header">
-        <h2>
-          <span class="section-icon">🎯</span>
-          Generate Report Cards
-        </h2>
-        <p class="section-description">Select class and exam type to generate report cards</p>
-      </div>
+
+    <!-- Report Parameters card -->
+    <section class="rp-params rp-card">
+      <header class="rp-params-head">
+        <span class="rp-params-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="7" y1="12" x2="17" y2="12"></line>
+            <line x1="10" y1="18" x2="14" y2="18"></line>
+          </svg>
+        </span>
+        <h2 class="rp-params-title">Report Parameters</h2>
+      </header>
 
       <form (ngSubmit)="generateReportCards()">
-        <div class="form-grid">
-          <div class="form-group" *ngIf="!isParent; else parentClassDisplay" [class.has-error]="isFieldInvalid('class')">
-            <label>
-              Class <span class="required">*</span>
-            </label>
-            <select 
-              [(ngModel)]="selectedClass" 
-              name="class" 
-              required
-              [class.invalid]="isFieldInvalid('class')"
-              class="form-control"
-              (change)="onSelectionChange()">
-              <option value="">Select Class</option>
-              <option *ngFor="let class of classes" [value]="class.id">
-                {{ class.name }}
-              </option>
-            </select>
-            <div class="field-error" *ngIf="isFieldInvalid('class')">
-              {{ getFieldError('class') }}
-            </div>
-          </div>
+        <div class="rp-grid">
 
-        <ng-template #parentClassDisplay>
-          <div class="form-group">
-            <label>
-              Class
-            </label>
-            <div class="form-control readonly">
-              {{ parentStudentClassName || 'Class information unavailable' }}
-            </div>
-            <div class="field-helper">
-              Class is automatically selected based on the linked student.
-            </div>
-          </div>
-        </ng-template>
-
-          <div class="form-group" [class.has-error]="isFieldInvalid('term')">
-            <label>
-              Term <span class="required">*</span>
-            </label>
-            <select 
+          <!-- Choose Term -->
+          <div class="rp-field" [class.has-value]="!!selectedTerm" [class.is-invalid]="!loadingTerms && isFieldInvalid('term')">
+            <select id="rpTerm"
+              class="rp-input"
               [(ngModel)]="selectedTerm"
               name="term"
               required
               [disabled]="loadingTerms"
-              [class.invalid]="isFieldInvalid('term')"
-              class="form-control"
               (change)="onSelectionChange()">
-              <option value="">{{ loadingTerms ? 'Loading terms...' : 'Select Term' }}</option>
-              <option *ngFor="let term of availableTerms" [value]="term">
-                {{ term }}
-              </option>
+              <option value="" disabled hidden></option>
+              <option *ngFor="let term of availableTerms" [value]="term">{{ term }}</option>
             </select>
-            <small style="color: #666; font-style: italic; display: block; margin-top: 5px;">
-              {{ loadingTerms ? 'Loading term from settings...' : (selectedTerm ? 'Current term is automatically selected from system settings' : 'Please configure active term in settings') }}
-            </small>
-            <div class="field-error" *ngIf="loadingTerms">
-              Loading term options...
-            </div>
-            <div class="field-error" *ngIf="!loadingTerms && isFieldInvalid('term')">
-              {{ getFieldError('term') || 'Term is required' }}
-            </div>
+            <label for="rpTerm" class="rp-label">Choose Term<span class="rp-req">*</span></label>
+            <span class="rp-caret" aria-hidden="true">▾</span>
           </div>
 
-          <div class="form-group" [class.has-error]="isFieldInvalid('examType')">
-            <label>
-              Exam Type <span class="required">*</span>
-            </label>
-            <select 
-              [(ngModel)]="selectedExamType" 
-              name="examType" 
+          <!-- Choose Class -->
+          <div class="rp-field" *ngIf="!isParent; else parentClassFieldTpl"
+            [class.has-value]="!!selectedClass"
+            [class.is-invalid]="isFieldInvalid('class')">
+            <select id="rpClass"
+              class="rp-input"
+              [(ngModel)]="selectedClass"
+              name="class"
               required
-              [class.invalid]="isFieldInvalid('examType')"
-              class="form-control"
               (change)="onSelectionChange()">
-              <option value="">Select Exam Type</option>
-              <option *ngFor="let type of examTypes" [value]="type.value">
-                {{ type.label }}
-              </option>
+              <option value="" disabled hidden></option>
+              <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
             </select>
-            <div class="field-error" *ngIf="isFieldInvalid('examType')">
-              {{ getFieldError('examType') }}
+            <label for="rpClass" class="rp-label">Choose Class<span class="rp-req">*</span></label>
+            <span class="rp-caret" aria-hidden="true">▾</span>
+          </div>
+          <ng-template #parentClassFieldTpl>
+            <div class="rp-field has-value rp-field-readonly">
+              <div class="rp-readonly-value">{{ parentStudentClassName || 'Class information unavailable' }}</div>
+              <span class="rp-label">Class (auto)</span>
+              <span class="rp-lock" aria-hidden="true">🔒</span>
             </div>
+          </ng-template>
+
+          <!-- Exam Type -->
+          <div class="rp-field" [class.has-value]="!!selectedExamType" [class.is-invalid]="isFieldInvalid('examType')">
+            <select id="rpExamType"
+              class="rp-input"
+              [(ngModel)]="selectedExamType"
+              name="examType"
+              required
+              (change)="onSelectionChange()">
+              <option value="" disabled hidden></option>
+              <option *ngFor="let type of examTypes" [value]="type.value">{{ type.label }}</option>
+            </select>
+            <label for="rpExamType" class="rp-label">Exam Type<span class="rp-req">*</span></label>
+            <span class="rp-caret" aria-hidden="true">▾</span>
           </div>
 
         </div>
 
-        <div class="form-actions-inline">
-          <button 
-            type="submit" 
-            class="btn btn-primary btn-generate" 
+        <div class="rp-actions">
+          <button type="submit"
+            class="rp-btn rp-btn-generate"
             [disabled]="loading || loadingTerms || !isSelectionValid()">
-            <span *ngIf="!loading">
-              📄 Generate Report Cards
-            </span>
-            <span *ngIf="loading" class="loading-content">
-              <span class="spinner-small"></span>
-              Generating...
-            </span>
+            <ng-container *ngIf="!loading">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span>Generate</span>
+            </ng-container>
+            <ng-container *ngIf="loading">
+              <span class="rp-spin" aria-hidden="true"></span>
+              <span>Generating…</span>
+            </ng-container>
           </button>
-          <button 
-            type="button" 
-            class="btn btn-secondary" 
+
+          <button type="button"
+            class="rp-btn rp-btn-save"
+            (click)="downloadAllPDFs()"
+            [disabled]="loading || !hasGeneratedReports">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            <span>Save</span>
+          </button>
+
+          <button type="button"
+            class="rp-btn rp-btn-view"
+            (click)="viewReportCards()"
+            [disabled]="loading">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span>View</span>
+          </button>
+
+          <button type="button"
+            class="rp-btn rp-btn-reset"
             (click)="resetSelection()"
             [disabled]="loading">
-            🔄 Reset
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+            </svg>
+            <span>Reset</span>
           </button>
         </div>
+
+        <div class="rp-helper" *ngIf="loadingTerms">Loading term options…</div>
+        <div class="rp-helper-row" *ngIf="!loadingTerms">
+          <span *ngIf="selectedTerm" class="rp-helper-pill">Term: <strong>{{ selectedTerm }}</strong></span>
+          <span *ngIf="selectedExamType === 'mid_term'" class="rp-helper-pill">Exam: <strong>Mid Term</strong></span>
+          <span *ngIf="selectedExamType === 'end_term'" class="rp-helper-pill">Exam: <strong>End of Term</strong></span>
+          <span *ngIf="hasGeneratedReports" class="rp-helper-pill rp-helper-pill-ok">
+            ✓ {{ filteredReportCards.length }} card{{ filteredReportCards.length === 1 ? '' : 's' }} ready
+          </span>
+        </div>
       </form>
-    </div>
+    </section>
+
+    <!-- Existing content wrapper (preserves all original results markup) -->
+    <div class="container container-inner">
+      <div class="report-card-wrapper">
+        <div class="rc-pdf-banner" *ngIf="(schoolName || schoolLogo) && hasGeneratedReports">
+          <div class="rc-pdf-banner__text">
+            <div class="rc-pdf-banner__school">{{ schoolName || 'School' }}</div>
+            <div class="rc-pdf-banner__meta" *ngIf="schoolAddress">{{ schoolAddress }}</div>
+            <div class="rc-pdf-banner__meta" *ngIf="schoolEmail">Email: {{ schoolEmail }}</div>
+          </div>
+          <div class="rc-pdf-banner__logo" *ngIf="schoolLogo">
+            <img [src]="schoolLogo" alt="School logo" />
+          </div>
+        </div>
 
     <!-- Report Cards Section -->
     <div *ngIf="reportCards.length > 0" class="report-cards-section">
@@ -539,11 +564,18 @@
       </div>
     </div>
 
-    <!-- Empty State -->
-    <div *ngIf="!loading && reportCards.length === 0 && !error" class="empty-state-card info">
-      <span class="empty-icon">📊</span>
-      <h3>Ready to Generate Report Cards</h3>
-      <p>Select a class and exam type above, then click "Generate Report Cards" to view student report cards.</p>
+        <!-- Empty State -->
+        <div *ngIf="!loading && reportCards.length === 0 && !error" class="rp-empty rp-card">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="6" y1="20" x2="6" y2="12"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="18" y1="20" x2="18" y2="8"></line>
+          </svg>
+          <h3>Ready to generate report cards</h3>
+          <p>Choose a <strong>Term</strong>, <strong>Class</strong> and <strong>Exam Type</strong> above, then click <strong>Generate</strong>.</p>
+        </div>
+      </div>
     </div>
+
   </div>
 </div>

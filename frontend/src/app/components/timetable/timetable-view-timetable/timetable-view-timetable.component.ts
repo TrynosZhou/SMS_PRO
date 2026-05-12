@@ -19,7 +19,7 @@ import JSZip from 'jszip';
 
 /**
  * Dedicated admin page: print-style preview by teacher, by class, or teacher summary (no generation UI).
- * Route: /timetable/manage/view_timetable
+ * Route: /view_timetable
  */
 @Component({
   selector: 'app-timetable-view-timetable',

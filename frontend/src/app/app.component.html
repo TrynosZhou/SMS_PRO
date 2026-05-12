@@ -8,10 +8,15 @@
   </div>
 </div>
 
-<!-- Top Navigation Bar -->
-<nav class="top-navbar" *ngIf="isAuthenticated()">
+<!-- Top Navigation Bar (hidden on /dashboard — dashboard renders its own top bar) -->
+<nav class="top-navbar" *ngIf="isAuthenticated() && !isDashboardRoute() && !isParent()">
   <div class="top-navbar-content">
-    <button class="sidebar-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
+    <button
+      class="sidebar-toggle"
+      (click)="toggleSidebar()"
+      aria-label="Toggle sidebar"
+      *ngIf="navItems.length > 0"
+    >
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="3" y1="12" x2="21" y2="12"></line>
         <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -25,254 +30,103 @@
   </div>
 </nav>
 
-<!-- Dim background when staff/student mobile nav is open -->
+<!-- Modern Left Sidebar (mirrors the dashboard sidebar, shown on every non-dashboard route) -->
+<aside
+  class="db-sidebar"
+  *ngIf="isAuthenticated() && !isDashboardRoute() && !isParent() && navItems.length > 0"
+  [class.db-sidebar--open]="sidebarOpen"
+  (click)="$event.stopPropagation()"
+>
+  <nav class="db-nav">
+    <ng-container *ngFor="let item of navItems">
+      <!-- Direct link (no submenu) -->
+      <a
+        *ngIf="item.route && !item.children"
+        [routerLink]="item.route"
+        routerLinkActive="db-nav-item--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="db-nav-item"
+        (click)="closeSidebar()"
+      >
+        <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
+        <span class="db-nav-label">{{ item.label }}</span>
+      </a>
+
+      <!-- Group with submenu -->
+      <div
+        *ngIf="item.children && item.children.length > 0"
+        class="db-nav-group"
+        [class.db-nav-group--open]="isSubmenuOpen(item.id)"
+      >
+        <button
+          type="button"
+          class="db-nav-item db-nav-item--group"
+          (click)="toggleSubmenu(item.id)"
+          [attr.aria-expanded]="isSubmenuOpen(item.id)"
+        >
+          <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="db-nav-label">{{ item.label }}</span>
+          <span class="db-nav-chev" aria-hidden="true">›</span>
+        </button>
+        <ul class="db-nav-sub" *ngIf="isSubmenuOpen(item.id)">
+          <li *ngFor="let child of item.children">
+            <a
+              *ngIf="child.route"
+              [routerLink]="child.route"
+              [queryParams]="child.queryParams || null"
+              routerLinkActive="db-nav-sub-item--active"
+              [routerLinkActiveOptions]="{ exact: !!child.queryParams }"
+              class="db-nav-sub-item"
+              (click)="closeSidebar()"
+            >
+              <span class="db-nav-sub-ico" aria-hidden="true">{{ child.icon || '•' }}</span>
+              <span class="db-nav-sub-label">{{ child.label }}</span>
+            </a>
+            <button
+              *ngIf="!child.route && child.action"
+              type="button"
+              class="db-nav-sub-item db-nav-sub-item--btn"
+              (click)="runNavAction(child.action)"
+            >
+              <span class="db-nav-sub-ico" aria-hidden="true">{{ child.icon || '•' }}</span>
+              <span class="db-nav-sub-label">{{ child.label }}</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </ng-container>
+
+    <div class="db-nav-divider"></div>
+    <button type="button" class="db-nav-item db-nav-item--logout" (click)="logout()">
+      <span class="db-nav-ico" aria-hidden="true">🚪</span>
+      <span class="db-nav-label">Sign Out</span>
+    </button>
+  </nav>
+</aside>
+
+<!-- Backdrop for the mobile drawer (only visible when the sidebar is toggled open on small screens) -->
 <div
-  class="sidebar-backdrop"
-  *ngIf="isAuthenticated() && !isParent() && mobileDrawerOpen"
-  (click)="closeMobileDrawer()"
+  class="db-sidebar-backdrop"
+  *ngIf="isAuthenticated() && !isDashboardRoute() && !isParent() && sidebarOpen"
+  (click)="closeSidebar()"
   aria-hidden="true"
 ></div>
 
-<!-- Collapsible Sidebar -->
-<aside
-  class="sidebar"
-  [class.collapsed]="sidebarCollapsed"
-  [class.mobile-open]="mobileDrawerOpen"
-  *ngIf="isAuthenticated() && !isParent()"
->
-  <div class="sidebar-content">
-    <nav class="sidebar-nav">
-      <!-- Dashboard -->
-      <a routerLink="/teacher/dashboard" routerLinkActive="active" class="sidebar-item" *ngIf="isTeacher()">
-        <span class="sidebar-icon">🏠</span>
-        <span class="sidebar-text">Dashboard</span>
-      </a>
-      <a routerLink="/dashboard" routerLinkActive="active" class="sidebar-item" *ngIf="!isStudent() && !isTeacher()">
-        <span class="sidebar-icon">🏠</span>
-        <span class="sidebar-text">Dashboard</span>
-      </a>
-      <a routerLink="/student/dashboard" routerLinkActive="active" class="sidebar-item" *ngIf="isStudent()">
-        <span class="sidebar-icon">🏠</span>
-        <span class="sidebar-text">Dashboard</span>
-      </a>
-      <a
-        routerLink="/student/elearning"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="sidebar-item"
-        *ngIf="isStudent()"
-      >
-        <span class="sidebar-icon">💻</span>
-        <span class="sidebar-text">E-learning Services</span>
-      </a>
-      <a routerLink="/student/report-card" routerLinkActive="active" class="sidebar-item" *ngIf="isStudent()">
-        <span class="sidebar-icon">📄</span>
-        <span class="sidebar-text">My Report Card</span>
-      </a>
-      <a routerLink="/student/invoice-statement" routerLinkActive="active" class="sidebar-item" *ngIf="isStudent()">
-        <span class="sidebar-icon">🧾</span>
-        <span class="sidebar-text">My Invoice Statement</span>
-      </a>
-      <a routerLink="/student/inventory" routerLinkActive="active" class="sidebar-item" *ngIf="isStudent()">
-        <span class="sidebar-icon">📚</span>
-        <span class="sidebar-text">My books &amp; fines</span>
-      </a>
-
-      <!-- Student Manager (tabbed hub: /students/manage) -->
-      <a
-        routerLink="/students/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="(canAccessModule('students') || isAdmin() || isSuperAdmin() || canEnrollStudents()) && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">👨‍🎓</span>
-        <span class="sidebar-text">Student Manager</span>
-      </a>
-      <a
-        routerLink="/admin/class-promotion"
-        routerLinkActive="active"
-        class="sidebar-item"
-        *ngIf="isSuperAdmin() && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">🚀</span>
-        <span class="sidebar-text">Class Promotion</span>
-      </a>
-
-      <a
-        routerLink="/teachers/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="(isAdmin() || isSuperAdmin()) && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">👨‍🏫</span>
-        <span class="sidebar-text">Teacher Manager</span>
-      </a>
-
-      <!-- Class Manager (tabbed hub: /classes/manage) -->
-      <a
-        routerLink="/classes/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="(isAdmin() || isSuperAdmin() || isTeacher() || canAccessModule('attendance')) && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">🏫</span>
-        <span class="sidebar-text">Class Manager</span>
-      </a>
-
-      <!-- Subject Manager (tabbed hub: /subjects/manage) -->
-      <a
-        routerLink="/subjects/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="(isAdmin() || isSuperAdmin()) && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">📚</span>
-        <span class="sidebar-text">Subject Manager</span>
-      </a>
-
-      <!-- Exam Manager (tabbed hub: /exams/manage) -->
-      <a
-        routerLink="/exams/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="(canAccessModule('exams') || canAccessModule('reportCards') || canAccessModule('rankings') || isAdmin() || isSuperAdmin()) && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">📝</span>
-        <span class="sidebar-text">Exam Manager</span>
-      </a>
-
-      <!-- Finance Manager (tabbed hub: /finance/manage) -->
-      <a
-        routerLink="/finance/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="canAccessModule('finance') && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">💰</span>
-        <span class="sidebar-text">Finance Manager</span>
-      </a>
-
-      <!-- Communications (admin — parent messaging) -->
-      <a
-        routerLink="/communication_manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="isAdmin() && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">💬</span>
-        <span class="sidebar-text">Communications</span>
-      </a>
-
-      <!-- Payroll Manager (tabbed hub: /payroll/manage) -->
-      <a
-        routerLink="/payroll/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="canAccessModule('finance') && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">💵</span>
-        <span class="sidebar-text">Payroll Manager</span>
-      </a>
-
-      <!-- Timetable Manager (tabbed hub: /timetable/manage) -->
-      <a
-        routerLink="/timetable/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="(isAdmin() || isSuperAdmin()) && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">📅</span>
-        <span class="sidebar-text">Timetable Manager</span>
-      </a>
-
-      <!-- Reports Manager (tabbed hub: /reports/manage) -->
-      <a
-        routerLink="/reports/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="(isAdmin() || isSuperAdmin()) && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">📊</span>
-        <span class="sidebar-text">Reports Manager</span>
-      </a>
-
-      <a
-        [routerLink]="isTeacher() ? '/teacher/inventory_manage' : '/inventory/manage'"
-        routerLinkActive="active"
-        class="sidebar-item"
-        *ngIf="isInventoryStaff() && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">📦</span>
-        <span class="sidebar-text">Inventory Manager</span>
-      </a>
-
-      <!-- E-learning Manager (teachers — hub with tabs) -->
-      <a
-        routerLink="/teacher/elearning-manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="isTeacher() && canAccessModule('recordBook') && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">💻</span>
-        <span class="sidebar-text">E-learning Manager</span>
-      </a>
-
-
-      <!-- System Administration (tabbed hub: /general/manage) -->
-      <a
-        routerLink="/general/manage"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="linkActiveSubset"
-        class="sidebar-item"
-        *ngIf="(canAccessModule('settings') || isAdmin() || isSuperAdmin() || authService.hasRole('accountant')) && !isStudent()"
-        (click)="closeMobileMenu()"
-      >
-        <span class="sidebar-icon">⚙️</span>
-        <span class="sidebar-text">System Administration</span>
-      </a>
-    </nav>
-  </div>
-</aside>
-
 <!-- Parent Navigation (Mobile) -->
-<div class="mobile-sidebar" 
-     [class.open]="mobileMenuOpen" 
+<div class="mobile-sidebar"
+     [class.open]="mobileMenuOpen"
      *ngIf="isAuthenticated() && isParent()">
   <!-- Overlay -->
-  <div class="mobile-sidebar-overlay" 
+  <div class="mobile-sidebar-overlay"
        (click)="closeMobileMenu()"
        [class.show]="mobileMenuOpen"></div>
-  
+
   <!-- Sidebar Content -->
   <div class="mobile-sidebar-content" [class.show]="mobileMenuOpen">
     <div class="mobile-sidebar-header">
       <h2>{{ schoolName }}</h2>
-      <button class="mobile-sidebar-close" 
-              (click)="closeMobileMenu()" 
+      <button class="mobile-sidebar-close"
+              (click)="closeMobileMenu()"
               aria-label="Close menu">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -320,8 +174,8 @@
 </div>
 
 <!-- Mobile Menu Toggle for Parents -->
-<button class="mobile-menu-toggle" 
-        (click)="toggleMobileMenu()" 
+<button class="mobile-menu-toggle"
+        (click)="toggleMobileMenu()"
         aria-label="Toggle menu"
         *ngIf="isAuthenticated() && isParent()">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -336,8 +190,15 @@
 <!-- Main Content -->
 <main
   class="main-content"
-  [class.sidebar-open]="!sidebarCollapsed && !isParent()"
   [class.menu-open]="mobileMenuOpen"
-  [class.parent-layout]="isParent()">
+  [class.parent-layout]="isParent()"
+  [class.dashboard-fullscreen]="isDashboardRoute()"
+  [class.with-modern-sidebar]="isAuthenticated() && !isDashboardRoute() && !isParent() && navItems.length > 0">
   <router-outlet></router-outlet>
 </main>
+
+<!-- Bulk message modal (triggered from the sidebar's Communication → Bulk Message item) -->
+<app-bulk-message *ngIf="showBulkMessage" (close)="closeBulkMessage()"></app-bulk-message>
+
+<!-- Shared "Add New Teacher" modal (triggered from any Add Teacher button across the app) -->
+<app-add-teacher-modal></app-add-teacher-modal>

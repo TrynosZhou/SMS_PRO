@@ -7,12 +7,13 @@
  */
 
 import 'reflect-metadata';
+import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { AppDataSource } from '../src/config/database';
 import { User, UserRole } from '../src/entities/User';
 import bcrypt from 'bcryptjs';
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 async function createAdmin() {
   const args = process.argv.slice(2);

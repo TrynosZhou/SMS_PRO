@@ -1,0 +1,136 @@
+<div class="mt-page">
+  <div class="mt-shell">
+    <!-- Banner -->
+    <header class="mt-banner">
+      <h1 class="mt-banner-title">
+        <span class="mt-banner-ico" aria-hidden="true">🎓</span>
+        Manage Terms
+      </h1>
+      <div class="mt-banner-actions">
+        <div class="mt-year-field">
+          <label class="mt-year-label">Filter by Year</label>
+          <select class="mt-year-select" [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()" aria-label="Filter by year">
+            <option value="all">All Years</option>
+            <option *ngFor="let y of availableYears" [value]="y">{{ y }}</option>
+          </select>
+        </div>
+        <button type="button" class="mt-add-btn" (click)="openAddTerm()">
+          <span class="mt-add-ico" aria-hidden="true">+</span>
+          Add Term
+        </button>
+      </div>
+    </header>
+
+    <!-- Alerts -->
+    <div class="mt-alert mt-alert-success" *ngIf="success"><span aria-hidden="true">✓</span><span>{{ success }}</span></div>
+    <div class="mt-alert mt-alert-error" *ngIf="error"><span aria-hidden="true">⚠</span><span>{{ error }}</span></div>
+
+    <!-- Table -->
+    <div class="mt-table-card">
+      <table class="mt-table">
+        <thead>
+          <tr>
+            <th class="mt-th-num"><span class="mt-th-ico">≡</span> #</th>
+            <th><span class="mt-th-ico">🏷</span> Ty..</th>
+            <th><span class="mt-th-ico">🏷</span> La..</th>
+            <th><span class="mt-th-ico">1</span> Term</th>
+            <th><span class="mt-th-ico">📅</span> Year</th>
+            <th><span class="mt-th-ico">▶</span> Start<br/>Date</th>
+            <th><span class="mt-th-ico">🗓</span> End<br/>Date</th>
+            <th><span class="mt-th-ico">⏱</span> Duration</th>
+            <th><span class="mt-th-ico">ⓘ</span> Status</th>
+            <th><span class="mt-th-ico">⚙</span> Actions</th>
+          </tr>
+        </thead>
+        <tbody *ngIf="!loading && filteredTerms.length > 0">
+          <tr *ngFor="let t of filteredTerms; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ typeShort(t) }}</td>
+            <td>{{ labelShort(t) }}</td>
+            <td><strong>{{ termName(t) }}</strong></td>
+            <td>{{ t.year }}</td>
+            <td>{{ t.startDate ? (t.startDate | date:'mediumDate') : '—' }}</td>
+            <td>{{ t.endDate ? (t.endDate | date:'mediumDate') : '—' }}</td>
+            <td>{{ getDuration(t.startDate, t.endDate) }}</td>
+            <td>
+              <span class="mt-status-pill" [attr.data-status]="t.status">{{ t.status }}</span>
+            </td>
+            <td>
+              <div class="mt-row-actions">
+                <button type="button" class="mt-icon-btn" (click)="openEditTerm(t)" title="Edit" aria-label="Edit term">✏️</button>
+                <button type="button" class="mt-icon-btn mt-icon-btn-danger" (click)="deleteTerm(t)" title="Delete" aria-label="Delete term">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Loading -->
+      <div class="mt-empty" *ngIf="loading">
+        <div class="mt-spinner"></div>
+        <p>Loading terms…</p>
+      </div>
+
+      <!-- Empty -->
+      <div class="mt-empty" *ngIf="!loading && filteredTerms.length === 0">
+        <div class="mt-empty-ico" aria-hidden="true">🗂</div>
+        <h3 class="mt-empty-title">No Terms Found</h3>
+        <p class="mt-empty-sub">No terms match your current search criteria. Try adjusting your filters or add a new term.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form modal -->
+  <div class="mt-modal-backdrop" *ngIf="showFormModal" (click)="closeFormModal()" role="dialog" aria-modal="true">
+    <div class="mt-modal-panel" (click)="$event.stopPropagation()">
+      <header class="mt-modal-head">
+        <h2 class="mt-modal-title">{{ editingTermId ? 'Edit Term' : 'Add Term' }}</h2>
+        <button type="button" class="mt-modal-close" (click)="closeFormModal()" aria-label="Close">×</button>
+      </header>
+      <div class="mt-modal-body">
+        <div class="mt-form-error" *ngIf="formError">{{ formError }}</div>
+
+        <div class="mt-form-grid">
+          <label class="mt-form-row">
+            <span class="mt-form-label">Term Number <span class="req">*</span></span>
+            <select class="mt-form-input" [(ngModel)]="formData.termNumber">
+              <option *ngFor="let n of termNumbers" [value]="n">Term {{ n }}</option>
+            </select>
+          </label>
+          <label class="mt-form-row">
+            <span class="mt-form-label">Period Type</span>
+            <select class="mt-form-input" [(ngModel)]="formData.periodType">
+              <option *ngFor="let p of periodTypes" [value]="p.value">{{ p.label }}</option>
+            </select>
+          </label>
+          <label class="mt-form-row">
+            <span class="mt-form-label">Year <span class="req">*</span></span>
+            <select class="mt-form-input" [(ngModel)]="formData.year">
+              <option *ngFor="let y of yearOptions" [value]="y">{{ y }}</option>
+            </select>
+          </label>
+          <label class="mt-form-row">
+            <span class="mt-form-label">Status</span>
+            <select class="mt-form-input" [(ngModel)]="formData.status">
+              <option *ngFor="let s of statusOptions" [value]="s">{{ s }}</option>
+            </select>
+          </label>
+          <label class="mt-form-row">
+            <span class="mt-form-label">Start Date <span class="req">*</span></span>
+            <input type="date" class="mt-form-input" [(ngModel)]="formData.startDate" />
+          </label>
+          <label class="mt-form-row">
+            <span class="mt-form-label">End Date <span class="req">*</span></span>
+            <input type="date" class="mt-form-input" [(ngModel)]="formData.endDate" />
+          </label>
+        </div>
+      </div>
+      <footer class="mt-modal-foot">
+        <button type="button" class="mt-btn mt-btn-cancel" (click)="closeFormModal()" [disabled]="saving">Cancel</button>
+        <button type="button" class="mt-btn mt-btn-save" (click)="saveTerm()" [disabled]="saving">
+          {{ saving ? 'Saving…' : (editingTermId ? 'Save Changes' : 'Add Term') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+</div>

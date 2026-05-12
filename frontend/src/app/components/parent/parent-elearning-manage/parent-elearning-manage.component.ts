@@ -135,7 +135,7 @@ export class ParentElearningManageComponent implements OnInit {
       setTimeout(() => (this.error = ''), 8000);
       return;
     }
-    this.router.navigate(['/report-cards'], { queryParams: { studentId: student.id } });
+    this.router.navigate(['/reports'], { queryParams: { studentId: student.id } });
   }
 
   linkStudents(): void {

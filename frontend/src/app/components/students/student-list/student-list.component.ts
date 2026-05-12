@@ -226,7 +226,7 @@ export class StudentListComponent implements OnInit {
   }
 
   viewReportCard(studentId: string) {
-    this.router.navigate(['/report-cards'], { queryParams: { studentId } });
+    this.router.navigate(['/reports'], { queryParams: { studentId } });
   }
 
   getClassName(student: any): string {

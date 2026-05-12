@@ -1,9 +1,14 @@
 /**
  * Reset a user's password by username (case-insensitive).
- * Usage: npx ts-node scripts/reset-user-password.ts <username> <newPassword>
- * Example: npx ts-node scripts/reset-user-password.ts zhout admin12345
+ * Usage: npm run reset-password -- <username> <newPassword>
+ * Example: npm run reset-password -- admin admin12345
  */
 import 'reflect-metadata';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
 import { AppDataSource } from '../src/config/database';
 import { User } from '../src/entities/User';
 import bcrypt from 'bcryptjs';
@@ -13,7 +18,7 @@ async function main() {
   const plainPassword = process.argv[3] || '';
 
   if (!username) {
-    console.error('Usage: npx ts-node scripts/reset-user-password.ts <username> <newPassword>');
+    console.error('Usage: npm run reset-password -- <username> <newPassword>');
     process.exit(1);
   }
 

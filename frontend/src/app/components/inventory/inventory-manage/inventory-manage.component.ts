@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
-import { forkJoin, of } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
+import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { InventoryService } from '../../../services/inventory.service';
 import { StudentService } from '../../../services/student.service';
@@ -23,8 +24,24 @@ type InvTab =
   templateUrl: './inventory-manage.component.html',
   styleUrls: ['./inventory-manage.component.css'],
 })
-export class InventoryManageComponent implements OnInit {
+export class InventoryManageComponent implements OnInit, OnDestroy {
   activeTab: InvTab = 'stock';
+
+  /** Subscription to ?tab= query param changes, so sidebar deep-links switch the active tab. */
+  private routeSub: Subscription | null = null;
+
+  /** Whitelist of tabs that can be activated via the URL. */
+  private readonly validTabs: ReadonlySet<InvTab> = new Set<InvTab>([
+    'stock',
+    'custody',
+    'furnitureAllocation',
+    'tx',
+    'reportsFurniture',
+    'reportsTextbooksHod',
+    'audit',
+    'textbookReport',
+    'furnitureReport',
+  ]);
 
   error = '';
   success = '';
@@ -148,13 +165,22 @@ export class InventoryManageComponent implements OnInit {
     private inv: InventoryService,
     private studentsApi: StudentService,
     public auth: AuthService,
-    private teacherService: TeacherService
+    private teacherService: TeacherService,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
     if (!this.auth.isAuthenticated()) return;
 
     this.pickInitialTab();
+
+    // Honor ?tab= deep-links coming from the sidebar so each Inventory sub-menu opens the right tab.
+    this.routeSub = this.route.queryParamMap.subscribe(params => {
+      const requested = params.get('tab');
+      if (requested && this.validTabs.has(requested as InvTab) && requested !== this.activeTab) {
+        this.setTab(requested as InvTab);
+      }
+    });
 
     if (this.isAdmin()) {
       this.inv.listClassTeachersForFurniture().subscribe({
@@ -187,6 +213,11 @@ export class InventoryManageComponent implements OnInit {
     if (this.activeTab === 'tx' && this.isTeacher()) {
       this.loadMyFurniturePool();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.routeSub?.unsubscribe();
+    this.routeSub = null;
   }
 
   private pickInitialTab(): void {

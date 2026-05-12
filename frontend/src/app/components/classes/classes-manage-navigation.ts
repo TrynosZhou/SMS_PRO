@@ -10,8 +10,8 @@ export function classesManageNav(router: Router) {
   return {
     list: m ? '/classes/manage/classes' : '/classes',
     lists: m ? '/classes/manage/lists' : '/classes/lists',
-    markRegister: m ? '/classes/manage/mark-register' : '/attendance/mark',
-    attendanceReports: m ? '/reports/manage/attendance-reports' : '/attendance/reports',
+    markRegister: '/mark-register',
+    attendanceReports: '/attendance-reports',
     addNew: m ? '/classes/manage/add-new' : '/classes/new',
     editSegments: (id: string) =>
       m ? ['/classes', 'manage', 'edit', id] : ['/classes', id, 'edit'],

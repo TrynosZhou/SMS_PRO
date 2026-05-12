@@ -1,0 +1,172 @@
+<div class="ms-page">
+  <div class="ms-shell">
+    <!-- Header banner -->
+    <header class="ms-banner">
+      <h1 class="ms-banner-title">
+        <span class="ms-banner-ico" aria-hidden="true">🎓</span>
+        Manage Students
+      </h1>
+      <button
+        type="button"
+        class="ms-banner-refresh"
+        (click)="refresh()"
+        [disabled]="loading"
+        aria-label="Refresh"
+        title="Refresh">
+        <span class="ms-banner-refresh-ico" aria-hidden="true" [class.spin]="loading">↻</span>
+      </button>
+    </header>
+
+    <!-- Alerts -->
+    <div class="ms-alert ms-alert-success" *ngIf="success">
+      <span aria-hidden="true">✓</span>
+      <span>{{ success }}</span>
+    </div>
+    <div class="ms-alert ms-alert-error" *ngIf="error">
+      <span aria-hidden="true">⚠</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Toolbar (search + gender + add) -->
+    <div class="ms-toolbar">
+      <div class="ms-field ms-field-search">
+        <input
+          type="text"
+          class="ms-input"
+          placeholder="Search students"
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
+          aria-label="Search students" />
+        <span class="ms-input-ico" aria-hidden="true">🔍</span>
+      </div>
+
+      <div class="ms-field ms-field-select">
+        <label class="ms-select-label">Gender</label>
+        <select
+          class="ms-select"
+          [(ngModel)]="selectedGender"
+          (ngModelChange)="onGenderChange()"
+          aria-label="Filter by gender">
+          <option value="">All Genders</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
+
+      <button type="button" class="ms-add-btn" (click)="openAddStudentModal()">
+        <span class="ms-add-ico" aria-hidden="true">+</span>
+        Add Student
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="ms-table-card">
+      <table class="ms-table">
+        <thead>
+          <tr>
+            <th><span class="ms-th-ico">🎓</span> Student ID</th>
+            <th><span class="ms-th-ico">👤</span> Surname</th>
+            <th><span class="ms-th-ico">👤</span> Name</th>
+            <th><span class="ms-th-ico">⚥</span> Gender</th>
+            <th><span class="ms-th-ico">☎</span> Phone</th>
+            <th><span class="ms-th-ico">⚙</span> Actions</th>
+          </tr>
+        </thead>
+        <tbody *ngIf="!loading && filteredStudents.length > 0">
+          <tr *ngFor="let s of filteredStudents">
+            <td><strong class="ms-id-chip">{{ s.studentNumber || '—' }}</strong></td>
+            <td>{{ s.lastName || '—' }}</td>
+            <td>{{ s.firstName || '—' }}</td>
+            <td>
+              <span class="ms-gender-pill" [class.male]="(s.gender || '') === 'Male'" [class.female]="(s.gender || '') === 'Female'">
+                {{ s.gender || '—' }}
+              </span>
+            </td>
+            <td>{{ phoneOf(s) }}</td>
+            <td>
+              <div class="ms-row-actions">
+                <button type="button" class="ms-icon-btn" (click)="viewStudent(s)" title="View / edit" aria-label="View student">
+                  👁️
+                </button>
+                <button type="button" class="ms-icon-btn ms-icon-btn-danger" (click)="deleteStudent(s)" title="Delete" aria-label="Delete student">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Loading -->
+      <div class="ms-empty" *ngIf="loading">
+        <div class="ms-spinner"></div>
+        <p>Loading students…</p>
+      </div>
+
+      <!-- Empty -->
+      <div class="ms-empty" *ngIf="!loading && filteredStudents.length === 0">
+        <div class="ms-empty-ico" aria-hidden="true">🔎</div>
+        <p class="ms-empty-title">No students found matching your criteria</p>
+      </div>
+
+      <!-- Pagination -->
+      <div class="ms-pagination" *ngIf="!loading && pagination.total > 0">
+        <div class="ms-pag-left">
+          <label class="ms-pag-label" for="msPageSize">Items per page:</label>
+          <select
+            id="msPageSize"
+            class="ms-pag-select"
+            [value]="pagination.limit"
+            (change)="changePageSize($any($event.target).value)">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+          </select>
+        </div>
+        <div class="ms-pag-right">
+          <span class="ms-pag-info">
+            {{ (pagination.page - 1) * pagination.limit + 1 }}–{{
+              (pagination.page - 1) * pagination.limit + filteredStudents.length
+            }}
+            of {{ pagination.total }}
+          </span>
+          <button
+            type="button"
+            class="ms-pag-btn"
+            (click)="changePage(pagination.page - 1)"
+            [disabled]="pagination.page === 1"
+            aria-label="Previous page">‹</button>
+          <button
+            type="button"
+            class="ms-pag-btn"
+            (click)="changePage(pagination.page + 1)"
+            [disabled]="pagination.page === pagination.totalPages"
+            aria-label="Next page">›</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Student modal — opened by the toolbar Add Student button. -->
+  <div
+    class="ms-modal-backdrop"
+    *ngIf="showAddStudentModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="ms-add-student-title"
+    (click)="onAddModalBackdropClick($event)"
+  >
+    <div class="ms-modal-panel" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="ms-modal-close"
+        (click)="closeAddStudentModal()"
+        aria-label="Close add student dialog"
+      >
+        ×
+      </button>
+      <app-student-form
+        [modalMode]="true"
+        (dismissAddModal)="closeAddStudentModal()"
+      ></app-student-form>
+    </div>
+  </div>
+</div>

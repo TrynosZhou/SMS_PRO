@@ -61,7 +61,7 @@ export class ClassAssignComponent implements OnInit {
     if (!c?.id) {
       return;
     }
-    this.router.navigate(['/classes/manage/assign-teachers', c.id, 'lessons']);
+    this.router.navigate(['/assign-teachers', c.id, 'lessons']);
   }
 
   /** Single click: select only (enables sidebar actions). */

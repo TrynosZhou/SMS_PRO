@@ -811,6 +811,28 @@ export class ReportCardComponent implements OnInit, OnDestroy {
     this.onSelectionChange();
   }
 
+  /** Scroll to (or hint about) the generated report cards section — wired to the "View" action. */
+  viewReportCards() {
+    if (this.reportCards.length === 0) {
+      this.error = 'Generate report cards first to view them.';
+      setTimeout(() => (this.error = ''), 3500);
+      return;
+    }
+    setTimeout(() => {
+      const el = document.querySelector('.report-cards-section');
+      if (el && (el as HTMLElement).scrollIntoView) {
+        (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 0);
+    this.success = `Showing ${this.filteredReportCards.length} report card${this.filteredReportCards.length === 1 ? '' : 's'}.`;
+    setTimeout(() => (this.success = ''), 2500);
+  }
+
+  /** True once the user has generated report cards in this session. */
+  get hasGeneratedReports(): boolean {
+    return this.reportCards.length > 0;
+  }
+
   // Download all PDFs
   downloadAllPDFs() {
     if (this.filteredReportCards.length === 0) {

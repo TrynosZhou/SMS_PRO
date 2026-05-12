@@ -7,7 +7,7 @@
   <nav class="em-tabs" aria-label="Exam manager sections">
     <a
       *ngIf="showExamsTabs()"
-      routerLink="/exams/manage/marks-capturing"
+      routerLink="/marks-input"
       [class.active]="isMarksCapturingSectionActive()"
       class="em-tab"
     >
@@ -16,7 +16,7 @@
     </a>
     <a
       *ngIf="showExamsTabs()"
-      routerLink="/exams/manage/mark-sheet"
+      routerLink="/mark-sheets"
       routerLinkActive="active"
       class="em-tab"
     >
@@ -25,7 +25,7 @@
     </a>
     <a
       *ngIf="showAdminExamTabs()"
-      routerLink="/exams/manage/mark-input-progress"
+      routerLink="/marks-progress"
       routerLinkActive="active"
       class="em-tab"
     >
@@ -34,7 +34,7 @@
     </a>
     <a
       *ngIf="showRankingsTab()"
-      routerLink="/exams/manage/rankings"
+      routerLink="/ranking"
       routerLinkActive="active"
       class="em-tab"
     >
@@ -43,7 +43,7 @@
     </a>
     <a
       *ngIf="showReportCardsTab()"
-      routerLink="/exams/manage/report-cards"
+      routerLink="/reports"
       routerLinkActive="active"
       class="em-tab"
     >
@@ -52,7 +52,7 @@
     </a>
     <a
       *ngIf="showResultsAnalysisTab()"
-      routerLink="/exams/manage/results-analysis"
+      routerLink="/termly-results"
       routerLinkActive="active"
       class="em-tab"
     >

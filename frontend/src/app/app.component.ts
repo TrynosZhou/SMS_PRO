@@ -1,10 +1,27 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { AuthService } from './services/auth.service';
 import { SettingsService } from './services/settings.service';
 import { ModuleAccessService } from './services/module-access.service';
 import { Router, NavigationEnd, IsActiveMatchOptions } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { UserActivityService } from './services/user-activity.service';
+import { AddTeacherModalService } from './services/add-teacher-modal.service';
+
+interface NavChild {
+  label: string;
+  route?: string;
+  icon?: string;
+  action?: 'bulkMessage' | 'addTeacher';
+  queryParams?: Record<string, string>;
+}
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  route?: string;        // present when item is a direct link (no submenu)
+  children?: NavChild[]; // present when item has a submenu
+}
 
 @Component({
   selector: 'app-root',
@@ -25,20 +42,29 @@ export class AppComponent implements OnInit {
 
   schoolName = 'School Management System';
   mobileMenuOpen = false;
-  /** Slide-out nav drawer for staff/student on narrow viewports (separate from sidebarCollapsed). */
-  mobileDrawerOpen = false;
-  sidebarCollapsed = false;
-  private readonly mobileDrawerBreakpointPx = 768;
-  expandedMenus: { [key: string]: boolean } = {};
+  /** Live URL so views can toggle layout (e.g. dashboard renders its own shell). */
+  currentUrl = '';
   private lastMenuAccessLogged = '';
   private lastMenuAccessLoggedAt = 0;
 
+  // ── Modern sidebar state (mirrors the dashboard's own sidebar so navigation
+  //    is available on every route, not just /dashboard) ───────────────────
+  /** Mobile drawer open state (visible on small screens). */
+  sidebarOpen = false;
+  /** Which submenu group is expanded — keyed by NavItem.id. Only one at a time. */
+  openSubmenu: string | null = null;
+  /** Top-level navigation items shown in the left sidebar. */
+  navItems: NavItem[] = [];
+  /** Bulk-message modal visibility (triggered from sidebar action). */
+  showBulkMessage = false;
+
   constructor(
-    public authService: AuthService, 
+    public authService: AuthService,
     private settingsService: SettingsService,
     public moduleAccessService: ModuleAccessService,
     public router: Router,
-    private userActivityService: UserActivityService
+    private userActivityService: UserActivityService,
+    private addTeacherModal: AddTeacherModalService
   ) { }
 
   ngOnInit(): void {
@@ -52,16 +78,23 @@ export class AppComponent implements OnInit {
           // ignore settings fetch errors to avoid blocking UI
         }
       });
-      
+
       // Load module access settings
       this.moduleAccessService.loadModuleAccess();
     }
+
+    // Seed currentUrl on first load (NavigationEnd fires only after subsequent navigations).
+    this.currentUrl = this.router.url || '';
+
+    // Build the modern sidebar nav once the user identity is known.
+    this.buildNavMenu();
 
     // Track menu access (used by Activity Log)
     this.router.events
       .pipe(filter((event: any) => event instanceof NavigationEnd))
       .subscribe((event: any) => {
-        this.closeMobileDrawer();
+        this.currentUrl = event.urlAfterRedirects || event.url || '';
+        this.closeSidebar();
 
         if (!this.authService.isAuthenticated()) return;
 
@@ -95,6 +128,15 @@ export class AppComponent implements OnInit {
     return this.authService.isAuthenticated();
   }
 
+  /**
+   * Dashboard renders its own self-contained shell (top header + side nav).
+   * On that route we hide the app-level sidebar/top navbar so they don't double up.
+   */
+  isDashboardRoute(): boolean {
+    const url = (this.currentUrl || this.router.url || '').split('?')[0].split('#')[0];
+    return url === '/dashboard' || url.startsWith('/dashboard/');
+  }
+
   isParent(): boolean {
     return this.authService.hasRole('parent');
   }
@@ -109,6 +151,10 @@ export class AppComponent implements OnInit {
 
   isAdmin(): boolean {
     return this.authService.hasRole('admin') || this.authService.hasRole('superadmin');
+  }
+
+  isAccountant(): boolean {
+    return this.authService.hasRole('accountant');
   }
 
   isInventoryStaff(): boolean {
@@ -158,77 +204,290 @@ export class AppComponent implements OnInit {
     document.body.style.overflow = '';
   }
 
-  private isMobileDrawerLayout(): boolean {
-    return typeof window !== 'undefined' && window.innerWidth <= this.mobileDrawerBreakpointPx;
-  }
-
-  closeMobileDrawer(): void {
-    if (!this.mobileDrawerOpen) {
-      return;
-    }
-    this.mobileDrawerOpen = false;
-    if (!this.mobileMenuOpen) {
-      document.body.style.overflow = '';
-    }
-  }
-
   logout(): void {
     this.closeMobileMenu();
-    this.closeMobileDrawer();
+    this.closeSidebar();
     this.authService.logout();
   }
 
+  // ── Modern sidebar interactions ──────────────────────────────────────
   toggleSidebar(): void {
-    if (this.isMobileDrawerLayout()) {
-      this.mobileDrawerOpen = !this.mobileDrawerOpen;
-      if (this.mobileDrawerOpen) {
-        this.sidebarCollapsed = false;
-        document.body.style.overflow = 'hidden';
-      } else if (!this.mobileMenuOpen) {
-        document.body.style.overflow = '';
-      }
-      return;
-    }
-
-    this.closeMobileDrawer();
-    this.sidebarCollapsed = !this.sidebarCollapsed;
-    if (this.sidebarCollapsed) {
-      this.expandedMenus = {};
-    }
+    this.sidebarOpen = !this.sidebarOpen;
   }
 
-  @HostListener('window:resize')
-  onWindowResize(): void {
-    if (!this.isMobileDrawerLayout()) {
-      this.closeMobileDrawer();
-    }
+  closeSidebar(): void {
+    this.sidebarOpen = false;
   }
 
-  toggleMenu(menuKey: string): void {
-    // Don't expand menus when sidebar is collapsed
-    if (this.sidebarCollapsed) {
-      return;
-    }
-    this.expandedMenus[menuKey] = !this.expandedMenus[menuKey];
+  toggleSubmenu(id: string): void {
+    this.openSubmenu = this.openSubmenu === id ? null : id;
   }
 
-  isMenuExpanded(menuKey: string): boolean {
-    return this.expandedMenus[menuKey] || false;
+  isSubmenuOpen(id: string): boolean {
+    return this.openSubmenu === id;
+  }
+
+  /** Handle clicks on submenu items that map to component actions (e.g. bulk message). */
+  runNavAction(action: string | undefined): void {
+    if (!action) return;
+    if (action === 'bulkMessage') this.openBulkMessage();
+    if (action === 'addTeacher') this.addTeacherModal.open();
+    this.closeSidebar();
+  }
+
+  openBulkMessage(): void {
+    this.showBulkMessage = true;
+  }
+
+  closeBulkMessage(): void {
+    this.showBulkMessage = false;
   }
 
   getCurrentUserRole(): string {
     const user = this.authService.getCurrentUser();
     if (!user) return '';
-    
+
     if (user.role) {
       return user.role.toUpperCase();
     }
-    
+
     // Fallback to checking roles
     if (this.isSuperAdmin()) return 'SUPERADMIN';
     if (this.isTeacher()) return 'TEACHER';
     if (this.isParent()) return 'PARENT';
     return 'ADMIN';
   }
-}
 
+  /** Build the left sidebar menu based on the current user's role. */
+  private buildNavMenu(): void {
+    const items: NavItem[] = [];
+
+    if (this.isStudent()) {
+      // Students get a minimal student-focused nav; their own dashboard handles the rest.
+      this.navItems = items;
+      return;
+    }
+
+    items.push({ id: 'dashboard', label: 'Dashboard', icon: '📊', route: '/dashboard' });
+
+    if (this.isAdmin()) {
+      items.push(
+        {
+          id: 'registration', label: 'Registration', icon: '📝',
+          children: [
+            { label: 'Teachers', icon: '👨‍🏫', route: '/teachers' },
+            { label: 'Departments', icon: '🏢', route: '/departments' },
+            { label: 'Students', icon: '🎓', route: '/students' },
+            { label: 'Parents', icon: '👪', route: '/parents' }
+          ]
+        },
+        {
+          id: 'enrolment', label: 'Enrolment', icon: '🎒',
+          children: [
+            { label: 'Classes', icon: '📕', route: '/classes' },
+            { label: 'Terms', icon: '📆', route: '/terms' },
+            { label: 'Enrol', icon: '✅', route: '/enrol' },
+            { label: 'Class Lists', icon: '📋', route: '/class-lists' },
+            { label: 'Migrate Class', icon: '⬆️', route: '/migrate-class' }
+          ]
+        },
+        {
+          id: 'attendance', label: 'Attendance', icon: '🗓️',
+          children: [
+            { label: 'Mark Register', icon: '✏️', route: '/mark-register' },
+            { label: 'Attendance Reports', icon: '📈', route: '/attendance-reports' }
+          ]
+        },
+        {
+          id: 'marks', label: 'Marks', icon: '⭐',
+          children: [
+            { label: 'Subjects', icon: '📚', route: '/subjects' },
+            { label: 'Marks Input', icon: '📝', route: '/marks-input' },
+            { label: 'Marks Progress', icon: '📈', route: '/marks-progress' },
+            { label: 'Marks Diagnostics', icon: '📊', route: '/mark-diagnostic' }
+          ]
+        },
+        {
+          id: 'progress', label: 'Progress Reports', icon: '📑',
+          children: [
+            { label: 'Report Cards', icon: '🧾', route: '/reports' },
+            { label: 'Rankings', icon: '🏆', route: '/ranking' }
+          ]
+        },
+        {
+          id: 'results', label: 'Results Analysis', icon: '📊',
+          children: [
+            { label: 'Mark Sheets', icon: '📄', route: '/mark-sheets' },
+            { label: 'Termly Results', icon: '📊', route: '/termly-results' }
+          ]
+        },
+        {
+          id: 'finance', label: 'Finance', icon: '💰',
+          children: [
+            { label: 'Fees', icon: '🏷️', route: '/finance' },
+            { label: 'Receipting', icon: '🧾', route: '/record-payment' },
+            { label: 'Billing', icon: '💳', route: '/billing' },
+            { label: 'Invoices', icon: '📋', route: '/invoices/statements' },
+            { label: 'Exemptions', icon: '🪪', route: '/exemptions' },
+            { label: 'Student Balances', icon: '💼', route: '/balance-enquiry' }
+          ]
+        },
+        {
+          id: 'financial-reports', label: 'Financial Reports', icon: '📊',
+          children: [
+            { label: 'Student Ledgers', icon: '📒', route: '/student-ledgers' },
+            { label: 'Fees Collection', icon: '💵', route: '/fees-collection' },
+            { label: 'Outstanding Fees', icon: '💲', route: '/outstanding-fees' },
+            { label: 'Exemptions', icon: '🪪', route: '/exemptions-report' },
+            { label: 'Aged Debtors', icon: '⏳', route: '/aged-debtors' },
+            { label: 'Enrolment vs Billing', icon: '📈', route: '/enrolment-vs-billing' },
+            { label: 'Revenue Recognition', icon: '💹', route: '/revenue-recognition' },
+            { label: 'Student Reconciliation', icon: '⚖️', route: '/student-reconciliation' },
+            { label: 'Analytics & Forecasts', icon: '🔮', route: '/analytics-forecasts' },
+            { label: 'Class Reconciliation', icon: '🏫', route: '/class-reconciliation' }
+          ]
+        },
+        {
+          id: 'payroll', label: 'Payroll', icon: '🧮',
+          children: [
+            { label: 'Overview', icon: '🗂️', route: '/payroll/manage/overview' },
+            { label: 'Employees', icon: '👥', route: '/payroll/manage/employees' },
+            { label: 'Structures', icon: '🏛️', route: '/payroll/manage/structures' },
+            { label: 'Assignments', icon: '🔗', route: '/payroll/manage/assignments' },
+            { label: 'Process', icon: '⚙️', route: '/payroll/manage/process' },
+            { label: 'Leave', icon: '🌴', route: '/payroll/manage/leave' },
+            { label: 'Payslips', icon: '🧾', route: '/payroll/manage/payslips' },
+            { label: 'Reports', icon: '📊', route: '/payroll/manage/reports' }
+          ]
+        },
+        {
+          id: 'timetable', label: 'Timetable', icon: '📅',
+          children: [
+            { label: 'Configure', icon: '⚙️', route: '/timetable/manage/config' },
+            { label: 'Subject Periods', icon: '⏱️', route: '/subject-periods' },
+            { label: 'Assign Subjects to Classes', icon: '📚', route: '/assign-subject' },
+            { label: 'Assign Subjects to Teachers', icon: '👨‍🏫', route: '/teacher_subject' },
+            { label: 'Assign Teachers to Classes', icon: '🔗', route: '/assign-teachers' },
+            { label: 'Assign Classes to Teachers', icon: '🎯', route: '/assign-classes' },
+            { label: 'Allocate Class Teachers', icon: '🧑‍🏫', route: '/allocate_class' },
+            { label: 'Class Teachers', icon: '📋', route: '/class-teachers' },
+            { label: 'Generate Timetable', icon: '🗓️', route: '/view' },
+            { label: 'View Timetable', icon: '👁️', route: '/view_timetable' },
+            { label: 'Manual Adjustments', icon: '✏️', route: '/manual' }
+          ]
+        },
+        {
+          id: 'communication', label: 'Communication', icon: '💬',
+          children: [
+            { label: 'Send Message', icon: '📤', route: '/communication_manage/send' },
+            { label: 'View Messages', icon: '📥', route: '/communication_manage/view' },
+            { label: 'Bulk Message', icon: '📧', action: 'bulkMessage' }
+          ]
+        },
+        {
+          id: 'reports', label: 'Misc Reports', icon: '📈',
+          children: [
+            { label: 'Transport Services', icon: '🚌', route: '/reports/manage/transport-services' },
+            { label: 'Student ID Cards', icon: '🪪', route: '/reports/manage/student-id-cards' },
+            { label: 'DH Services', icon: '🛏️', route: '/reports/dh-services' }
+          ]
+        },
+        { id: 'elearning', label: 'E-Learning', icon: '💻', route: '/elearning' }
+      );
+
+      if (this.isInventoryStaff()) {
+        items.push({
+          id: 'inventory', label: 'Inventory', icon: '📦',
+          children: [
+            { label: 'Stock', icon: '📚', route: '/inventory/manage', queryParams: { tab: 'stock' } },
+            { label: 'Textbook Allocation', icon: '📘', route: '/inventory/manage', queryParams: { tab: 'custody' } },
+            { label: 'Furniture Allocation', icon: '🪑', route: '/inventory/manage', queryParams: { tab: 'furnitureAllocation' } },
+            { label: 'Report Furniture', icon: '🛋️', route: '/inventory/manage', queryParams: { tab: 'reportsFurniture' } },
+            { label: 'Report Textbook', icon: '📕', route: '/inventory/manage', queryParams: { tab: 'reportsTextbooksHod' } },
+            { label: 'Audit', icon: '📋', route: '/inventory/manage', queryParams: { tab: 'audit' } }
+          ]
+        });
+      }
+
+      items.push(
+        {
+          id: 'system-administration', label: 'System Administration', icon: '🛠️',
+          children: [
+            { label: 'User Management', icon: '👥', route: '/user-management' },
+            { label: 'Departments', icon: '🏢', route: '/departments' },
+            { label: 'Role & Permissions', icon: '🔐', route: '/roles-permissions' },
+            { label: 'Academic Settings', icon: '🎓', route: '/academic-settings' },
+            { label: 'System Settings', icon: '⚙️', route: '/system-settings' },
+            { label: 'Audit Logs', icon: '📜', route: '/audit-logs' },
+            { label: 'Analytics & Reports', icon: '📊', route: '/analytics-reports' },
+            { label: 'Integrations', icon: '🔗', route: '/integrations' }
+          ]
+        }
+      );
+    } else if (this.isAccountant()) {
+      items.push(
+        {
+          id: 'registration', label: 'Students', icon: '👥',
+          children: [
+            { label: 'All Students', icon: '📋', route: '/students' }
+          ]
+        },
+        {
+          id: 'finance', label: 'Finance', icon: '💰',
+          children: [
+            { label: 'Fees', icon: '🏷️', route: '/finance' },
+            { label: 'Receipting', icon: '🧾', route: '/record-payment' },
+            { label: 'Billing', icon: '💳', route: '/billing' },
+            { label: 'Invoices', icon: '📋', route: '/invoices/statements' },
+            { label: 'Exemptions', icon: '🪪', route: '/exemptions' },
+            { label: 'Student Balances', icon: '💼', route: '/balance-enquiry' }
+          ]
+        },
+        {
+          id: 'financial-reports', label: 'Financial Reports', icon: '📊',
+          children: [
+            { label: 'Student Ledgers', icon: '📒', route: '/student-ledgers' },
+            { label: 'Fees Collection', icon: '💵', route: '/fees-collection' },
+            { label: 'Outstanding Fees', icon: '💲', route: '/outstanding-fees' },
+            { label: 'Exemptions', icon: '🪪', route: '/exemptions-report' },
+            { label: 'Aged Debtors', icon: '⏳', route: '/aged-debtors' },
+            { label: 'Enrolment vs Billing', icon: '📈', route: '/enrolment-vs-billing' },
+            { label: 'Revenue Recognition', icon: '💹', route: '/revenue-recognition' },
+            { label: 'Student Reconciliation', icon: '⚖️', route: '/student-reconciliation' },
+            { label: 'Analytics & Forecasts', icon: '🔮', route: '/analytics-forecasts' },
+            { label: 'Class Reconciliation', icon: '🏫', route: '/class-reconciliation' }
+          ]
+        },
+        {
+          id: 'payroll', label: 'Payroll', icon: '🧮',
+          children: [
+            { label: 'Overview', icon: '🗂️', route: '/payroll/manage/overview' },
+            { label: 'Payslips', icon: '🧾', route: '/payroll/manage/payslips' },
+            { label: 'Reports', icon: '📊', route: '/payroll/manage/reports' }
+          ]
+        }
+      );
+    } else if (this.isTeacher()) {
+      items.push(
+        { id: 'teacher-dash', label: 'Teacher Dashboard', icon: '🏠', route: '/teacher/dashboard' },
+        { id: 'classes', label: 'Classes', icon: '🏫', route: '/classes/manage' },
+        { id: 'elearning', label: 'E-Learning', icon: '💻', route: '/teacher/elearning-manage' },
+        { id: 'inventory', label: 'Inventory', icon: '📦', route: '/teacher/inventory_manage' }
+      );
+    } else if (this.isInventoryStaff()) {
+      items.push({
+        id: 'inventory', label: 'Inventory', icon: '📦',
+        children: [
+          { label: 'Stock', icon: '📚', route: '/inventory/manage', queryParams: { tab: 'stock' } },
+          { label: 'Textbook Allocation', icon: '📘', route: '/inventory/manage', queryParams: { tab: 'custody' } },
+          { label: 'Furniture Allocation', icon: '🪑', route: '/inventory/manage', queryParams: { tab: 'furnitureAllocation' } },
+          { label: 'Report Furniture', icon: '🛋️', route: '/inventory/manage', queryParams: { tab: 'reportsFurniture' } },
+          { label: 'Report Textbook', icon: '📕', route: '/inventory/manage', queryParams: { tab: 'reportsTextbooksHod' } },
+          { label: 'Audit', icon: '📋', route: '/inventory/manage', queryParams: { tab: 'audit' } }
+        ]
+      });
+    }
+
+    this.navItems = items;
+  }
+}

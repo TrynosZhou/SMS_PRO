@@ -62,7 +62,7 @@ export class StudentsManageComponent implements OnInit, OnDestroy {
   isStudentsSectionActive(): boolean {
     const u = this.router.url.split('?')[0];
     return (
-      u.includes('/students/manage/students') ||
+      u === '/students' ||
       u.includes('/students/manage/edit')
     );
   }

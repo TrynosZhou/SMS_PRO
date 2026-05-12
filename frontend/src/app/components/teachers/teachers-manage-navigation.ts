@@ -10,11 +10,12 @@ export function teachersManageNav(router: Router) {
   const m = isInTeachersManageShell(router);
   return {
     list: m ? '/teachers/manage/teachers' : '/teachers',
-    addNew: m ? '/teachers/manage/add-new' : '/teachers/new',
-    assignClasses: m ? '/teachers/manage/assign-classes' : '/teachers/assign-classes',
-    allocateClass: m ? '/teachers/manage/allocate_class' : '/teachers/allocate_class',
+    /** @deprecated Add Teacher is now an in-app modal; call AddTeacherModalService.open() instead. */
+    addNew: m ? '/teachers/manage/teachers' : '/teachers',
+    assignClasses: '/assign-classes',
+    allocateClass: '/allocate_class',
     recordBook: m ? '/teachers/manage/record-book' : '/admin/teacher-record-book',
-    teacherSubjectAssignment: '/teachers/manage/teacher_subject',
+    teacherSubjectAssignment: '/teacher_subject',
     teacherSubjectContact: (id: string) => `/teachers/manage/teacher_subject/contact/${id}`,
     editSegments: (id: string) =>
       m ? ['/teachers', 'manage', 'edit', id] : ['/teachers', id, 'edit'],

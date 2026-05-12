@@ -120,7 +120,7 @@ export class ClassSubjectsComponent implements OnInit {
   }
 
   close(): void {
-    this.router.navigate(['/classes/manage/assign-teachers']);
+    this.router.navigate(['/assign-teachers']);
   }
 
   newLesson(): void {

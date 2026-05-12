@@ -1,402 +1,456 @@
-<div class="mark-input-progress-container">
-  <div class="header">
-    <h2>Mark Input Progress</h2>
-    <p class="subtitle">
-      Choose a class (or <strong>All classes</strong>) to see each subject’s mark-capture progress for the selected term and exam type.
-    </p>
-  </div>
+<div class="mip-page">
+  <div class="mip-frame">
 
-  <div class="filters-section">
-    <div class="filters-grid">
-      <div class="filter-group">
-        <label for="classSelect">Class</label>
-        <select id="classSelect" [(ngModel)]="selectedClassId" (change)="onAnyFilterChange()" class="form-control">
-          <option value="">Select a class or All classes</option>
-          <option [value]="ALL_CLASSES_VALUE">All classes</option>
-          <option *ngFor="let cls of classes" [value]="cls.id">
-            {{ cls.name }}
-          </option>
-        </select>
+    <section class="mip-hero card">
+      <div class="hero-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 17 9 11 13 15 21 7"></polyline>
+          <polyline points="14 7 21 7 21 14"></polyline>
+        </svg>
       </div>
+      <h1 class="hero-title">Marks Capture Progress</h1>
+      <p class="hero-subtitle">Track and monitor marks entry progress across subjects</p>
+    </section>
 
-      <div class="filter-group">
-        <label for="examTypeSelect">Exam Type</label>
-        <select id="examTypeSelect" [(ngModel)]="selectedExamType" class="form-control" (change)="onAnyFilterChange()">
-          <option *ngFor="let type of examTypes" [value]="type.value">
-            {{ type.label }}
-          </option>
-        </select>
-      </div>
+    <section class="mip-filter card">
+      <header class="filter-head">
+        <span class="filter-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="7" y1="12" x2="17" y2="12"></line>
+            <line x1="10" y1="18" x2="14" y2="18"></line>
+          </svg>
+        </span>
+        <div class="filter-titles">
+          <h2 class="filter-title">Filter Criteria</h2>
+          <p class="filter-sub">Select term, exam type, and class to view progress data</p>
+        </div>
+      </header>
 
-      <div class="filter-group">
-        <label for="termInput">Term</label>
-        <input
-          type="text"
-          id="termInput"
-          [(ngModel)]="selectedTerm"
-          class="form-control"
-          [placeholder]="selectedTerm || 'e.g., Term 1 2024'"
-          readonly>
-        <small class="form-text text-muted">Fetched from Settings (Active Term)</small>
-      </div>
+      <div class="filter-grid">
+        <div class="field" [class.has-value]="!!selectedTerm">
+          <span class="field-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </span>
+          <select id="termSelect" class="field-input" [(ngModel)]="selectedTerm" (change)="onAnyFilterChange()">
+            <option value="" disabled hidden></option>
+            <option *ngFor="let t of terms" [value]="t.label">{{ t.label }}</option>
+          </select>
+          <label for="termSelect" class="field-label">Term<span class="req">*</span></label>
+          <span class="field-caret" aria-hidden="true">▾</span>
+        </div>
 
-      <div class="filter-group filter-search">
-        <label for="subjectSearch">Search Subject</label>
-        <input
-          id="subjectSearch"
-          type="text"
-          class="form-control"
-          placeholder="e.g., ENG, English, MAT..."
-          [(ngModel)]="subjectSearch"
-        />
-      </div>
-    </div>
+        <div class="field" [class.has-value]="!!selectedExamType">
+          <span class="field-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="3" width="16" height="18" rx="2"></rect>
+              <path d="M9 9a3 3 0 1 1 4.5 2.6c-.9.5-1.5 1-1.5 2.4"></path>
+              <line x1="12" y1="17" x2="12" y2="17.5"></line>
+            </svg>
+          </span>
+          <select id="examTypeSelect" class="field-input" [(ngModel)]="selectedExamType" (change)="onAnyFilterChange()">
+            <option value="" disabled hidden></option>
+            <option *ngFor="let type of examTypes" [value]="type.value">{{ type.label }}</option>
+          </select>
+          <label for="examTypeSelect" class="field-label">Exam Type<span class="req">*</span></label>
+          <span class="field-caret" aria-hidden="true">▾</span>
+        </div>
 
-    <div class="filter-actions">
-      <button type="button" class="btn btn-primary" (click)="loadProgress()" [disabled]="loading">
-        <span *ngIf="loading">Loading...</span>
-        <span *ngIf="!loading">Load Progress</span>
-      </button>
-      <button type="button" class="btn btn-outline" (click)="resetFilters()">
-        Reset Filters
-      </button>
-    </div>
-
-    <div class="auto-load-row">
-      <label class="auto-load-label">
-        <input type="checkbox" [(ngModel)]="autoLoadProgress" />
-        Auto-load on filter change
-      </label>
-    </div>
-  </div>
-
-  <div class="alert alert-danger" *ngIf="error">
-    {{ error }}
-  </div>
-
-  <div class="loading-shell" *ngIf="loading">
-    <div class="skeleton skeleton-title"></div>
-    <div class="skeleton-row">
-      <div class="skeleton skeleton-card"></div>
-      <div class="skeleton skeleton-card"></div>
-      <div class="skeleton skeleton-card"></div>
-    </div>
-    <div class="skeleton skeleton-table"></div>
-  </div>
-
-  <div class="progress-dashboard" *ngIf="progressData">
-    <div class="dashboard-header">
-      <div class="dashboard-title-row">
-        <h3>Progress Dashboard</h3>
-        <div class="dashboard-actions">
-          <div class="dashboard-last-updated" *ngIf="lastLoadedAt">
-            Last updated: {{ lastLoadedAt | date:'short' }}
-          </div>
-          <button type="button" class="btn btn-ghost" (click)="loadProgress()" [disabled]="loading" title="Refresh progress">
-            Refresh
-          </button>
-          <button type="button" class="btn btn-ghost" (click)="exportCSV()" [disabled]="!hasExportableRows" title="Export as CSV">
-            Export CSV
-          </button>
+        <div class="field" [class.has-value]="!!selectedClassId">
+          <span class="field-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"></path>
+              <path d="M5 17h14"></path>
+            </svg>
+          </span>
+          <select id="classSelect" class="field-input" [(ngModel)]="selectedClassId" (change)="onAnyFilterChange()">
+            <option value="" disabled hidden></option>
+            <option [value]="ALL_CLASSES_VALUE">All classes</option>
+            <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+          </select>
+          <label for="classSelect" class="field-label">Class<span class="req">*</span></label>
+          <span class="field-caret" aria-hidden="true">▾</span>
         </div>
       </div>
-      <div class="filters-info" *ngIf="progressData.filters">
-        <span *ngIf="isAllClassesView"><strong>All classes</strong> | </span>
-        <span *ngIf="!isAllClassesView && progressData.class?.name">Class: {{ progressData.class.name }} | </span>
-        <span *ngIf="progressData.filters.term">Term: {{ progressData.filters.term }} | </span>
-        <span *ngIf="progressData.filters.examType">Type: {{ formatExamTypeLabel(progressData.filters.examType) }}</span>
+
+      <div class="filter-extras">
+        <div class="extra-search">
+          <span class="search-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
+          <input type="text" class="extra-input" placeholder="Search subject by code or name..." [(ngModel)]="subjectSearch" />
+        </div>
+
+        <label class="auto-toggle">
+          <input type="checkbox" [(ngModel)]="autoLoadProgress" />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          <span class="auto-label">Auto-refresh on change</span>
+        </label>
       </div>
 
-      <div class="dashboard-controls">
+      <div class="filter-actions">
+        <button type="button" class="btn btn-ghost" (click)="resetFilters()">Reset</button>
+        <button type="button" class="btn btn-primary" (click)="loadProgress()" [disabled]="!canLoad || loading">
+          <ng-container *ngIf="!loading">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="3 17 9 11 13 15 21 7"></polyline>
+              <polyline points="14 7 21 7 21 14"></polyline>
+            </svg>
+            <span>Generate Progress</span>
+          </ng-container>
+          <ng-container *ngIf="loading">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Loading…</span>
+          </ng-container>
+        </button>
+      </div>
+    </section>
+
+    <div class="mip-alert" *ngIf="error">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="13"></line>
+        <line x1="12" y1="16" x2="12" y2="16.01"></line>
+      </svg>
+      <span>{{ error }}</span>
+    </div>
+
+    <section class="mip-loading card" *ngIf="loading">
+      <div class="skel skel-title"></div>
+      <div class="skel-row">
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+      </div>
+      <div class="skel skel-table"></div>
+    </section>
+
+    <section class="mip-empty card" *ngIf="!loading && !progressData && !error">
+      <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+        <path d="M8 15h2M14 15h2M8 18h2M14 18h2"></path>
+      </svg>
+      <h3>No progress data yet</h3>
+      <p>Pick a <strong>Term</strong>, <strong>Exam Type</strong> and <strong>Class</strong>, then press <strong>Generate Progress</strong>.</p>
+    </section>
+
+    <section class="mip-dashboard" *ngIf="!loading && progressData">
+      <div class="dash-head card">
+        <div class="dash-titles">
+          <h3>Progress Dashboard</h3>
+          <div class="dash-meta">
+            <span class="meta-pill" *ngIf="isAllClassesView">All classes</span>
+            <span class="meta-pill" *ngIf="!isAllClassesView && progressData.class?.name">{{ progressData.class.name }}</span>
+            <span class="meta-pill" *ngIf="progressData.filters?.term">{{ progressData.filters.term }}</span>
+            <span class="meta-pill" *ngIf="progressData.filters?.examType">{{ formatExamTypeLabel(progressData.filters.examType) }}</span>
+            <span class="meta-update" *ngIf="lastLoadedAt">Last updated {{ lastLoadedAt | date:'shortTime' }}</span>
+          </div>
+        </div>
+        <div class="dash-actions">
+          <button type="button" class="icon-btn" (click)="loadProgress()" [disabled]="loading" title="Refresh">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+              <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+            </svg>
+            <span>Refresh</span>
+          </button>
+          <button type="button" class="icon-btn" (click)="exportCSV()" [disabled]="!hasExportableRows" title="Export CSV">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Export CSV</span>
+          </button>
+          <div class="view-toggle">
+            <button type="button" class="vt-btn" [class.active]="viewMode === 'cards'" (click)="viewMode = 'cards'">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+              </svg>
+              Cards
+            </button>
+            <button type="button" class="vt-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+              Table
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-row" *ngIf="(isAllClassesView && filteredSortedClasses.length > 0) || (!isAllClassesView && filteredSortedSubjects.length > 0)">
+        <div class="stat-tile stat-classes" *ngIf="isAllClassesView && overallStats.classCount != null">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 7l9-4 9 4-9 4-9-4z"></path>
+              <path d="M3 12l9 4 9-4"></path>
+              <path d="M3 17l9 4 9-4"></path>
+            </svg>
+          </div>
+          <div class="stat-meta">
+            <span class="stat-name">Classes</span>
+            <span class="stat-num">{{ overallStats.classCount }}</span>
+          </div>
+        </div>
+        <div class="stat-tile stat-students">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path>
+              <circle cx="10" cy="7" r="4"></circle>
+              <path d="M21 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="stat-meta">
+            <span class="stat-name">{{ isAllClassesView ? 'Total Students' : 'Total Students' }}</span>
+            <span class="stat-num">{{ overallStats.totalStudents }}</span>
+          </div>
+        </div>
+        <div class="stat-tile stat-subjects">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </div>
+          <div class="stat-meta">
+            <span class="stat-name">Subjects</span>
+            <span class="stat-num">{{ overallStats.totalSubjects }}</span>
+          </div>
+        </div>
+        <div class="stat-tile stat-avg">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="3 17 9 11 13 15 21 7"></polyline>
+              <polyline points="14 7 21 7 21 14"></polyline>
+            </svg>
+          </div>
+          <div class="stat-meta">
+            <span class="stat-name">Avg. Completion</span>
+            <span class="stat-num">{{ overallStats.avgCompletion }}%</span>
+          </div>
+        </div>
+        <div class="stat-tile stat-ontrack">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </div>
+          <div class="stat-meta">
+            <span class="stat-name">On Track (80+)</span>
+            <span class="stat-num">{{ overallStats.onTrack }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-controls card">
         <div class="chip-row" role="group" aria-label="Status filter">
           <button type="button" class="chip" [class.active]="statusFilter==='all'" (click)="setStatusFilter('all')">All</button>
-          <button type="button" class="chip" [class.active]="statusFilter==='completed'" (click)="setStatusFilter('completed')">On Track</button>
-          <button type="button" class="chip" [class.active]="statusFilter==='almost'" (click)="setStatusFilter('almost')">Almost Done</button>
-          <button type="button" class="chip" [class.active]="statusFilter==='progress'" (click)="setStatusFilter('progress')">In Progress</button>
-          <button type="button" class="chip" [class.active]="statusFilter==='started'" (click)="setStatusFilter('started')">Started</button>
-          <button type="button" class="chip" [class.active]="statusFilter==='not-started'" (click)="setStatusFilter('not-started')">Not Started</button>
+          <button type="button" class="chip chip-completed" [class.active]="statusFilter==='completed'" (click)="setStatusFilter('completed')">On Track</button>
+          <button type="button" class="chip chip-almost" [class.active]="statusFilter==='almost'" (click)="setStatusFilter('almost')">Almost Done</button>
+          <button type="button" class="chip chip-progress" [class.active]="statusFilter==='progress'" (click)="setStatusFilter('progress')">In Progress</button>
+          <button type="button" class="chip chip-started" [class.active]="statusFilter==='started'" (click)="setStatusFilter('started')">Started</button>
+          <button type="button" class="chip chip-none" [class.active]="statusFilter==='not-started'" (click)="setStatusFilter('not-started')">Not Started</button>
         </div>
-
         <div class="sort-row">
-          <span class="sort-label">Sort subjects:</span>
-          <button type="button" class="sort-btn" (click)="toggleSort('completion')" [attr.aria-label]="sortAria('completion')">
-            Completion
-            <span class="sort-ind" *ngIf="sortKey==='completion'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
+          <span class="sort-label">Sort:</span>
+          <button type="button" class="sort-btn" (click)="toggleSort('completion')" [class.active]="sortKey==='completion'">
+            Completion <span class="sort-ind" *ngIf="sortKey==='completion'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
           </button>
-          <button type="button" class="sort-btn" (click)="toggleSort('subjectName')" [attr.aria-label]="sortAria('subjectName')">
-            Subject
-            <span class="sort-ind" *ngIf="sortKey==='subjectName'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
+          <button type="button" class="sort-btn" (click)="toggleSort('subjectName')" [class.active]="sortKey==='subjectName'">
+            Subject <span class="sort-ind" *ngIf="sortKey==='subjectName'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
           </button>
-          <button type="button" class="sort-btn" (click)="toggleSort('subjectCode')" [attr.aria-label]="sortAria('subjectCode')">
-            Code
-            <span class="sort-ind" *ngIf="sortKey==='subjectCode'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
+          <button type="button" class="sort-btn" (click)="toggleSort('subjectCode')" [class.active]="sortKey==='subjectCode'">
+            Code <span class="sort-ind" *ngIf="sortKey==='subjectCode'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
           </button>
-          <button type="button" class="sort-btn" (click)="toggleSort('studentsWithMarks')" [attr.aria-label]="sortAria('studentsWithMarks')">
-            With Marks
-            <span class="sort-ind" *ngIf="sortKey==='studentsWithMarks'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
+          <button type="button" class="sort-btn" (click)="toggleSort('studentsWithMarks')" [class.active]="sortKey==='studentsWithMarks'">
+            With Marks <span class="sort-ind" *ngIf="sortKey==='studentsWithMarks'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
           </button>
         </div>
       </div>
 
-      <div class="view-toggle">
-        <button type="button" class="btn btn-view" [class.active]="viewMode === 'cards'" (click)="viewMode = 'cards'">
-          Cards
-        </button>
-        <button type="button" class="btn btn-view" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'">
-          Table
-        </button>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot dot-completed"></span> On Track (80+)</div>
+        <div class="legend-item"><span class="legend-dot dot-almost"></span> Almost Done (50+)</div>
+        <div class="legend-item"><span class="legend-dot dot-progress"></span> In Progress (25+)</div>
+        <div class="legend-item"><span class="legend-dot dot-started"></span> Started / Not started</div>
       </div>
-    </div>
 
-    <div class="quick-stats" *ngIf="(isAllClassesView && filteredSortedClasses.length > 0) || (!isAllClassesView && filteredSortedSubjects.length > 0)">
-      <div class="stat-card" *ngIf="isAllClassesView && overallStats.classCount != null">
-        <div class="stat-label">Classes (after filters)</div>
-        <div class="stat-value">{{ overallStats.classCount }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">{{ isAllClassesView ? 'Students (sum)' : 'Total Students' }}</div>
-        <div class="stat-value">{{ overallStats.totalStudents }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Subject rows</div>
-        <div class="stat-value">{{ overallStats.totalSubjects }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Average Completion</div>
-        <div class="stat-value">{{ overallStats.avgCompletion }}%</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">On Track (80+)</div>
-        <div class="stat-value">{{ overallStats.onTrack }}</div>
-      </div>
-    </div>
-
-    <div class="legend">
-      <div class="legend-item">
-        <span class="legend-dot legend-completed"></span> On Track (80+)
-      </div>
-      <div class="legend-item">
-        <span class="legend-dot legend-almost"></span> Almost Done (50+)
-      </div>
-      <div class="legend-item">
-        <span class="legend-dot legend-progress"></span> In Progress (25+)
-      </div>
-      <div class="legend-item">
-        <span class="legend-dot legend-started"></span> Started / Not started
-      </div>
-    </div>
-
-    <!-- Single class — cards -->
-    <div class="streams-container" *ngIf="!isAllClassesView && viewMode === 'cards' && filteredSortedSubjects.length > 0">
-      <div class="class-card" *ngFor="let subj of filteredSortedSubjects">
-        <div class="class-header">
-          <h5>{{ subj.subjectCode }} - {{ subj.subjectName }}</h5>
-          <div class="class-right">
-            <span class="completion-badge" [ngClass]="getCompletionStatus(subj.completionPercentage).cls">
+      <!-- Single class — cards -->
+      <div class="subjects-grid" *ngIf="!isAllClassesView && viewMode === 'cards' && filteredSortedSubjects.length > 0">
+        <div class="subject-card card" *ngFor="let subj of filteredSortedSubjects">
+          <div class="subject-head">
+            <div class="subject-id">
+              <span class="subj-code">{{ subj.subjectCode }}</span>
+              <span class="subj-name">{{ subj.subjectName }}</span>
+            </div>
+            <span class="completion-pill" [ngClass]="getCompletionStatus(subj.completionPercentage).cls">
               {{ subj.completionPercentage }}%
             </span>
           </div>
-        </div>
-
-        <div class="class-progress-bar">
-          <div
-            class="progress-fill"
-            [style.width]="getProgressWidth(subj.completionPercentage)"
-            [style.background-color]="getProgressColor(subj.completionPercentage)">
+          <div class="progress-track">
+            <div class="progress-fill"
+              [style.width]="getProgressWidth(subj.completionPercentage)"
+              [style.background-color]="getProgressColor(subj.completionPercentage)"></div>
           </div>
-        </div>
-
-        <div class="class-stats">
-          <div class="stat-item">
-            <span class="stat-label">With Marks:</span>
-            <span class="stat-value">{{ subj.studentsWithMarks }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Remaining:</span>
-            <span class="stat-value">{{ overallStats.totalStudents - subj.studentsWithMarks }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Status:</span>
-            <span class="stat-value">{{ getCompletionStatus(subj.completionPercentage).label }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- All classes — cards (grouped by class name) -->
-    <div class="streams-container all-classes-root" *ngIf="isAllClassesView && viewMode === 'cards' && filteredSortedClasses.length > 0">
-      <div class="stream-card all-classes-block" *ngFor="let block of filteredSortedClasses">
-        <div class="stream-header all-classes-class-header">
-          <h4>{{ block.class.name }}</h4>
-          <div class="stream-summary">
-            <span class="summary-item"><strong>Students:</strong> {{ block.totalStudents }}</span>
-            <span class="summary-item"><strong>Subjects shown:</strong> {{ block.subjects.length }}</span>
-          </div>
-        </div>
-        <div class="classes-grid">
-          <div class="class-card" *ngFor="let subj of block.subjects">
-            <div class="class-header">
-              <h5>{{ subj.subjectCode }} - {{ subj.subjectName }}</h5>
-              <div class="class-right">
-                <span class="completion-badge" [ngClass]="getCompletionStatus(subj.completionPercentage).cls">
-                  {{ subj.completionPercentage }}%
-                </span>
-              </div>
+          <div class="subject-meta">
+            <div class="meta-item">
+              <span class="meta-label">With Marks</span>
+              <span class="meta-val">{{ subj.studentsWithMarks }}</span>
             </div>
-
-            <div class="class-progress-bar">
-              <div
-                class="progress-fill"
-                [style.width]="getProgressWidth(subj.completionPercentage)"
-                [style.background-color]="getProgressColor(subj.completionPercentage)">
-              </div>
+            <div class="meta-item">
+              <span class="meta-label">Remaining</span>
+              <span class="meta-val">{{ overallStats.totalStudents - subj.studentsWithMarks }}</span>
             </div>
-
-            <div class="class-stats">
-              <div class="stat-item">
-                <span class="stat-label">With Marks:</span>
-                <span class="stat-value">{{ subj.studentsWithMarks }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Remaining:</span>
-                <span class="stat-value">{{ block.totalStudents - subj.studentsWithMarks }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Status:</span>
-                <span class="stat-value">{{ getCompletionStatus(subj.completionPercentage).label }}</span>
-              </div>
+            <div class="meta-item">
+              <span class="meta-label">Status</span>
+              <span class="meta-val">{{ getCompletionStatus(subj.completionPercentage).label }}</span>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="no-data" *ngIf="viewMode === 'cards' && ((!isAllClassesView && filteredSortedSubjects.length === 0) || (isAllClassesView && filteredSortedClasses.length === 0))">
-      <p>No progress matches the current search or status filters.</p>
-    </div>
-
-    <!-- Table: single class -->
-    <div class="table-view" *ngIf="!isAllClassesView && viewMode === 'table'">
-      <div class="no-data" *ngIf="filteredSortedSubjects.length === 0">
-        <p>No progress matches the current search or status filters.</p>
-      </div>
-
-      <div class="progress-table-wrap" *ngIf="filteredSortedSubjects.length > 0">
-        <table class="progress-table">
+      <!-- Single class — table -->
+      <div class="subjects-table card" *ngIf="!isAllClassesView && viewMode === 'table' && filteredSortedSubjects.length > 0">
+        <table>
           <thead>
             <tr>
-              <th>
-                <button type="button" class="th-btn" (click)="toggleSort('subjectCode')" [attr.aria-label]="sortAria('subjectCode')">
-                  Code <span class="sort-ind" *ngIf="sortKey==='subjectCode'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
-                </button>
-              </th>
-              <th>
-                <button type="button" class="th-btn" (click)="toggleSort('subjectName')" [attr.aria-label]="sortAria('subjectName')">
-                  Subject <span class="sort-ind" *ngIf="sortKey==='subjectName'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
-                </button>
-              </th>
-              <th>Total Students</th>
-              <th>
-                <button type="button" class="th-btn" (click)="toggleSort('studentsWithMarks')" [attr.aria-label]="sortAria('studentsWithMarks')">
-                  With Marks <span class="sort-ind" *ngIf="sortKey==='studentsWithMarks'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
-                </button>
-              </th>
-              <th>
-                <button type="button" class="th-btn" (click)="toggleSort('completion')" [attr.aria-label]="sortAria('completion')">
-                  Completion <span class="sort-ind" *ngIf="sortKey==='completion'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
-                </button>
-              </th>
+              <th (click)="toggleSort('subjectCode')" class="sortable" [class.active]="sortKey==='subjectCode'">Code<span class="sort-ind" *ngIf="sortKey==='subjectCode'">{{ sortDir==='asc' ? '↑' : '↓' }}</span></th>
+              <th (click)="toggleSort('subjectName')" class="sortable" [class.active]="sortKey==='subjectName'">Subject<span class="sort-ind" *ngIf="sortKey==='subjectName'">{{ sortDir==='asc' ? '↑' : '↓' }}</span></th>
+              <th>Total</th>
+              <th (click)="toggleSort('studentsWithMarks')" class="sortable" [class.active]="sortKey==='studentsWithMarks'">With Marks<span class="sort-ind" *ngIf="sortKey==='studentsWithMarks'">{{ sortDir==='asc' ? '↑' : '↓' }}</span></th>
+              <th>Remaining</th>
+              <th (click)="toggleSort('completion')" class="sortable" [class.active]="sortKey==='completion'">% Done<span class="sort-ind" *ngIf="sortKey==='completion'">{{ sortDir==='asc' ? '↑' : '↓' }}</span></th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let subj of filteredSortedSubjects">
-              <td class="nowrap">{{ subj.subjectCode }}</td>
+              <td><strong>{{ subj.subjectCode }}</strong></td>
               <td>{{ subj.subjectName }}</td>
-              <td>{{ progressData.totalStudents }}</td>
+              <td>{{ overallStats.totalStudents }}</td>
               <td>{{ subj.studentsWithMarks }}</td>
+              <td>{{ overallStats.totalStudents - subj.studentsWithMarks }}</td>
               <td>
-                <div class="completion-cell">
-                  <div class="completion-badge" [ngClass]="getCompletionStatus(subj.completionPercentage).cls">
-                    {{ subj.completionPercentage }}% - {{ getCompletionStatus(subj.completionPercentage).label }}
-                  </div>
-                  <div class="mini-bar">
-                    <div class="mini-fill"
-                      [style.width]="getProgressWidth(subj.completionPercentage)"
-                      [style.background-color]="getProgressColor(subj.completionPercentage)">
-                    </div>
-                  </div>
+                <div class="cell-pct">
+                  <div class="mini-track"><div class="mini-fill" [style.width]="getProgressWidth(subj.completionPercentage)" [style.background-color]="getProgressColor(subj.completionPercentage)"></div></div>
+                  <span class="cell-pct-val">{{ subj.completionPercentage }}%</span>
                 </div>
               </td>
+              <td><span class="status-pill" [ngClass]="getCompletionStatus(subj.completionPercentage).cls">{{ getCompletionStatus(subj.completionPercentage).label }}</span></td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
 
-    <!-- Table: all classes -->
-    <div class="table-view" *ngIf="isAllClassesView && viewMode === 'table'">
-      <div class="no-data" *ngIf="filteredSortedClasses.length === 0">
-        <p>No progress matches the current search or status filters.</p>
+      <!-- All classes — cards -->
+      <div class="all-classes" *ngIf="isAllClassesView && viewMode === 'cards' && filteredSortedClasses.length > 0">
+        <div class="class-block card" *ngFor="let block of filteredSortedClasses">
+          <div class="block-head">
+            <h4>{{ block.class.name }}</h4>
+            <div class="block-summary">
+              <span><strong>Students:</strong> {{ block.totalStudents }}</span>
+              <span><strong>Subjects:</strong> {{ block.subjects.length }}</span>
+            </div>
+          </div>
+          <div class="subjects-grid">
+            <div class="subject-card subject-card-inner" *ngFor="let subj of block.subjects">
+              <div class="subject-head">
+                <div class="subject-id">
+                  <span class="subj-code">{{ subj.subjectCode }}</span>
+                  <span class="subj-name">{{ subj.subjectName }}</span>
+                </div>
+                <span class="completion-pill" [ngClass]="getCompletionStatus(subj.completionPercentage).cls">
+                  {{ subj.completionPercentage }}%
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill"
+                  [style.width]="getProgressWidth(subj.completionPercentage)"
+                  [style.background-color]="getProgressColor(subj.completionPercentage)"></div>
+              </div>
+              <div class="subject-meta">
+                <div class="meta-item">
+                  <span class="meta-label">With Marks</span>
+                  <span class="meta-val">{{ subj.studentsWithMarks }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Remaining</span>
+                  <span class="meta-val">{{ block.totalStudents - subj.studentsWithMarks }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="progress-table-wrap" *ngIf="filteredSortedClasses.length > 0">
-        <table class="progress-table">
+      <!-- All classes — table -->
+      <div class="subjects-table card" *ngIf="isAllClassesView && viewMode === 'table' && filteredSortedClasses.length > 0">
+        <table>
           <thead>
             <tr>
               <th>Class</th>
-              <th>
-                <button type="button" class="th-btn" (click)="toggleSort('subjectCode')" [attr.aria-label]="sortAria('subjectCode')">
-                  Code <span class="sort-ind" *ngIf="sortKey==='subjectCode'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
-                </button>
-              </th>
-              <th>
-                <button type="button" class="th-btn" (click)="toggleSort('subjectName')" [attr.aria-label]="sortAria('subjectName')">
-                  Subject <span class="sort-ind" *ngIf="sortKey==='subjectName'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
-                </button>
-              </th>
-              <th>Total Students</th>
-              <th>
-                <button type="button" class="th-btn" (click)="toggleSort('studentsWithMarks')" [attr.aria-label]="sortAria('studentsWithMarks')">
-                  With Marks <span class="sort-ind" *ngIf="sortKey==='studentsWithMarks'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
-                </button>
-              </th>
-              <th>
-                <button type="button" class="th-btn" (click)="toggleSort('completion')" [attr.aria-label]="sortAria('completion')">
-                  Completion <span class="sort-ind" *ngIf="sortKey==='completion'">{{ sortDir==='asc' ? '↑' : '↓' }}</span>
-                </button>
-              </th>
+              <th>Code</th>
+              <th>Subject</th>
+              <th>Total</th>
+              <th>With Marks</th>
+              <th>Remaining</th>
+              <th>% Done</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             <ng-container *ngFor="let block of filteredSortedClasses">
               <tr *ngFor="let subj of block.subjects">
-                <td class="nowrap class-cell-strong">{{ block.class.name }}</td>
-                <td class="nowrap">{{ subj.subjectCode }}</td>
+                <td>{{ block.class.name }}</td>
+                <td><strong>{{ subj.subjectCode }}</strong></td>
                 <td>{{ subj.subjectName }}</td>
                 <td>{{ block.totalStudents }}</td>
                 <td>{{ subj.studentsWithMarks }}</td>
+                <td>{{ block.totalStudents - subj.studentsWithMarks }}</td>
                 <td>
-                  <div class="completion-cell">
-                    <div class="completion-badge" [ngClass]="getCompletionStatus(subj.completionPercentage).cls">
-                      {{ subj.completionPercentage }}% - {{ getCompletionStatus(subj.completionPercentage).label }}
-                    </div>
-                    <div class="mini-bar">
-                      <div class="mini-fill"
-                        [style.width]="getProgressWidth(subj.completionPercentage)"
-                        [style.background-color]="getProgressColor(subj.completionPercentage)">
-                      </div>
-                    </div>
+                  <div class="cell-pct">
+                    <div class="mini-track"><div class="mini-fill" [style.width]="getProgressWidth(subj.completionPercentage)" [style.background-color]="getProgressColor(subj.completionPercentage)"></div></div>
+                    <span class="cell-pct-val">{{ subj.completionPercentage }}%</span>
                   </div>
                 </td>
+                <td><span class="status-pill" [ngClass]="getCompletionStatus(subj.completionPercentage).cls">{{ getCompletionStatus(subj.completionPercentage).label }}</span></td>
               </tr>
             </ng-container>
           </tbody>
         </table>
       </div>
-    </div>
-  </div>
 
-  <div class="empty-state" *ngIf="!progressData && !loading">
-    <p>Select a class or <strong>All classes</strong>, then click <strong>Load Progress</strong>.</p>
+      <div class="no-results card"
+        *ngIf="(isAllClassesView && filteredSortedClasses.length === 0) || (!isAllClassesView && filteredSortedSubjects.length === 0)">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <h4>No subjects match your filters</h4>
+        <p>Try widening the status filter or clearing the search.</p>
+      </div>
+    </section>
+
   </div>
 </div>

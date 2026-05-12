@@ -1,37 +1,128 @@
-<div class="container">
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h1>Invoice Statements</h1>
-      <button class="btn btn-secondary" (click)="router.navigate(['/invoices'])">
-        ⬅️ Back to Invoices
+<div class="st-page">
+  <div class="st-shell">
+
+    <!-- Invoice Management hero (blue gradient) -->
+    <section class="st-hero">
+      <div class="st-hero-inner">
+        <span class="st-hero-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v18l3-2 3 2 3-2 3 2 3-2V8z"></path>
+            <line x1="8" y1="10" x2="16" y2="10"></line>
+            <line x1="8" y1="14" x2="13" y2="14"></line>
+          </svg>
+        </span>
+        <div class="st-hero-text">
+          <h1 class="st-hero-title">Invoice Management</h1>
+          <p class="st-hero-sub">View and manage student invoices by term</p>
+        </div>
+      </div>
+      <button type="button" class="st-back-btn" (click)="router.navigate(['/invoices'])">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Back</span>
       </button>
+    </section>
+
+    <!-- Alerts -->
+    <div class="st-alert st-alert-success" *ngIf="success">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span>{{ success }}</span>
     </div>
-    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
-    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
-    
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-      <div class="form-group">
-        <label>Filter by Student</label>
-        <select [(ngModel)]="selectedStudent" [ngModelOptions]="{standalone: true}" (change)="onFilterChange()">
-          <option value="">All Students</option>
+    <div class="st-alert st-alert-error" *ngIf="error">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="13"></line>
+        <line x1="12" y1="16" x2="12" y2="16.01"></line>
+      </svg>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Select Academic Term card -->
+    <section class="st-term-card">
+      <header class="st-term-head">
+        <span class="st-term-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </span>
+        <div>
+          <h2 class="st-term-title">Select Academic Term</h2>
+          <p class="st-term-sub">Choose a term to view invoices</p>
+        </div>
+      </header>
+      <div class="st-term-body">
+        <div class="st-term-field" [class.has-value]="!!selectedTerm">
+          <select id="stTerm" class="st-term-select"
+            [(ngModel)]="selectedTerm"
+            [ngModelOptions]="{standalone: true}"
+            (change)="onTermChange()"
+            [disabled]="loadingTerms">
+            <option value="" disabled hidden></option>
+            <option value="">All terms</option>
+            <option *ngFor="let t of availableTerms" [value]="t">{{ t }}</option>
+          </select>
+          <label for="stTerm" class="st-term-label">Academic Term</label>
+          <span class="st-term-caret" aria-hidden="true">▾</span>
+        </div>
+        <p class="st-term-hint">Select the term to view invoices</p>
+      </div>
+    </section>
+
+    <!-- Secondary filters -->
+    <section class="st-filters" *ngIf="!loading || invoices.length > 0">
+      <div class="st-filter-field" [class.has-value]="!!selectedStudent">
+        <select [(ngModel)]="selectedStudent" [ngModelOptions]="{standalone: true}" (change)="onFilterChange()" class="st-filter-select" id="stStudent">
+          <option value="" disabled hidden></option>
+          <option value="">All students</option>
           <option *ngFor="let student of students" [value]="student.id">
             {{ student.firstName }} {{ student.lastName }}
           </option>
         </select>
+        <label for="stStudent" class="st-filter-label">Filter by Student</label>
+        <span class="st-filter-caret" aria-hidden="true">▾</span>
       </div>
-      <div class="form-group">
-        <label>Filter by Status</label>
-        <select [(ngModel)]="selectedStatus" [ngModelOptions]="{standalone: true}" (change)="onFilterChange()">
-          <option value="">All Statuses</option>
+      <div class="st-filter-field" [class.has-value]="!!selectedStatus">
+        <select [(ngModel)]="selectedStatus" [ngModelOptions]="{standalone: true}" (change)="onFilterChange()" class="st-filter-select" id="stStatus">
+          <option value="" disabled hidden></option>
+          <option value="">All statuses</option>
           <option value="pending">Pending</option>
           <option value="paid">Paid</option>
           <option value="partial">Partial</option>
           <option value="overdue">Overdue</option>
         </select>
+        <label for="stStatus" class="st-filter-label">Filter by Status</label>
+        <span class="st-filter-caret" aria-hidden="true">▾</span>
       </div>
+      <div class="st-filter-summary">
+        <span class="st-pill" *ngIf="selectedTerm">Term: <strong>{{ selectedTerm }}</strong></span>
+        <span class="st-pill st-pill-info">{{ filteredInvoices.length }} of {{ invoices.length }} invoices</span>
+      </div>
+    </section>
+
+    <div class="st-loading" *ngIf="loading">
+      <span class="st-spin" aria-hidden="true"></span>
+      <span>Loading invoices…</span>
     </div>
-    <div *ngIf="loading">Loading...</div>
-    <table *ngIf="!loading">
+
+    <div class="st-empty" *ngIf="!loading && filteredInvoices.length === 0">
+      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+      <h3>No invoices to display</h3>
+      <p>Try selecting a different <strong>term</strong>, student, or status.</p>
+    </div>
+
+    <table *ngIf="!loading && filteredInvoices.length > 0" class="st-table">
       <thead>
         <tr>
           <th>Invoice Number</th>
@@ -50,7 +141,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let invoice of invoices">
+        <tr *ngFor="let invoice of filteredInvoices">
           <td>{{ invoice.invoiceNumber }}</td>
           <td>{{ invoice.student?.firstName }} {{ invoice.student?.lastName }}</td>
           <td style="text-align: right;">{{ currencySymbol }} {{ (invoice.amount - (invoice.uniformTotal || 0)) | number:'1.2-2' }}</td>
@@ -338,6 +429,7 @@
         </div>
       </div>
     </div>
+
   </div>
 </div>
 

@@ -1,12 +1,163 @@
-<div class="dashboard-container db-page">
-  <main class="main-content">
-    <header class="db-hero">
+<div class="db-shell db-page" [class.db-dark]="darkMode" [class.db-sidebar-open]="sidebarOpen">
+
+  <!-- ─────────────  TOP HEADER BAR  ───────────── -->
+  <header class="db-topbar">
+    <div class="db-topbar-left">
+      <button type="button" class="db-burger" (click)="toggleSidebar()" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="db-brand">
+        <span class="db-brand-logo" aria-hidden="true">🏫</span>
+        <span class="db-brand-name">{{ schoolName || 'School Management' }}</span>
+      </div>
+    </div>
+    <div class="db-topbar-right">
+      <button type="button" class="db-tb-icon" (click)="openCommandPalette()" title="Quick search (Ctrl+K)">
+        <span aria-hidden="true">🔍</span>
+      </button>
+      <button type="button" class="db-tb-icon" (click)="refreshNow()" [disabled]="refreshing" *ngIf="(isAdmin() || isAccountant())" title="Refresh">
+        <span aria-hidden="true" [class.db-spinning]="refreshing">⟳</span>
+      </button>
+      <button type="button" class="db-tb-icon db-tb-icon--toggle" [class.db-tb-icon--on]="autoRefresh" (click)="toggleAutoRefresh()" *ngIf="(isAdmin() || isAccountant())" [title]="autoRefresh ? ('Auto-refresh in ' + autoRefreshCountdown + 's') : 'Enable auto-refresh'">
+        <span aria-hidden="true">🔄</span>
+        <span class="db-tb-icon-badge" *ngIf="autoRefresh">{{ autoRefreshCountdown }}</span>
+      </button>
+      <a routerLink="/communication_manage/view" class="db-tb-icon" title="Messages" *ngIf="isAdmin()">
+        <span aria-hidden="true">💬</span>
+      </a>
+      <a routerLink="/view" class="db-tb-icon" title="Timetable" *ngIf="isAdmin()">
+        <span aria-hidden="true">📅</span>
+      </a>
+      <button type="button" class="db-tb-icon" (click)="toggleDarkMode()" [title]="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+        <span aria-hidden="true">{{ darkMode ? '☀️' : '🌙' }}</span>
+      </button>
+      <div class="db-tb-user">
+        <div class="db-tb-user-info">
+          <span class="db-tb-user-name">{{ getDisplayName() }}</span>
+          <span class="db-tb-user-role">{{ getRoleLabel() }}</span>
+        </div>
+        <div class="db-tb-user-avatar" (click)="logout()" title="Sign out">
+          {{ (getDisplayName() || 'U').charAt(0).toUpperCase() }}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─────────────  LEFT SIDEBAR  ───────────── -->
+  <aside class="db-sidebar" (click)="$event.stopPropagation()">
+    <nav class="db-nav">
+      <ng-container *ngFor="let item of navItems">
+        <!-- Direct link (no submenu) -->
+        <a *ngIf="item.route && !item.children" [routerLink]="item.route" routerLinkActive="db-nav-item--active" [routerLinkActiveOptions]="{exact: true}" class="db-nav-item" (click)="closeSidebar()">
+          <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="db-nav-label">{{ item.label }}</span>
+        </a>
+
+        <!-- Group with submenu -->
+        <div *ngIf="item.children && item.children.length > 0" class="db-nav-group" [class.db-nav-group--open]="isSubmenuOpen(item.id)">
+          <button type="button" class="db-nav-item db-nav-item--group" (click)="toggleSubmenu(item.id)" [attr.aria-expanded]="isSubmenuOpen(item.id)">
+            <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
+            <span class="db-nav-label">{{ item.label }}</span>
+            <span class="db-nav-chev" aria-hidden="true">›</span>
+          </button>
+          <ul class="db-nav-sub" *ngIf="isSubmenuOpen(item.id)">
+            <li *ngFor="let child of item.children">
+              <a *ngIf="child.route" [routerLink]="child.route" [queryParams]="child.queryParams || null" routerLinkActive="db-nav-sub-item--active" [routerLinkActiveOptions]="{ exact: !!child.queryParams }" class="db-nav-sub-item" (click)="closeSidebar()">
+                <span class="db-nav-sub-ico" aria-hidden="true">{{ child.icon || '•' }}</span>
+                <span class="db-nav-sub-label">{{ child.label }}</span>
+              </a>
+              <button *ngIf="!child.route && child.action" type="button" class="db-nav-sub-item db-nav-sub-item--btn" (click)="runNavAction(child.action)">
+                <span class="db-nav-sub-ico" aria-hidden="true">{{ child.icon || '•' }}</span>
+                <span class="db-nav-sub-label">{{ child.label }}</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </ng-container>
+
+      <div class="db-nav-divider"></div>
+      <button type="button" class="db-nav-item db-nav-item--logout" (click)="logout()">
+        <span class="db-nav-ico" aria-hidden="true">🚪</span>
+        <span class="db-nav-label">Sign Out</span>
+      </button>
+    </nav>
+  </aside>
+  <div class="db-sidebar-backdrop" *ngIf="sidebarOpen" (click)="closeSidebar()"></div>
+
+  <!-- ─────────────  MAIN CONTENT  ───────────── -->
+  <main class="db-main">
+    <!-- ✦ New welcome banner (matches design mock) ✦ -->
+    <section class="dbn-welcome-banner" *ngIf="isAdmin() || isAccountant()">
+      <div class="dbn-welcome-text">
+        <h1 class="dbn-welcome-title">Welcome to your dashboard</h1>
+        <p class="dbn-welcome-sub">Monitor activity, track progress, and take action from one clean workspace.</p>
+      </div>
+    </section>
+
+    <!-- ✦ Trio of helper cards ✦ -->
+    <div class="dbn-info-row" *ngIf="isAdmin() || isAccountant()">
+      <div class="dbn-info-card">
+        <div class="dbn-info-ico dbn-info-ico--fast" aria-hidden="true">⚡</div>
+        <div class="dbn-info-body">
+          <h3>Fast access</h3>
+          <p>Role-based widgets surface the data you need first.</p>
+        </div>
+      </div>
+      <div class="dbn-info-card">
+        <div class="dbn-info-ico dbn-info-ico--trends" aria-hidden="true">📈</div>
+        <div class="dbn-info-body">
+          <h3>Smart trends</h3>
+          <p>Track attendance, finance, and student performance in one place.</p>
+        </div>
+      </div>
+      <div class="dbn-info-card">
+        <div class="dbn-info-ico dbn-info-ico--focus" aria-hidden="true">✅</div>
+        <div class="dbn-info-body">
+          <h3>Focused workspace</h3>
+          <p>Clean visual hierarchy helps teams work faster with less clutter.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✦ Teaching & administration colorful stat tiles ✦ -->
+    <section class="dbn-stats-section" *ngIf="(isAdmin() || isAccountant()) && !loadingStats">
+      <h2 class="dbn-section-title">Teaching &amp; administration</h2>
+      <div class="dbn-stat-grid">
+        <div class="dbn-stat-tile dbn-stat-tile--teachers">
+          <div class="dbn-stat-tile-ico" aria-hidden="true">🎓</div>
+          <div class="dbn-stat-tile-num">{{ stats.totalTeachers }}</div>
+          <div class="dbn-stat-tile-name">TEACHERS</div>
+          <div class="dbn-stat-tile-breakdown">
+            <span class="dbn-bd-chip">Male <span class="sym">♂</span> : {{ stats.maleTeachers }}</span>
+            <span class="dbn-bd-chip">Female <span class="sym">♀</span> : {{ stats.femaleTeachers }}</span>
+          </div>
+        </div>
+        <div class="dbn-stat-tile dbn-stat-tile--students">
+          <div class="dbn-stat-tile-ico" aria-hidden="true">👥</div>
+          <div class="dbn-stat-tile-num">{{ stats.totalStudents }}</div>
+          <div class="dbn-stat-tile-name">STUDENTS</div>
+          <div class="dbn-stat-tile-breakdown">
+            <span class="dbn-bd-chip">Male <span class="sym">♂</span> : {{ stats.maleStudents }}</span>
+            <span class="dbn-bd-chip">Female <span class="sym">♀</span> : {{ stats.femaleStudents }}</span>
+          </div>
+        </div>
+        <div class="dbn-stat-tile dbn-stat-tile--classes">
+          <div class="dbn-stat-tile-ico" aria-hidden="true">🏫</div>
+          <div class="dbn-stat-tile-num">{{ stats.totalClasses }}</div>
+          <div class="dbn-stat-tile-name">CLASSES</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Legacy hero / chips kept hidden in case other roles need them — replaced for admin/accountant -->
+    <header class="db-hero" *ngIf="!(isAdmin() || isAccountant())">
       <div class="db-hero-main">
         <div class="db-hero-badges">
           <span class="db-role-pill">{{ getRoleLabel() }}</span>
-          <span class="db-live-pill" *ngIf="(isAdmin() || isAccountant()) && !loadingStats" title="KPIs refreshed from live data">
-            <span class="db-live-dot" aria-hidden="true"></span>
-            Live overview
+          <span class="db-clock-pill" title="Local time">
+            <span class="db-clock-ico" aria-hidden="true">🕒</span>
+            <span class="db-clock-time">{{ getLiveTime() }}</span>
+            <span class="db-clock-date">· {{ getLiveDate() }}</span>
           </span>
         </div>
         <h1 class="db-title">
@@ -14,15 +165,9 @@
           Dashboard
         </h1>
         <p class="db-welcome">
-          <span class="db-wave" aria-hidden="true">👋</span>
-          Welcome back, <strong>{{ getDisplayName() }}</strong>
+          <span class="db-wave" aria-hidden="true">{{ getGreetingIcon() }}</span>
+          {{ getGreeting() }}, <strong>{{ getDisplayName() }}</strong>
         </p>
-        <div class="db-meta">
-          <span class="db-chip" *ngIf="academicYear">AY {{ academicYear }}</span>
-          <span class="db-chip" *ngIf="currentTerm">{{ currentTerm }}</span>
-          <span class="db-chip" *ngIf="currencySymbol && (isAdmin() || isAccountant())">{{ currencySymbol }} reporting</span>
-          <span class="db-chip db-chip-muted">{{ getCurrentDateTime() }}</span>
-        </div>
       </div>
       <div class="db-hero-aside" *ngIf="displayedHeadline">
         <div class="school-name-container db-school-banner">
@@ -31,16 +176,16 @@
         </div>
       </div>
     </header>
-    
-    <!-- Statistics Cards -->
-    <div class="stats-grid" *ngIf="(isAdmin() || isAccountant()) && !loadingStats">
+
+    <!-- Legacy Statistics Cards (hidden — replaced by new colored tiles above) -->
+    <div class="stats-grid" *ngIf="false && (isAdmin() || isAccountant()) && !loadingStats">
       <div class="stat-card primary modern-card">
         <div class="stat-icon-wrapper">
           <div class="stat-icon modern-icon">👥</div>
           <div class="icon-badge">+</div>
         </div>
         <div class="stat-content">
-          <div class="stat-value animated-value">{{ stats.totalStudents }}</div>
+          <div class="stat-value animated-value">{{ fmtCount('totalStudents') }}</div>
           <div class="stat-label">Total Students</div>
           <div class="stat-sublabel" *ngIf="stats.totalStudents > 0">
             <span class="sublabel-item">📘 {{ stats.dayScholars }} Day Scholars</span>
@@ -51,13 +196,13 @@
           <span class="trend-icon">📈</span>
         </div>
       </div>
-      
+
       <div class="stat-card success modern-card">
         <div class="stat-icon-wrapper">
           <div class="stat-icon modern-icon">👨‍🏫</div>
         </div>
         <div class="stat-content">
-          <div class="stat-value animated-value">{{ stats.totalTeachers }}</div>
+          <div class="stat-value animated-value">{{ fmtCount('totalTeachers') }}</div>
           <div class="stat-label">Teachers</div>
           <div class="stat-sublabel">
             <span class="sublabel-item">Active Staff</span>
@@ -67,13 +212,13 @@
           <span class="trend-icon">✨</span>
         </div>
       </div>
-      
+
       <div class="stat-card info modern-card">
         <div class="stat-icon-wrapper">
           <div class="stat-icon modern-icon">🏫</div>
         </div>
         <div class="stat-content">
-          <div class="stat-value animated-value">{{ stats.totalClasses }}</div>
+          <div class="stat-value animated-value">{{ fmtCount('totalClasses') }}</div>
           <div class="stat-label">Active Classes</div>
           <div class="stat-sublabel">
             <span class="sublabel-item">Currently Running</span>
@@ -83,13 +228,13 @@
           <span class="trend-icon">🎓</span>
         </div>
       </div>
-      
+
       <div class="stat-card warning modern-card">
         <div class="stat-icon-wrapper">
           <div class="stat-icon modern-icon">📚</div>
         </div>
         <div class="stat-content">
-          <div class="stat-value animated-value">{{ stats.totalSubjects }}</div>
+          <div class="stat-value animated-value">{{ fmtCount('totalSubjects') }}</div>
           <div class="stat-label">Subjects</div>
           <div class="stat-sublabel">
             <span class="sublabel-item">Available Courses</span>
@@ -99,29 +244,29 @@
           <span class="trend-icon">📖</span>
         </div>
       </div>
-      
+
       <div class="stat-card danger modern-card" *ngIf="isAdmin() || isAccountant()">
         <div class="stat-icon-wrapper">
           <div class="stat-icon modern-icon">💰</div>
         </div>
         <div class="stat-content">
-          <div class="stat-value animated-value">{{ stats.totalInvoices }}</div>
+          <div class="stat-value animated-value">{{ fmtCount('totalInvoices') }}</div>
           <div class="stat-label">Total Invoices</div>
           <div class="stat-sublabel" *ngIf="stats.totalBalance > 0">
-            <span class="sublabel-item warning-text">⚠️ Outstanding: {{ currencySymbol }} {{ stats.totalBalance | number:'1.2-2' }}</span>
+            <span class="sublabel-item warning-text">⚠️ Outstanding: {{ currencySymbol }} {{ fmtCount('totalBalance', true) }}</span>
           </div>
         </div>
         <div class="stat-trend">
           <span class="trend-icon">💳</span>
         </div>
       </div>
-      
+
       <div class="stat-card secondary modern-card" *ngIf="isAdmin()">
         <div class="stat-icon-wrapper">
           <div class="stat-icon modern-icon">👶</div>
         </div>
         <div class="stat-content">
-          <div class="stat-value animated-value">{{ stats.staffChildren }}</div>
+          <div class="stat-value animated-value">{{ fmtCount('staffChildren') }}</div>
           <div class="stat-label">Staff Children</div>
           <div class="stat-sublabel">
             <span class="sublabel-item">Special Category</span>
@@ -132,7 +277,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="db-skeleton-stats" *ngIf="(isAdmin() || isAccountant()) && loadingStats" aria-busy="true">
       <div class="db-sk-card" *ngFor="let _ of [1, 2, 3, 4, 5, 6]">
         <div class="db-sk-icon"></div>
@@ -142,7 +287,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Financial Health Banner (admin / accountant only) -->
     <div class="db-fh-banner" *ngIf="(isAdmin() || isAccountant()) && !loadingStats && stats.totalInvoices > 0">
       <div class="db-fh-kpi">
@@ -171,6 +316,68 @@
       </div>
     </div>
 
+    <!-- Analytics row: donut chart + smart insights -->
+    <div class="db-analytics-row" *ngIf="(isAdmin() || isAccountant()) && !loadingStats">
+      <!-- Student distribution donut -->
+      <div class="card modern-card db-donut-card" *ngIf="stats.totalStudents > 0">
+        <div class="card-header-modern">
+          <h2><span class="card-icon">🧮</span> Student Distribution</h2>
+          <p class="db-card-lead">Breakdown of all enrolled students by category.</p>
+        </div>
+        <div class="db-donut-wrap">
+          <svg class="db-donut" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="db-donut-track" cx="50" cy="50" r="40"></circle>
+            <circle class="db-donut-seg db-donut-seg--day" cx="50" cy="50" r="40"
+                    [attr.stroke-dasharray]="getDonutSegment(stats.dayScholars).dasharray"
+                    [attr.stroke-dashoffset]="getDonutOffset(0)"></circle>
+            <circle class="db-donut-seg db-donut-seg--boarder" cx="50" cy="50" r="40"
+                    [attr.stroke-dasharray]="getDonutSegment(stats.boarders).dasharray"
+                    [attr.stroke-dashoffset]="getDonutOffset(1)"></circle>
+            <circle class="db-donut-seg db-donut-seg--staff" cx="50" cy="50" r="40"
+                    [attr.stroke-dasharray]="getDonutSegment(stats.staffChildren).dasharray"
+                    [attr.stroke-dashoffset]="getDonutOffset(2)"></circle>
+            <text class="db-donut-num" x="50" y="49" text-anchor="middle">{{ stats.totalStudents }}</text>
+            <text class="db-donut-lbl" x="50" y="62" text-anchor="middle">Students</text>
+          </svg>
+          <ul class="db-donut-legend">
+            <li>
+              <span class="db-donut-dot db-donut-dot--day"></span>
+              <span class="db-donut-li-lbl">Day Scholars</span>
+              <span class="db-donut-li-val">{{ stats.dayScholars }} <em>· {{ getDonutSegment(stats.dayScholars).pct }}%</em></span>
+            </li>
+            <li>
+              <span class="db-donut-dot db-donut-dot--boarder"></span>
+              <span class="db-donut-li-lbl">Boarders</span>
+              <span class="db-donut-li-val">{{ stats.boarders }} <em>· {{ getDonutSegment(stats.boarders).pct }}%</em></span>
+            </li>
+            <li>
+              <span class="db-donut-dot db-donut-dot--staff"></span>
+              <span class="db-donut-li-lbl">Staff Children</span>
+              <span class="db-donut-li-val">{{ stats.staffChildren }} <em>· {{ getDonutSegment(stats.staffChildren).pct }}%</em></span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Smart insights panel -->
+      <div class="card modern-card db-insights-card" *ngIf="insights.length > 0">
+        <div class="card-header-modern">
+          <h2><span class="card-icon">💡</span> Smart Insights</h2>
+          <p class="db-card-lead">Auto-generated observations from your live data.</p>
+        </div>
+        <ul class="db-insights-list">
+          <li *ngFor="let ins of insights" class="db-insight" [attr.data-sev]="ins.severity">
+            <span class="db-insight-ico" aria-hidden="true">{{ ins.icon }}</span>
+            <div class="db-insight-body">
+              <div class="db-insight-title">{{ ins.title }}</div>
+              <div class="db-insight-detail">{{ ins.detail }}</div>
+            </div>
+            <a *ngIf="ins.route" [routerLink]="ins.route" class="db-insight-cta">{{ ins.cta || 'Open' }} →</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
     <div class="dashboard-cards">
       <!-- Module Shortcuts -->
       <div class="card modern-card db-modules-card">
@@ -181,40 +388,52 @@
 
         <!-- Admin modules -->
         <div class="db-modules-grid" *ngIf="isAdmin()">
-          <a routerLink="/students/manage/students" class="db-mod-tile" style="--mc:#6366f1">
+          <a routerLink="/students" class="db-mod-tile" style="--mc:#6366f1" [class.db-mod-tile--fav]="isFavorite('/students')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/students', $event)" [class.db-mod-fav--on]="isFavorite('/students')" aria-label="Pin">★</button>
             <span class="db-mod-ico">👥</span><span class="db-mod-lbl">Students</span>
           </a>
-          <a routerLink="/teachers/manage" class="db-mod-tile" style="--mc:#0ea5e9">
+          <a routerLink="/teachers/manage" class="db-mod-tile" style="--mc:#0ea5e9" [class.db-mod-tile--fav]="isFavorite('/teachers/manage')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/teachers/manage', $event)" [class.db-mod-fav--on]="isFavorite('/teachers/manage')" aria-label="Pin">★</button>
             <span class="db-mod-ico">👨‍🏫</span><span class="db-mod-lbl">Teachers</span>
           </a>
-          <a routerLink="/classes/manage" class="db-mod-tile" style="--mc:#10b981">
+          <a routerLink="/classes/manage" class="db-mod-tile" style="--mc:#10b981" [class.db-mod-tile--fav]="isFavorite('/classes/manage')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/classes/manage', $event)" [class.db-mod-fav--on]="isFavorite('/classes/manage')" aria-label="Pin">★</button>
             <span class="db-mod-ico">🏫</span><span class="db-mod-lbl">Classes</span>
           </a>
-          <a routerLink="/finance/manage/billing" class="db-mod-tile" style="--mc:#ef4444">
+          <a routerLink="/billing" class="db-mod-tile" style="--mc:#ef4444" [class.db-mod-tile--fav]="isFavorite('/billing')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/billing', $event)" [class.db-mod-fav--on]="isFavorite('/billing')" aria-label="Pin">★</button>
             <span class="db-mod-ico">💳</span><span class="db-mod-lbl">Billing</span>
           </a>
-          <a routerLink="/reports/manage/attendance-reports" class="db-mod-tile" style="--mc:#f59e0b" *ngIf="canAccessModule('attendance')">
+          <a routerLink="/attendance-reports" class="db-mod-tile" style="--mc:#f59e0b" *ngIf="canAccessModule('attendance')" [class.db-mod-tile--fav]="isFavorite('/attendance-reports')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/attendance-reports', $event)" [class.db-mod-fav--on]="isFavorite('/attendance-reports')" aria-label="Pin">★</button>
             <span class="db-mod-ico">📋</span><span class="db-mod-lbl">Attendance</span>
           </a>
-          <a routerLink="/reports/manage" class="db-mod-tile" style="--mc:#8b5cf6">
+          <a routerLink="/reports/manage" class="db-mod-tile" style="--mc:#8b5cf6" [class.db-mod-tile--fav]="isFavorite('/reports/manage')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/reports/manage', $event)" [class.db-mod-fav--on]="isFavorite('/reports/manage')" aria-label="Pin">★</button>
             <span class="db-mod-ico">📊</span><span class="db-mod-lbl">Reports</span>
           </a>
-          <a routerLink="/inventory/manage" class="db-mod-tile" style="--mc:#14b8a6" *ngIf="isInventoryStaff()">
+          <a routerLink="/inventory/manage" class="db-mod-tile" style="--mc:#14b8a6" *ngIf="isInventoryStaff()" [class.db-mod-tile--fav]="isFavorite('/inventory/manage')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/inventory/manage', $event)" [class.db-mod-fav--on]="isFavorite('/inventory/manage')" aria-label="Pin">★</button>
             <span class="db-mod-ico">📦</span><span class="db-mod-lbl">Inventory Manager</span>
           </a>
-          <a routerLink="/timetable/manage" class="db-mod-tile" style="--mc:#06b6d4">
+          <a routerLink="/timetable/manage" class="db-mod-tile" style="--mc:#06b6d4" [class.db-mod-tile--fav]="isFavorite('/timetable/manage')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/timetable/manage', $event)" [class.db-mod-fav--on]="isFavorite('/timetable/manage')" aria-label="Pin">★</button>
             <span class="db-mod-ico">📅</span><span class="db-mod-lbl">Timetable</span>
           </a>
-          <a routerLink="/communication_manage" class="db-mod-tile" style="--mc:#ec4899">
+          <a routerLink="/communication_manage" class="db-mod-tile" style="--mc:#ec4899" [class.db-mod-tile--fav]="isFavorite('/communication_manage')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/communication_manage', $event)" [class.db-mod-fav--on]="isFavorite('/communication_manage')" aria-label="Pin">★</button>
             <span class="db-mod-ico">💬</span><span class="db-mod-lbl">Messages</span>
           </a>
-          <a routerLink="/settings" class="db-mod-tile" style="--mc:#64748b">
+          <a routerLink="/settings" class="db-mod-tile" style="--mc:#64748b" [class.db-mod-tile--fav]="isFavorite('/settings')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/settings', $event)" [class.db-mod-fav--on]="isFavorite('/settings')" aria-label="Pin">★</button>
             <span class="db-mod-ico">⚙️</span><span class="db-mod-lbl">Settings</span>
           </a>
-          <a routerLink="/elearning" class="db-mod-tile" style="--mc:#7c3aed">
+          <a routerLink="/elearning" class="db-mod-tile" style="--mc:#7c3aed" [class.db-mod-tile--fav]="isFavorite('/elearning')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/elearning', $event)" [class.db-mod-fav--on]="isFavorite('/elearning')" aria-label="Pin">★</button>
             <span class="db-mod-ico">💻</span><span class="db-mod-lbl">E-Learning</span>
           </a>
-          <a routerLink="/general/manage/academic" class="db-mod-tile" style="--mc:#8b5cf6">
+          <a routerLink="/academic-settings" class="db-mod-tile" style="--mc:#8b5cf6" [class.db-mod-tile--fav]="isFavorite('/academic-settings')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/academic-settings', $event)" [class.db-mod-fav--on]="isFavorite('/academic-settings')" aria-label="Pin">★</button>
             <span class="db-mod-ico">🎓</span><span class="db-mod-lbl">Academic Settings</span>
           </a>
         </div>
@@ -230,10 +449,10 @@
 
         <!-- Accountant modules -->
         <div class="db-modules-grid" *ngIf="isAccountant() && !isAdmin()">
-          <a routerLink="/students/manage/students" class="db-mod-tile" style="--mc:#6366f1">
+          <a routerLink="/students" class="db-mod-tile" style="--mc:#6366f1">
             <span class="db-mod-ico">👥</span><span class="db-mod-lbl">Students</span>
           </a>
-          <a routerLink="/finance/manage/billing" class="db-mod-tile" style="--mc:#ef4444">
+          <a routerLink="/billing" class="db-mod-tile" style="--mc:#ef4444">
             <span class="db-mod-ico">💳</span><span class="db-mod-lbl">Billing</span>
           </a>
           <a routerLink="/invoices/new" class="db-mod-tile" style="--mc:#10b981">
@@ -288,7 +507,7 @@
               <span class="action-text">Add Subject</span>
               <span class="action-arrow">→</span>
             </a>
-            <a routerLink="/teachers/manage/add-new" class="action-btn modern-action-btn success-action">
+            <a (click)="openAddTeacherModal()" class="action-btn modern-action-btn success-action" style="cursor:pointer">
               <span class="action-icon">👨‍🏫</span>
               <span class="action-text">Add Teacher</span>
               <span class="action-arrow">→</span>
@@ -299,12 +518,12 @@
         <section class="db-action-group" *ngIf="isAdmin() && canAccessModule('attendance')">
           <h3 class="db-action-group-title">Attendance</h3>
           <div class="quick-actions modern-actions">
-            <a routerLink="/classes/manage/mark-register" class="action-btn modern-action-btn success-action">
+            <a routerLink="/mark-register" class="action-btn modern-action-btn success-action">
               <span class="action-icon">✅</span>
               <span class="action-text">Mark Register</span>
               <span class="action-arrow">→</span>
             </a>
-            <a routerLink="/reports/manage/attendance-reports" class="action-btn modern-action-btn info-action">
+            <a routerLink="/attendance-reports" class="action-btn modern-action-btn info-action">
               <span class="action-icon">📊</span>
               <span class="action-text">Attendance Reports</span>
               <span class="action-arrow">→</span>
@@ -315,12 +534,12 @@
         <section class="db-action-group" *ngIf="isAdmin() || isAccountant()">
           <h3 class="db-action-group-title">Finance</h3>
           <div class="quick-actions modern-actions">
-            <a routerLink="/students/manage/students" class="action-btn modern-action-btn primary-action" *ngIf="isAccountant()">
+            <a routerLink="/students" class="action-btn modern-action-btn primary-action" *ngIf="isAccountant()">
               <span class="action-icon">📋</span>
               <span class="action-text">View Students</span>
               <span class="action-arrow">→</span>
             </a>
-            <a routerLink="/finance/manage/billing" class="action-btn modern-action-btn danger-action">
+            <a routerLink="/billing" class="action-btn modern-action-btn danger-action">
               <span class="action-icon">💳</span>
               <span class="action-text">Billing</span>
               <span class="action-arrow">→</span>
@@ -382,7 +601,7 @@
           </div>
         </section>
       </div>
-      
+
       <!-- Recent Activity Section -->
       <div class="card recent-activity modern-card db-activity-card" *ngIf="(isAdmin() || isAccountant()) && !loadingStats">
         <div class="card-header-flex db-activity-head">
@@ -391,10 +610,10 @@
             Recent Activity
           </h2>
           <div class="db-activity-links">
-            <a routerLink="/students/manage/students" class="view-all-link modern-link" title="Open full student directory">
+            <a routerLink="/students" class="view-all-link modern-link" title="Open full student directory">
               All students <span class="link-arrow">→</span>
             </a>
-            <a routerLink="/finance/manage/billing" class="view-all-link modern-link db-link-alt" title="Open billing">
+            <a routerLink="/billing" class="view-all-link modern-link db-link-alt" title="Open billing">
               All invoices <span class="link-arrow">→</span>
             </a>
           </div>
@@ -453,7 +672,7 @@
                 </div>
               </div>
               <div class="activity-action">
-                <a routerLink="/finance/manage/billing" class="btn-link modern-btn-link">View →</a>
+                <a routerLink="/billing" class="btn-link modern-btn-link">View →</a>
               </div>
             </div>
           </div>
@@ -467,5 +686,42 @@
 
   <!-- Bulk Message Modal -->
   <app-bulk-message *ngIf="showBulkMessage" (close)="closeBulkMessage()"></app-bulk-message>
-</div>
 
+  <!-- Command Palette (Ctrl+K) -->
+  <div class="db-cmd-overlay" *ngIf="commandPaletteOpen" (click)="closeCommandPalette()">
+    <div class="db-cmd-panel" (click)="$event.stopPropagation()">
+      <div class="db-cmd-search">
+        <span class="db-cmd-search-ico" aria-hidden="true">🔍</span>
+        <input
+          id="db-cmd-input"
+          type="text"
+          class="db-cmd-input"
+          placeholder="Search modules, actions, students…"
+          [(ngModel)]="commandQuery"
+          (ngModelChange)="onCommandQueryChange()"
+          autocomplete="off"
+          spellcheck="false" />
+        <button class="db-cmd-close" type="button" (click)="closeCommandPalette()" aria-label="Close">✕</button>
+      </div>
+      <ul class="db-cmd-list">
+        <li *ngFor="let item of filteredCommandItems(); let i = index"
+            class="db-cmd-item"
+            [class.db-cmd-item--active]="i === commandActiveIndex"
+            (mouseenter)="commandActiveIndex = i"
+            (click)="runCommand(item)">
+          <span class="db-cmd-item-ico">{{ item.icon }}</span>
+          <span class="db-cmd-item-label">{{ item.label }}</span>
+          <span class="db-cmd-item-group">{{ item.group }}</span>
+        </li>
+        <li *ngIf="filteredCommandItems().length === 0" class="db-cmd-empty">
+          <span>🔎</span> No results for "{{ commandQuery }}"
+        </li>
+      </ul>
+      <div class="db-cmd-footer">
+        <span><span class="db-kbd db-kbd-sm">↑</span> <span class="db-kbd db-kbd-sm">↓</span> navigate</span>
+        <span><span class="db-kbd db-kbd-sm">↵</span> select</span>
+        <span><span class="db-kbd db-kbd-sm">esc</span> close</span>
+      </div>
+    </div>
+  </div>
+</div>

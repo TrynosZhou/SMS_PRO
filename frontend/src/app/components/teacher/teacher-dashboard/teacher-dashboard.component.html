@@ -161,13 +161,13 @@
               <span class="td-fc-desc">Review student uploads</span>
               <span class="td-fc-go">Review →</span>
             </a>
-            <a routerLink="/classes/manage/mark-register" class="td-feature-card td-fc-att" *ngIf="canAccessModule('attendance')">
+            <a routerLink="/mark-register" class="td-feature-card td-fc-att" *ngIf="canAccessModule('attendance')">
               <span class="td-fc-icon">✅</span>
               <span class="td-fc-title">Mark register</span>
               <span class="td-fc-desc">Quick attendance for today</span>
               <span class="td-fc-go">Mark →</span>
             </a>
-            <a routerLink="/exams/manage/marks-capturing" class="td-feature-card td-fc-exam" *ngIf="canAccessModule('exams')">
+            <a routerLink="/marks-input" class="td-feature-card td-fc-exam" *ngIf="canAccessModule('exams')">
               <span class="td-fc-icon">📝</span>
               <span class="td-fc-title">Marks &amp; exams</span>
               <span class="td-fc-desc">Capture and review assessments</span>
@@ -226,10 +226,10 @@
                   <a routerLink="/teacher/elearning-manage/my-classes" class="action-btn modern-action-btn info-action">
                     <span class="action-icon">👥</span><span class="action-text">My Classes</span><span class="action-arrow">→</span>
                   </a>
-                  <a routerLink="/classes/manage/mark-register" class="action-btn modern-action-btn success-action" *ngIf="canAccessModule('attendance')">
+                  <a routerLink="/mark-register" class="action-btn modern-action-btn success-action" *ngIf="canAccessModule('attendance')">
                     <span class="action-icon">✅</span><span class="action-text">Mark Register</span><span class="action-arrow">→</span>
                   </a>
-                  <a routerLink="/classes/manage/attendance-reports" class="action-btn modern-action-btn info-action" *ngIf="canAccessModule('attendance')">
+                  <a routerLink="/attendance-reports" class="action-btn modern-action-btn info-action" *ngIf="canAccessModule('attendance')">
                     <span class="action-icon">📊</span><span class="action-text">Attendance Reports</span><span class="action-arrow">→</span>
                   </a>
                   <a routerLink="/classes/manage/lists" class="action-btn modern-action-btn secondary-action" *ngIf="canAccessModule('classes')">
@@ -240,13 +240,13 @@
               <div class="td-qa-group">
                 <h3 class="td-qa-heading">Assessment</h3>
                 <div class="quick-actions modern-actions td-qa-grid">
-                  <a routerLink="/exams/manage/marks-capturing" class="action-btn modern-action-btn warning-action" *ngIf="canAccessModule('exams')">
+                  <a routerLink="/marks-input" class="action-btn modern-action-btn warning-action" *ngIf="canAccessModule('exams')">
                     <span class="action-icon">📝</span><span class="action-text">Marks Capturing</span><span class="action-arrow">→</span>
                   </a>
-                  <a routerLink="/exams/manage/rankings" class="action-btn modern-action-btn success-action" *ngIf="canAccessModule('rankings')">
+                  <a routerLink="/ranking" class="action-btn modern-action-btn success-action" *ngIf="canAccessModule('rankings')">
                     <span class="action-icon">🏆</span><span class="action-text">Rankings</span><span class="action-arrow">→</span>
                   </a>
-                  <a routerLink="/exams/manage/report-cards" class="action-btn modern-action-btn info-action" *ngIf="canAccessModule('reportCards')">
+                  <a routerLink="/reports" class="action-btn modern-action-btn info-action" *ngIf="canAccessModule('reportCards')">
                     <span class="action-icon">📊</span><span class="action-text">Report Cards</span><span class="action-arrow">→</span>
                   </a>
                 </div>

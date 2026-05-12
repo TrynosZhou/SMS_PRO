@@ -1,0 +1,133 @@
+<div class="mt-page">
+  <div class="mt-shell">
+    <!-- Banner -->
+    <header class="mt-banner">
+      <h1 class="mt-banner-title">Manage Teachers</h1>
+    </header>
+
+    <!-- Alerts -->
+    <div class="mt-alert mt-alert-success" *ngIf="success">
+      <span aria-hidden="true">✓</span>
+      <span>{{ success }}</span>
+    </div>
+    <div class="mt-alert mt-alert-error" *ngIf="error">
+      <span aria-hidden="true">⚠</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Filter / Search toolbar -->
+    <div class="mt-toolbar">
+      <label class="mt-check">
+        <input type="checkbox" [(ngModel)]="showMales" (ngModelChange)="toggleFilter()" />
+        <span class="mt-check-box"></span>
+        <span class="mt-check-label"><span class="sym">♂</span> Males</span>
+      </label>
+      <label class="mt-check">
+        <input type="checkbox" [(ngModel)]="showFemales" (ngModelChange)="toggleFilter()" />
+        <span class="mt-check-box"></span>
+        <span class="mt-check-label"><span class="sym">♀</span> Females</span>
+      </label>
+      <label class="mt-check">
+        <input type="checkbox" [(ngModel)]="showActive" (ngModelChange)="toggleFilter()" />
+        <span class="mt-check-box"></span>
+        <span class="mt-check-label"><span class="sym">●</span> Active</span>
+      </label>
+      <label class="mt-check">
+        <input type="checkbox" [(ngModel)]="showInactive" (ngModelChange)="toggleFilter()" />
+        <span class="mt-check-box"></span>
+        <span class="mt-check-label"><span class="sym">⊗</span> Inactive</span>
+      </label>
+
+      <div class="mt-search">
+        <input
+          type="text"
+          class="mt-search-input"
+          placeholder="Search Teachers"
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
+          aria-label="Search Teachers" />
+        <span class="mt-search-ico" aria-hidden="true">🔍</span>
+      </div>
+
+      <button type="button" class="mt-add-btn" (click)="goToAddTeacher()" aria-label="Add teacher" title="Add teacher">
+        +
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="mt-table-card">
+      <table class="mt-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>TITLE</th>
+            <th>SURNAME</th>
+            <th>NAME</th>
+            <th>ROLE</th>
+            <th>CELL</th>
+            <th>EMAIL</th>
+            <th>ACTION</th>
+          </tr>
+        </thead>
+        <tbody *ngIf="!loading && filteredTeachers.length > 0">
+          <tr *ngFor="let t of filteredTeachers">
+            <td><strong>{{ t.teacherId || '—' }}</strong></td>
+            <td>{{ titleFor(t) || '—' }}</td>
+            <td>{{ t.lastName || '—' }}</td>
+            <td>{{ t.firstName || '—' }}</td>
+            <td>{{ t.role || 'Teacher' }}</td>
+            <td>{{ t.phoneNumber || '—' }}</td>
+            <td>{{ t.email || '—' }}</td>
+            <td>
+              <div class="mt-row-actions">
+                <button type="button" class="mt-icon-btn" (click)="viewTeacher(t)" title="View / edit" aria-label="View teacher">
+                  👁️
+                </button>
+                <button type="button" class="mt-icon-btn mt-icon-btn-danger" (click)="deleteTeacher(t)" title="Delete" aria-label="Delete teacher">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="mt-empty" *ngIf="loading">
+        <div class="mt-spinner"></div>
+        <p>Loading teachers…</p>
+      </div>
+
+      <div class="mt-empty mt-empty-small" *ngIf="!loading && filteredTeachers.length === 0">
+        <p>No data matching the filter ""</p>
+      </div>
+
+      <!-- Footer pagination -->
+      <div class="mt-pagination">
+        <div class="mt-pag-left">
+          <span class="mt-pag-label">Items per page:</span>
+          <select
+            class="mt-pag-select"
+            [value]="pagination.limit"
+            (change)="changePageSize($any($event.target).value)">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+          </select>
+        </div>
+        <div class="mt-pag-right">
+          <span class="mt-pag-info">{{ rangeInfo() }}</span>
+          <button
+            type="button"
+            class="mt-pag-btn"
+            (click)="changePage(pagination.page - 1)"
+            [disabled]="pagination.page === 1"
+            aria-label="Previous page">‹</button>
+          <button
+            type="button"
+            class="mt-pag-btn"
+            (click)="changePage(pagination.page + 1)"
+            [disabled]="pagination.page === pagination.totalPages"
+            aria-label="Next page">›</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

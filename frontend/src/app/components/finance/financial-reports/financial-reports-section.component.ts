@@ -27,9 +27,14 @@ export class FinancialReportsSectionComponent implements OnInit {
 
     this.route.data.subscribe(d => {
       this.report = d['report'] || '';
+      if ('bundle' in d) {
+        this.bundle = d['bundle'] || null;
+      }
     });
     this.route.parent?.data.subscribe(pd => {
-      this.bundle = pd['bundle'] || null;
+      if (pd && 'bundle' in pd) {
+        this.bundle = pd['bundle'] || null;
+      }
     });
   }
 

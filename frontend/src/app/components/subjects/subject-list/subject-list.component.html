@@ -1,206 +1,166 @@
-<div class="subjects-container">
-  <!-- Header Section -->
-  <div class="page-header">
-    <div class="header-content">
-      <div class="header-title">
-        <h1>📖 Subject Manager</h1>
-        <p class="subtitle">Manage and organize all subjects in your school</p>
-      </div>
-      <button class="btn btn-primary btn-add" (click)="goToNewSubject()">
-        <span class="btn-icon">➕</span>
-        <span>Add New Subject</span>
-      </button>
+<div class="sl-page">
+  <!-- Purple banner -->
+  <div class="sl-banner">
+    <span class="sl-banner-icon">≡</span>
+    <div>
+      <h1 class="sl-banner-title">Manage Subjects</h1>
+      <p class="sl-banner-sub">Create, edit, and manage academic subjects for your school</p>
     </div>
   </div>
 
-  <!-- Alert Messages -->
-  <div class="alert alert-success" *ngIf="success" (click)="success = ''">
-    <span class="alert-icon">✅</span>
+  <!-- Alerts -->
+  <div class="sl-alert sl-alert-success" *ngIf="success">
+    <span class="sl-alert-icon">✓</span>
     <span>{{ success }}</span>
-    <button class="alert-close" aria-label="Close">×</button>
   </div>
-  <div class="alert alert-error" *ngIf="error" (click)="error = ''">
-    <span class="alert-icon">⚠️</span>
+  <div class="sl-alert sl-alert-error" *ngIf="error">
+    <span class="sl-alert-icon">!</span>
     <span>{{ error }}</span>
-    <button class="alert-close" aria-label="Close">×</button>
   </div>
 
-  <!-- Filters and Search Section -->
-  <div class="filters-section">
-    <div class="search-box">
-      <span class="search-icon">🔍</span>
-      <input 
-        type="text" 
-        class="search-input" 
-        placeholder="Search by code, name, short title, or description..."
-        [(ngModel)]="searchTerm"
-        (input)="onSearchInput()">
-      <button class="search-clear" *ngIf="searchTerm" (click)="clearSearch()" aria-label="Clear search">×</button>
-    </div>
-    <div class="filter-controls">
-      <select class="filter-select" [(ngModel)]="statusFilter" (change)="filterSubjects()">
-        <option value="all">All Status</option>
-        <option value="active">Active Only</option>
-        <option value="inactive">Inactive Only</option>
-      </select>
-      <select class="filter-select" [(ngModel)]="sortBy" (change)="sortSubjects()">
-        <option value="code">Sort by Code</option>
-        <option value="name">Sort by Name</option>
-        <option value="teachers">Sort by Teachers</option>
-        <option value="classes">Sort by Classes</option>
-      </select>
-      <button class="btn btn-secondary btn-refresh" (click)="loadSubjects()" [disabled]="loading">
-        <span class="btn-icon">🔄</span>
-        <span>Refresh</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Loading State -->
-  <div class="loading-container" *ngIf="loading">
-    <div class="skeleton-loader" *ngFor="let i of [1,2,3,4,5]">
-      <div class="skeleton-row">
-        <div class="skeleton-cell skeleton-code"></div>
-        <div class="skeleton-cell skeleton-name"></div>
-        <div class="skeleton-cell skeleton-short"></div>
-        <div class="skeleton-cell skeleton-count"></div>
-        <div class="skeleton-cell skeleton-count"></div>
-        <div class="skeleton-cell skeleton-status"></div>
-        <div class="skeleton-cell skeleton-actions"></div>
+  <!-- Directory card -->
+  <div class="sl-card">
+    <!-- Blue header strip -->
+    <div class="sl-directory-head">
+      <div class="sl-directory-title">
+        <span class="sl-directory-icon">🎓</span>
+        <div>
+          <div class="sl-directory-name">Subjects Directory</div>
+          <div class="sl-directory-count">Total: {{ pagination.total || subjects.length }} subjects</div>
+        </div>
       </div>
+      <button type="button" class="sl-add-btn" (click)="goToNewSubject()">
+        <span class="sl-add-btn-plus">+</span>
+        Add Subject
+      </button>
     </div>
-  </div>
 
-  <!-- Subjects Table -->
-  <div class="table-container" *ngIf="!loading">
-    <table class="modern-table">
-      <thead>
-        <tr>
-          <th (click)="sortByColumn('code')" class="sortable">
-            <span>Subject Code</span>
-            <span class="sort-icon" *ngIf="sortColumn === 'code'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-          </th>
-          <th (click)="sortByColumn('name')" class="sortable">
-            <span>Subject Name</span>
-            <span class="sort-icon" *ngIf="sortColumn === 'name'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-          </th>
-          <th>Short</th>
-          <th>Syllabus category</th>
-          <th (click)="sortByColumn('teachers')" class="sortable">
-            <span>Teachers</span>
-            <span class="sort-icon" *ngIf="sortColumn === 'teachers'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-          </th>
-          <th (click)="sortByColumn('classes')" class="sortable">
-            <span>Classes</span>
-            <span class="sort-icon" *ngIf="sortColumn === 'classes'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-          </th>
-          <th>Status</th>
-          <th class="actions-header"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let subject of filteredSubjects" class="table-row">
-          <td class="subject-code">
-            <span class="code-badge">{{ subject.code || 'N/A' }}</span>
-          </td>
-          <td class="subject-name">
-            <span class="name-text">{{ subject.name }}</span>
-          </td>
-          <td class="subject-short">
-            <span class="short-badge">{{ subject.shortTitle?.trim() || '—' }}</span>
-          </td>
-          <td class="subject-category">
-            <span class="category-badge" [class.o-level]="normalizedCategory(subject.category) === 'O_LEVEL'" [class.a-level]="normalizedCategory(subject.category) === 'A_LEVEL'">
-              {{ getCategoryLabel(subject.category) }}
-            </span>
-          </td>
-          <td class="subject-count">
-            <span class="count-badge teachers">
-              <span class="count-icon">👨‍🏫</span>
-              {{ subject.teachers?.length || 0 }}
-            </span>
-          </td>
-          <td class="subject-count">
-            <span class="count-badge classes">
-              <span class="count-icon">🏫</span>
-              {{ subject.classes?.length || 0 }}
-            </span>
-          </td>
-          <td class="status-cell">
-            <span class="status-badge" [class.active]="subject.isActive" [class.inactive]="!subject.isActive">
-              <span class="status-dot"></span>
-              {{ subject.isActive ? 'Active' : 'Inactive' }}
-            </span>
-          </td>
-          <td class="actions-cell">
-            <div class="action-buttons">
-              <span class="actions-label">Actions</span>
-              <div class="action-buttons-row">
-                <button 
-                  class="btn-action btn-edit" 
-                  (click)="editSubject(subject.id)" 
-                  title="Edit Subject">
-                  <span class="action-icon">✏️</span>
-                  <span class="action-text">Edit</span>
-                </button>
-                <button 
-                  class="btn-action btn-delete" 
-                  (click)="deleteSubject(subject.id, subject.name, subject.code)" 
-                  [disabled]="loading"
-                  title="Delete Subject">
-                  <span class="action-icon">🗑️</span>
-                  <span class="action-text">Delete</span>
-                </button>
+    <!-- Search section -->
+    <div class="sl-search-section">
+      <div class="sl-search">
+        <span class="sl-search-icon">🔍</span>
+        <input
+          type="text"
+          class="sl-search-input"
+          placeholder="Search subjects"
+          [(ngModel)]="searchTerm"
+          name="search"
+          (ngModelChange)="onSearchInput()"
+        />
+        <button
+          *ngIf="searchTerm"
+          type="button"
+          class="sl-search-clear"
+          (click)="clearSearch()"
+          aria-label="Clear search"
+        >×</button>
+      </div>
+      <div class="sl-search-hint">Type to filter subjects by name or code</div>
+    </div>
+
+    <!-- Loading -->
+    <div class="sl-loading" *ngIf="loading">
+      <div class="sl-spinner"></div>
+      <div>Loading subjects…</div>
+    </div>
+
+    <!-- Table -->
+    <div class="sl-table-wrap" *ngIf="!loading">
+      <table class="sl-table">
+        <thead>
+          <tr>
+            <th class="sl-th-sortable" (click)="sortByColumn('code')">
+              <span class="sl-th-icon">&lt;/&gt;</span> CODE
+              <span class="sl-sort" *ngIf="sortColumn === 'code'">
+                {{ sortDirection === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th class="sl-th-sortable" (click)="sortByColumn('name')">
+              <span class="sl-th-icon">📘</span> SUBJECT NAME
+              <span class="sl-sort" *ngIf="sortColumn === 'name'">
+                {{ sortDirection === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th class="sl-th-actions">
+              <span class="sl-th-icon">⚙</span> ACTIONS
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of filteredSubjects">
+            <td class="sl-cell-code">
+              <span class="sl-code-chip">{{ s.code }}</span>
+            </td>
+            <td class="sl-cell-name">
+              <div class="sl-name-row">
+                <span class="sl-name-text">{{ s.name }}</span>
+                <span
+                  class="sl-tier-pill"
+                  [class.sl-tier-pill--a]="normalizedCategory(s.category) === 'A_LEVEL'"
+                  [class.sl-tier-pill--o]="normalizedCategory(s.category) === 'O_LEVEL'"
+                  *ngIf="s.category"
+                >
+                  {{ getCategoryLabel(s.category) }}
+                </span>
+                <span class="sl-inactive-pill" *ngIf="s.isActive === false">Inactive</span>
               </div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- Empty State -->
-    <div class="empty-state" *ngIf="filteredSubjects.length === 0 && !loading">
-      <div class="empty-icon">📖</div>
-      <h3>{{ searchTerm || statusFilter !== 'all' ? 'No subjects found' : 'No subjects yet' }}</h3>
-      <p *ngIf="searchTerm || statusFilter !== 'all'">
-        Try adjusting your search or filter criteria.
-      </p>
-      <p *ngIf="!searchTerm && statusFilter === 'all'">
-        Get started by creating your first subject.
-      </p>
-      <button class="btn btn-primary" (click)="goToNewSubject()" *ngIf="!searchTerm && statusFilter === 'all'">
-        <span class="btn-icon">➕</span>
-        <span>Add Your First Subject</span>
-      </button>
-      <button class="btn btn-secondary" (click)="clearFilters()" *ngIf="searchTerm || statusFilter !== 'all'">
-        <span>Clear Filters</span>
-      </button>
+              <div class="sl-name-sub" *ngIf="s.description">
+                {{ truncate(s.description, 90) }}
+              </div>
+            </td>
+            <td class="sl-cell-actions">
+              <button
+                type="button"
+                class="sl-act sl-act--edit"
+                (click)="editSubject(s.id)"
+                title="Edit subject"
+              >✏️ Edit</button>
+              <button
+                type="button"
+                class="sl-act sl-act--delete"
+                (click)="deleteSubject(s.id, s.name, s.code)"
+                title="Delete subject"
+              >🗑️ Delete</button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredSubjects.length === 0">
+            <td colspan="3" class="sl-empty">
+              <div class="sl-empty-icon">📭</div>
+              <div class="sl-empty-title">No subjects yet</div>
+              <div class="sl-empty-sub">
+                <span *ngIf="!searchTerm">Click <strong>Add Subject</strong> to create your first subject.</span>
+                <span *ngIf="searchTerm">No subjects match “{{ searchTerm }}”.</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
-    <!-- Results Summary -->
-    <div class="results-summary" *ngIf="filteredSubjects.length > 0">
-      <span class="summary-text">
-        Showing {{ filteredSubjects.length }} of {{ pagination.total }} subject{{ pagination.total !== 1 ? 's' : '' }}
+    <!-- Pagination -->
+    <div class="sl-pagination" *ngIf="!loading && pagination.totalPages > 1">
+      <button
+        type="button"
+        class="sl-page-btn"
+        [disabled]="pagination.page === 1"
+        (click)="changePage(pagination.page - 1)"
+      >◀ Previous</button>
+      <span class="sl-page-info">
+        Page {{ pagination.page }} of {{ pagination.totalPages }}
       </span>
-    </div>
-  </div>
-
-  <div class="pagination-bar" *ngIf="!loading && (pagination.totalPages > 1 || pagination.total > pagination.limit)">
-    <button class="btn btn-secondary" (click)="changePage(pagination.page - 1)" [disabled]="pagination.page === 1">
-      ‹ Previous
-    </button>
-    <span class="page-info">
-      Page {{ pagination.page }} of {{ pagination.totalPages }} • {{ pagination.total }} records
-    </span>
-    <button class="btn btn-secondary" (click)="changePage(pagination.page + 1)" [disabled]="pagination.page === pagination.totalPages">
-      Next ›
-    </button>
-    <div class="page-size-selector">
-      <label for="subjectPageSize">Rows per page:</label>
-      <select id="subjectPageSize" (change)="changePageSize($event.target.value)" [value]="pagination.limit">
-        <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+      <button
+        type="button"
+        class="sl-page-btn"
+        [disabled]="pagination.page === pagination.totalPages"
+        (click)="changePage(pagination.page + 1)"
+      >Next ▶</button>
+      <select
+        class="sl-page-size"
+        [ngModel]="pagination.limit"
+        (ngModelChange)="changePageSize($event)"
+      >
+        <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }} / page</option>
       </select>
     </div>
   </div>
 </div>
-

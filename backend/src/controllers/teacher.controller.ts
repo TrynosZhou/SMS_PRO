@@ -45,7 +45,7 @@ export const registerTeacher = async (req: AuthRequest, res: Response) => {
       await AppDataSource.initialize();
     }
 
-    const { firstName, lastName, phoneNumber, address, dateOfBirth, qualification, subjectIds, gender, maritalStatus, role, departmentId } =
+    const { firstName, lastName, phoneNumber, address, dateOfBirth, qualification, subjectIds, gender, maritalStatus, role, departmentId, email } =
       req.body;
     
     // Validate required fields
@@ -58,9 +58,28 @@ export const registerTeacher = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: PHONE_VALIDATION_MESSAGE });
     }
 
+    // Normalize and validate the email (optional, but if provided must look valid and be unique).
+    const trimmedEmail = typeof email === 'string' && email.trim()
+      ? email.trim().toLowerCase()
+      : null;
+    if (trimmedEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({ message: 'Please provide a valid email address.' });
+      }
+    }
+
     const teacherRepository = AppDataSource.getRepository(Teacher);
     const departmentRepository = AppDataSource.getRepository(Department);
     const userRepository = AppDataSource.getRepository(User);
+
+    // Reject duplicates early with a friendly message (the DB also enforces this with a unique index).
+    if (trimmedEmail) {
+      const existingUser = await userRepository.findOne({ where: { email: trimmedEmail } });
+      if (existingUser) {
+        return res.status(400).json({ message: 'A user with this email address already exists.' });
+      }
+    }
 
     // Generate unique teacher ID with prefix JPST
     const teacherId = await generateTeacherId();
@@ -152,7 +171,7 @@ export const registerTeacher = async (req: AuthRequest, res: Response) => {
     
     const accountRole = teacher.role === 'HOD' ? UserRole.HOD : UserRole.TEACHER;
     const user = userRepository.create({
-      email: null, // Teachers don't require email
+      email: trimmedEmail, // Optional: persisted on the User record for password resets, comms, etc.
       username: tempUsername,
       password: hashedPassword,
       role: accountRole,
@@ -167,15 +186,20 @@ export const registerTeacher = async (req: AuthRequest, res: Response) => {
     teacher.userId = user.id;
     await teacherRepository.save(teacher);
     
-    // Load the teacher with relations
+    // Load the teacher with relations (include user so the saved email is visible to the client).
     const savedTeacher = await teacherRepository.findOne({
       where: { id: teacher.id },
-      relations: ['subjects', 'classes', 'department']
+      relations: ['subjects', 'classes', 'department', 'user']
     });
+
+    // Surface the email at the top level too — the frontend lists/search use `teacher.email`.
+    const teacherResponse = savedTeacher
+      ? { ...(savedTeacher as any), email: savedTeacher.user?.email ?? null }
+      : savedTeacher;
 
     res.status(201).json({ 
       message: 'Teacher registered successfully with temporary account', 
-      teacher: savedTeacher,
+      teacher: teacherResponse,
       temporaryCredentials: {
         username: tempUsername,
         password: tempPassword,
@@ -187,6 +211,10 @@ export const registerTeacher = async (req: AuthRequest, res: Response) => {
     
     // Handle specific database errors
     if (error.code === '23505') {
+      const detail = (error.detail || error.message || '').toLowerCase();
+      if (detail.includes('email')) {
+        return res.status(400).json({ message: 'A user with this email address already exists.' });
+      }
       return res.status(400).json({ message: 'Employee number already exists' });
     }
 
@@ -267,17 +295,25 @@ export const getTeachers = async (req: AuthRequest, res: Response) => {
 
     let normalizedTeachers = Array.isArray(teachers) ? teachers : [];
 
+    // Expose the linked user's email at the top level so the frontend list/search can rely on `teacher.email`.
+    normalizedTeachers = normalizedTeachers.map((t: any) => ({
+      ...t,
+      email: t?.email ?? t?.user?.email ?? null
+    }));
+
     if (searchQuery) {
       normalizedTeachers = normalizedTeachers.filter((teacher: any) => {
         const fullName = `${teacher.firstName || ''} ${teacher.lastName || ''}`.toLowerCase();
         const teacherId = (teacher.teacherId || '').toLowerCase();
         const phone = (teacher.phoneNumber || '').toLowerCase();
         const qualification = (teacher.qualification || '').toLowerCase();
+        const teacherEmail = (teacher.email || '').toLowerCase();
         return (
           fullName.includes(searchQuery) ||
           teacherId.includes(searchQuery) ||
           phone.includes(searchQuery) ||
-          qualification.includes(searchQuery)
+          qualification.includes(searchQuery) ||
+          teacherEmail.includes(searchQuery)
         );
       });
     }

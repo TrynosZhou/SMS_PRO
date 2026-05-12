@@ -1,0 +1,316 @@
+<div class="mr-page">
+  <!-- Page header banner -->
+  <div class="mr-banner">
+    <span class="mr-banner-icon">📝</span>
+    <h1 class="mr-banner-title">Mark Attendance Register</h1>
+  </div>
+
+  <!-- Alerts -->
+  <div class="mr-alert mr-alert-success" *ngIf="success">
+    <span class="mr-alert-icon">✓</span>
+    <span>{{ success }}</span>
+  </div>
+  <div class="mr-alert mr-alert-error" *ngIf="error">
+    <span class="mr-alert-icon">!</span>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- Selection card -->
+  <div class="mr-card mr-select-card">
+    <div class="mr-card-head">
+      <span class="mr-card-head-icon">≡</span>
+      <div>
+        <h2 class="mr-card-title">Select Class &amp; Date</h2>
+        <p class="mr-card-sub">Choose a class, term, and date to mark attendance</p>
+      </div>
+    </div>
+
+    <div class="mr-filter-grid">
+      <!-- Term -->
+      <div class="mr-field">
+        <label class="mr-field-label">Choose Term*</label>
+        <div class="mr-input-wrap">
+          <select class="mr-input" [(ngModel)]="selectedTermId" name="term">
+            <option value="">Choose Term*</option>
+            <option *ngFor="let t of terms" [value]="t.id">{{ termLabel(t) }}</option>
+          </select>
+          <span class="mr-input-icon" aria-hidden="true">📅</span>
+        </div>
+        <div class="mr-field-hint">Select the academic term</div>
+      </div>
+
+      <!-- Class -->
+      <div class="mr-field">
+        <label class="mr-field-label">Choose Class*</label>
+        <div class="mr-input-wrap">
+          <select class="mr-input" [(ngModel)]="selectedClassId" name="cls">
+            <option value="">Choose Class*</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+          <span class="mr-input-icon" aria-hidden="true">📕</span>
+        </div>
+        <div class="mr-field-hint">Select the class</div>
+      </div>
+
+      <!-- Date -->
+      <div class="mr-field">
+        <label class="mr-field-label">Select Date*</label>
+        <div class="mr-input-wrap">
+          <input
+            type="date"
+            class="mr-input"
+            [(ngModel)]="selectedDate"
+            name="date"
+          />
+          <span class="mr-input-icon" aria-hidden="true">📅</span>
+        </div>
+        <div class="mr-field-hint">Choose the date for attendance</div>
+      </div>
+    </div>
+
+    <div class="mr-fetch-row">
+      <button
+        type="button"
+        class="mr-btn mr-btn-fetch"
+        [class.mr-btn-fetch--ready]="canFetch"
+        [disabled]="!canFetch || loadingList"
+        (click)="fetchList()"
+      >
+        <span class="mr-btn-icon">≡</span>
+        <span *ngIf="!loadingList">Fetch Class List</span>
+        <span *ngIf="loadingList">Loading…</span>
+      </button>
+    </div>
+    <div class="mr-weekend-warning" *ngIf="selectedDate && !isMarkingAllowed">
+      {{ weekendNotAllowedMessage }}
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="mr-loading" *ngIf="loadingList">
+    <div class="mr-spinner"></div>
+    <div>Loading class roster…</div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="mr-empty" *ngIf="hasFetched && !loadingList && students.length === 0">
+    <div class="mr-empty-icon">🗒️</div>
+    <div class="mr-empty-title">No students found</div>
+    <div class="mr-empty-sub">
+      The selected class has no enrolled students. Enrol students first, then fetch again.
+    </div>
+  </div>
+
+  <!-- Stats + register table -->
+  <ng-container *ngIf="!loadingList && students.length > 0">
+    <!-- Stats grid -->
+    <div class="mr-stats-grid">
+      <div class="mr-stat mr-stat--present">
+        <div class="mr-stat-icon">✓</div>
+        <div class="mr-stat-content">
+          <div class="mr-stat-value">{{ getStatistics().present }}</div>
+          <div class="mr-stat-label">Present</div>
+        </div>
+      </div>
+      <div class="mr-stat mr-stat--absent">
+        <div class="mr-stat-icon">✗</div>
+        <div class="mr-stat-content">
+          <div class="mr-stat-value">{{ getStatistics().absent }}</div>
+          <div class="mr-stat-label">Absent</div>
+        </div>
+      </div>
+      <div class="mr-stat mr-stat--late">
+        <div class="mr-stat-icon">⏰</div>
+        <div class="mr-stat-content">
+          <div class="mr-stat-value">{{ getStatistics().late }}</div>
+          <div class="mr-stat-label">Late</div>
+        </div>
+      </div>
+      <div class="mr-stat mr-stat--excused">
+        <div class="mr-stat-icon">📝</div>
+        <div class="mr-stat-content">
+          <div class="mr-stat-value">{{ getStatistics().excused }}</div>
+          <div class="mr-stat-label">Excused</div>
+        </div>
+      </div>
+      <div class="mr-stat mr-stat--rate">
+        <div class="mr-stat-icon">%</div>
+        <div class="mr-stat-content">
+          <div class="mr-stat-value">{{ getAttendanceRate() }}%</div>
+          <div class="mr-stat-label">Attendance rate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk-mark + filters card -->
+    <div class="mr-card mr-tools-card">
+      <div class="mr-tools-left">
+        <span class="mr-tools-label">Bulk mark:</span>
+        <button class="mr-chip mr-chip--present" type="button" (click)="markAll('present')">All Present</button>
+        <button class="mr-chip mr-chip--absent" type="button" (click)="markAll('absent')">All Absent</button>
+        <button class="mr-chip mr-chip--late" type="button" (click)="markAll('late')">All Late</button>
+        <button class="mr-chip mr-chip--excused" type="button" (click)="markAll('excused')">All Excused</button>
+      </div>
+      <div class="mr-tools-right">
+        <div class="mr-search">
+          <span class="mr-search-icon">🔍</span>
+          <input
+            type="text"
+            class="mr-search-input"
+            placeholder="Search by name or student #"
+            [(ngModel)]="searchQuery"
+            name="search"
+            (ngModelChange)="onSearchChange()"
+          />
+          <button
+            *ngIf="searchQuery"
+            type="button"
+            class="mr-search-clear"
+            (click)="clearSearch()"
+            aria-label="Clear search"
+          >×</button>
+        </div>
+        <select
+          class="mr-status-filter"
+          [(ngModel)]="statusFilter"
+          name="statusFilter"
+          (ngModelChange)="onStatusFilterChange()"
+        >
+          <option value="all">All statuses</option>
+          <option value="present">Present</option>
+          <option value="absent">Absent</option>
+          <option value="late">Late</option>
+          <option value="excused">Excused</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Attendance table -->
+    <div class="mr-card mr-table-card">
+      <div class="mr-table-head">
+        <div>
+          <h3 class="mr-table-title">Register</h3>
+          <p class="mr-table-sub">
+            {{ filteredAttendanceData.length }} of {{ attendanceData.length }} students ·
+            {{ getFormattedDate() }}
+          </p>
+        </div>
+        <div class="mr-save-state">
+          <span class="mr-dot mr-dot--unsaved" *ngIf="hasUnsavedChanges"></span>
+          <span class="mr-state-text" *ngIf="hasUnsavedChanges">Unsaved changes</span>
+          <span class="mr-dot mr-dot--saved" *ngIf="!hasUnsavedChanges && lastSavedDate"></span>
+          <span class="mr-state-text" *ngIf="!hasUnsavedChanges && lastSavedDate">
+            Saved {{ lastSavedDate | date:'short' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="mr-table-wrap">
+        <table class="mr-table">
+          <thead>
+            <tr>
+              <th class="mr-th-num">#</th>
+              <th>Student #</th>
+              <th>Name</th>
+              <th>Gender</th>
+              <th class="mr-th-actions">Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let row of filteredAttendanceData; let i = index; trackBy: trackByStudent"
+              [class.mr-row--present]="row.status === 'present'"
+              [class.mr-row--absent]="row.status === 'absent'"
+              [class.mr-row--late]="row.status === 'late'"
+              [class.mr-row--excused]="row.status === 'excused'"
+            >
+              <td>{{ i + 1 }}</td>
+              <td>{{ getStudentNumber(row.studentId) }}</td>
+              <td class="mr-cell-name">{{ getStudentName(row.studentId) }}</td>
+              <td>{{ getStudentGender(row.studentId) }}</td>
+              <td>
+                <div class="mr-status-group">
+                  <button
+                    type="button"
+                    class="mr-status-btn mr-status-btn--present"
+                    [class.is-active]="row.status === 'present'"
+                    [disabled]="!isMarkingAllowed"
+                    (click)="updateStatus(row.studentId, 'present')"
+                  >Present</button>
+                  <button
+                    type="button"
+                    class="mr-status-btn mr-status-btn--absent"
+                    [class.is-active]="row.status === 'absent'"
+                    [disabled]="!isMarkingAllowed"
+                    (click)="updateStatus(row.studentId, 'absent')"
+                  >Absent</button>
+                  <button
+                    type="button"
+                    class="mr-status-btn mr-status-btn--late"
+                    [class.is-active]="row.status === 'late'"
+                    [disabled]="!isMarkingAllowed"
+                    (click)="updateStatus(row.studentId, 'late')"
+                  >Late</button>
+                  <button
+                    type="button"
+                    class="mr-status-btn mr-status-btn--excused"
+                    [class.is-active]="row.status === 'excused'"
+                    [disabled]="!isMarkingAllowed"
+                    (click)="updateStatus(row.studentId, 'excused')"
+                  >Excused</button>
+                </div>
+              </td>
+              <td>
+                <input
+                  type="text"
+                  class="mr-remarks-input"
+                  placeholder="Optional remarks"
+                  [(ngModel)]="row.remarks"
+                  [name]="'remarks-' + row.studentId"
+                  (ngModelChange)="hasUnsavedChanges = true"
+                />
+              </td>
+            </tr>
+            <tr *ngIf="filteredAttendanceData.length === 0">
+              <td colspan="6" class="mr-table-empty">
+                No students match your filters.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mr-table-foot">
+        <button
+          type="button"
+          class="mr-btn mr-btn-secondary"
+          (click)="navigateDate(-1)"
+        >◀ Previous day</button>
+        <button
+          type="button"
+          class="mr-btn mr-btn-secondary"
+          (click)="goToToday()"
+          [disabled]="isToday()"
+        >Today</button>
+        <button
+          type="button"
+          class="mr-btn mr-btn-secondary"
+          (click)="navigateDate(1)"
+        >Next day ▶</button>
+
+        <span class="mr-foot-spacer"></span>
+
+        <button
+          type="button"
+          class="mr-btn mr-btn-primary"
+          [disabled]="submitting || !isMarkingAllowed"
+          (click)="submit()"
+        >
+          <span *ngIf="!submitting">💾 Save Attendance</span>
+          <span *ngIf="submitting">Saving…</span>
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</div>

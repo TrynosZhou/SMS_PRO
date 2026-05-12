@@ -319,7 +319,7 @@ export class ManageAccountsComponent implements OnInit {
 
   isSuperAdmin() { return this.currentUser?.role === 'superadmin'; }
 
-  goToActivityLog() { this.router.navigate(['/general/manage/activity-log']); }
+  goToActivityLog() { this.router.navigate(['/audit-logs']); }
 
   private blankAddForm() {
     return {

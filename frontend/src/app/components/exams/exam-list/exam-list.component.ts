@@ -745,11 +745,7 @@ export class ExamListComponent implements OnInit, OnDestroy {
   }
 
   openMarkInputProgress() {
-    if (isInExamsManageShell(this.router)) {
-      this.router.navigate(['/exams', 'manage', 'mark-input-progress']);
-    } else {
-      this.router.navigate(['/exams', 'mark-input-progress']);
-    }
+    this.router.navigate(['/marks-progress']);
   }
 
   // Quick actions

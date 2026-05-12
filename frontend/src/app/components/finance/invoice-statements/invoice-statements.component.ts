@@ -32,6 +32,9 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
 export class InvoiceStatementsComponent implements OnInit {
   invoices: any[] = [];
   students: any[] = [];
+  availableTerms: string[] = [];
+  loadingTerms = false;
+  selectedTerm = '';
   selectedStudent = '';
   selectedStatus = '';
   loading = false;
@@ -95,6 +98,40 @@ export class InvoiceStatementsComponent implements OnInit {
     }
     this.loadInvoices();
     this.loadSettings();
+    this.loadTerms();
+  }
+
+  loadTerms() {
+    this.loadingTerms = true;
+    this.settingsService.getTerms().subscribe({
+      next: (data: any) => {
+        const raw: any[] = Array.isArray(data) ? data : data?.terms || [];
+        const labels = raw.map((t: any) => `Term ${t.termNumber} ${t.year}`);
+        this.availableTerms = labels.length > 0 ? labels : this.fallbackTermLabels();
+        this.loadingTerms = false;
+        const active = raw.find((t: any) => t.status === 'active');
+        if (active) this.selectedTerm = `Term ${active.termNumber} ${active.year}`;
+      },
+      error: () => {
+        this.availableTerms = this.fallbackTermLabels();
+        this.loadingTerms = false;
+      }
+    });
+  }
+
+  private fallbackTermLabels(): string[] {
+    const y = new Date().getFullYear();
+    return [`Term 1 ${y}`, `Term 2 ${y}`, `Term 3 ${y}`, `Term 1 ${y + 1}`, `Term 2 ${y + 1}`, `Term 3 ${y + 1}`];
+  }
+
+  get filteredInvoices(): any[] {
+    const term = (this.selectedTerm || '').trim().toLowerCase();
+    if (!term) return this.invoices;
+    return this.invoices.filter((inv: any) => String(inv?.term || '').trim().toLowerCase() === term);
+  }
+
+  onTermChange() {
+    // term filter is client-side via filteredInvoices, no extra fetch required
   }
 
   loadSettings() {

@@ -1,0 +1,304 @@
+<div class="arv-page">
+  <!-- Banner -->
+  <div class="arv-banner">
+    <span class="arv-banner-icon">📊</span>
+    <h1 class="arv-banner-title">Attendance Reports</h1>
+  </div>
+
+  <!-- Alerts -->
+  <div class="arv-alert arv-alert-error" *ngIf="error">
+    <span class="arv-alert-icon">!</span>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- Filter card -->
+  <div class="arv-card arv-filter-card">
+    <div class="arv-card-head">
+      <span class="arv-card-head-icon">≡</span>
+      <div>
+        <h2 class="arv-card-title">Generate Reports</h2>
+        <p class="arv-card-sub">Select class and term to generate attendance reports</p>
+      </div>
+    </div>
+
+    <div class="arv-filter-row">
+      <!-- Term -->
+      <div class="arv-field">
+        <label class="arv-field-label">Choose Term*</label>
+        <div class="arv-input-wrap">
+          <select class="arv-input" [(ngModel)]="selectedTermId" name="term">
+            <option value="">Choose Term*</option>
+            <option *ngFor="let t of terms" [value]="t.id">{{ termLabel(t) }}</option>
+          </select>
+          <span class="arv-input-icon" aria-hidden="true">📅</span>
+        </div>
+        <div class="arv-field-hint">Select the academic term</div>
+      </div>
+
+      <!-- Class -->
+      <div class="arv-field">
+        <label class="arv-field-label">Choose Class*</label>
+        <div class="arv-input-wrap">
+          <select class="arv-input" [(ngModel)]="selectedClassId" name="cls">
+            <option value="">Choose Class*</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+          <span class="arv-input-icon" aria-hidden="true">📕</span>
+        </div>
+        <div class="arv-field-hint">Select the class</div>
+      </div>
+
+      <!-- Generate button -->
+      <div class="arv-field arv-field--action">
+        <button
+          type="button"
+          class="arv-btn arv-btn-generate"
+          [class.arv-btn-generate--ready]="canGenerate"
+          [disabled]="!canGenerate || loading"
+          (click)="generate()"
+        >
+          <span class="arv-btn-icon">📊</span>
+          <span *ngIf="!loading">Generate Reports</span>
+          <span *ngIf="loading">Generating…</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="arv-loading" *ngIf="loading">
+    <div class="arv-spinner"></div>
+    <div>Generating attendance report…</div>
+  </div>
+
+  <!-- Empty state (after generate) -->
+  <div
+    class="arv-empty"
+    *ngIf="hasGenerated && !loading && rawRows.length === 0 && !error"
+  >
+    <div class="arv-empty-icon">📭</div>
+    <div class="arv-empty-title">No data found</div>
+    <div class="arv-empty-sub">
+      No attendance records were found for the selected class and term.
+    </div>
+  </div>
+
+  <!-- Report content -->
+  <ng-container *ngIf="!loading && rawRows.length > 0">
+    <!-- Summary stats -->
+    <div class="arv-stats-grid">
+      <div class="arv-stat arv-stat--avg">
+        <div class="arv-stat-icon">%</div>
+        <div class="arv-stat-content">
+          <div class="arv-stat-value">{{ averageAttendanceRate | number:'1.0-1' }}%</div>
+          <div class="arv-stat-label">Average attendance</div>
+        </div>
+      </div>
+      <div class="arv-stat arv-stat--students">
+        <div class="arv-stat-icon">🎓</div>
+        <div class="arv-stat-content">
+          <div class="arv-stat-value">{{ rawRows.length }}</div>
+          <div class="arv-stat-label">Students</div>
+        </div>
+      </div>
+      <div class="arv-stat arv-stat--concerns">
+        <div class="arv-stat-icon">!</div>
+        <div class="arv-stat-content">
+          <div class="arv-stat-value">{{ concernCount }}</div>
+          <div class="arv-stat-label">Need attention (&lt; {{ concernThreshold }}%)</div>
+        </div>
+      </div>
+      <div class="arv-stat arv-stat--top" *ngIf="topPerformer">
+        <div class="arv-stat-icon">★</div>
+        <div class="arv-stat-content">
+          <div class="arv-stat-value arv-stat-value--small">
+            {{ topPerformer.firstName }} {{ topPerformer.lastName }}
+          </div>
+          <div class="arv-stat-label">
+            Top performer · {{ topPerformer.attendanceRateNumber | number:'1.0-1' }}%
+          </div>
+        </div>
+      </div>
+      <div class="arv-stat arv-stat--low" *ngIf="lowestPerformer">
+        <div class="arv-stat-icon">↓</div>
+        <div class="arv-stat-content">
+          <div class="arv-stat-value arv-stat-value--small">
+            {{ lowestPerformer.firstName }} {{ lowestPerformer.lastName }}
+          </div>
+          <div class="arv-stat-label">
+            Lowest · {{ lowestPerformer.attendanceRateNumber | number:'1.0-1' }}%
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status distribution bar -->
+    <div class="arv-card arv-dist-card">
+      <h3 class="arv-section-title">Attendance breakdown</h3>
+      <div class="arv-dist-bar">
+        <div
+          class="arv-dist-seg arv-dist-seg--present"
+          [style.width.%]="statusPercent('present')"
+          [title]="'Present: ' + attendanceByStatus.present"
+        ></div>
+        <div
+          class="arv-dist-seg arv-dist-seg--late"
+          [style.width.%]="statusPercent('late')"
+          [title]="'Late: ' + attendanceByStatus.late"
+        ></div>
+        <div
+          class="arv-dist-seg arv-dist-seg--excused"
+          [style.width.%]="statusPercent('excused')"
+          [title]="'Excused: ' + attendanceByStatus.excused"
+        ></div>
+        <div
+          class="arv-dist-seg arv-dist-seg--absent"
+          [style.width.%]="statusPercent('absent')"
+          [title]="'Absent: ' + attendanceByStatus.absent"
+        ></div>
+      </div>
+      <div class="arv-dist-legend">
+        <span class="arv-dist-key arv-dist-key--present">
+          Present · {{ attendanceByStatus.present }} ({{ statusPercent('present') | number:'1.0-1' }}%)
+        </span>
+        <span class="arv-dist-key arv-dist-key--late">
+          Late · {{ attendanceByStatus.late }} ({{ statusPercent('late') | number:'1.0-1' }}%)
+        </span>
+        <span class="arv-dist-key arv-dist-key--excused">
+          Excused · {{ attendanceByStatus.excused }} ({{ statusPercent('excused') | number:'1.0-1' }}%)
+        </span>
+        <span class="arv-dist-key arv-dist-key--absent">
+          Absent · {{ attendanceByStatus.absent }} ({{ statusPercent('absent') | number:'1.0-1' }}%)
+        </span>
+      </div>
+    </div>
+
+    <!-- Tools (search/filter/export) -->
+    <div class="arv-card arv-tools-card">
+      <div class="arv-tools-left">
+        <div class="arv-search">
+          <span class="arv-search-icon">🔍</span>
+          <input
+            type="text"
+            class="arv-search-input"
+            placeholder="Search by name or student #"
+            [(ngModel)]="searchQuery"
+            name="search"
+            (ngModelChange)="onSearchChange()"
+          />
+        </div>
+        <select
+          class="arv-status-filter"
+          [(ngModel)]="statusFilter"
+          name="statusFilter"
+          (ngModelChange)="onStatusFilterChange()"
+        >
+          <option value="all">All performance bands</option>
+          <option value="excellent">Excellent (≥ 95%)</option>
+          <option value="good">Good (85–94%)</option>
+          <option value="attention">Needs attention (75–84%)</option>
+          <option value="critical">Critical (&lt; 75%)</option>
+        </select>
+        <button type="button" class="arv-btn arv-btn-ghost" (click)="resetFilters()">
+          Reset filters
+        </button>
+      </div>
+      <div class="arv-tools-right">
+        <button type="button" class="arv-btn arv-btn-export" (click)="exportCSV()">
+          ⬇ Export CSV
+        </button>
+        <button type="button" class="arv-btn arv-btn-export" (click)="exportPDF()">
+          🖨 Export PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Report table -->
+    <div class="arv-card arv-table-card">
+      <div class="arv-table-head">
+        <div>
+          <h3 class="arv-table-title">{{ getSelectedClassName() }} · Attendance</h3>
+          <p class="arv-table-sub">
+            {{ filteredRows.length }} of {{ rawRows.length }} students
+            <span *ngIf="lastGeneratedAt">
+              · Generated {{ lastGeneratedAt | date:'short' }}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div class="arv-table-wrap">
+        <table class="arv-table">
+          <thead>
+            <tr>
+              <th class="arv-th-num">#</th>
+              <th class="arv-th-sortable" (click)="changeSort('studentNumber')">
+                Student #
+                <span class="arv-sort" *ngIf="getSortDirection('studentNumber') as d">
+                  {{ d === 'asc' ? '▲' : '▼' }}
+                </span>
+              </th>
+              <th class="arv-th-sortable" (click)="changeSort('firstName')">
+                Name
+                <span class="arv-sort" *ngIf="getSortDirection('firstName') as d">
+                  {{ d === 'asc' ? '▲' : '▼' }}
+                </span>
+              </th>
+              <th>Present</th>
+              <th>Absent</th>
+              <th>Late</th>
+              <th>Excused</th>
+              <th>Total</th>
+              <th class="arv-th-sortable" (click)="changeSort('attendanceRateNumber')">
+                Rate
+                <span class="arv-sort" *ngIf="getSortDirection('attendanceRateNumber') as d">
+                  {{ d === 'asc' ? '▲' : '▼' }}
+                </span>
+              </th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let r of filteredRows; let i = index; trackBy: trackByStudent"
+            >
+              <td>{{ i + 1 }}</td>
+              <td>{{ r.studentNumber }}</td>
+              <td class="arv-cell-name">{{ r.firstName }} {{ r.lastName }}</td>
+              <td>{{ r.present }}</td>
+              <td>{{ r.absent }}</td>
+              <td>{{ r.late }}</td>
+              <td>{{ r.excused }}</td>
+              <td>{{ r.total }}</td>
+              <td>
+                <div class="arv-rate-cell">
+                  <div class="arv-rate-bar">
+                    <div
+                      class="arv-rate-bar-fill"
+                      [class.arv-rate-bar-fill--excellent]="bucketOf(r.attendanceRateNumber) === 'excellent'"
+                      [class.arv-rate-bar-fill--good]="bucketOf(r.attendanceRateNumber) === 'good'"
+                      [class.arv-rate-bar-fill--attention]="bucketOf(r.attendanceRateNumber) === 'attention'"
+                      [class.arv-rate-bar-fill--critical]="bucketOf(r.attendanceRateNumber) === 'critical'"
+                      [style.width.%]="r.attendanceRateNumber"
+                    ></div>
+                  </div>
+                  <span class="arv-rate-text">{{ r.attendanceRateNumber | number:'1.0-1' }}%</span>
+                </div>
+              </td>
+              <td>
+                <span [ngClass]="badgeClass(r.attendanceRateNumber)">
+                  {{ statusLabel(r.attendanceRateNumber) }}
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="filteredRows.length === 0">
+              <td colspan="10" class="arv-table-empty">
+                No students match your filters.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+</div>

@@ -64,7 +64,7 @@ export class TeacherSubjectContactComponent implements OnInit {
   }
 
   /** Opens Assign classes with this teacher auto-selected (`AssignClassesComponent` reads `teacherId`). */
-  readonly assignClassesRoute = ['/teachers/manage/assign-classes'] as const;
+  readonly assignClassesRoute = ['/assign-classes'] as const;
 
   get assignClassesTeacherQuery(): { teacherId: string } {
     return { teacherId: this.apiTeacherKey };

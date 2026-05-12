@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { TeacherService } from '../../../services/teacher.service';
 import { SubjectService } from '../../../services/subject.service';
 import { ClassService } from '../../../services/class.service';
 import { DepartmentsService } from '../../../services/departments.service';
+import { AddTeacherModalService } from '../../../services/add-teacher-modal.service';
 import { teachersManageNav } from '../teachers-manage-navigation';
 
 /** Editable teacher fields from list / grid / modal (Staff / Employee ID is read-only). */
@@ -27,7 +29,7 @@ export type TeacherQuickEditField =
   templateUrl: './teacher-list.component.html',
   styleUrls: ['./teacher-list.component.css']
 })
-export class TeacherListComponent implements OnInit {
+export class TeacherListComponent implements OnInit, OnDestroy {
   teachers: any[] = [];
   filteredTeachers: any[] = [];
   allSubjects: any[] = [];
@@ -74,7 +76,8 @@ export class TeacherListComponent implements OnInit {
     private subjectService: SubjectService,
     private classService: ClassService,
     private departmentsService: DepartmentsService,
-    private router: Router
+    private router: Router,
+    private addTeacherModal: AddTeacherModalService
   ) {
     const today = new Date();
     this.maxDobDate = today.toISOString().split('T')[0];
@@ -87,11 +90,22 @@ export class TeacherListComponent implements OnInit {
     );
   }
 
+  private addTeacherSub?: Subscription;
+
   ngOnInit() {
     this.loadTeachers();
     this.loadSubjects();
     this.loadClasses();
     this.loadDepartments();
+    this.addTeacherSub = this.addTeacherModal.created$.subscribe(() => {
+      this.success = 'Teacher added successfully';
+      setTimeout(() => (this.success = ''), 4000);
+      this.loadTeachers();
+    });
+  }
+
+  ngOnDestroy() {
+    this.addTeacherSub?.unsubscribe();
   }
 
   loadDepartments(): void {
@@ -630,7 +644,7 @@ export class TeacherListComponent implements OnInit {
   }
 
   goToNewTeacher(): void {
-    this.router.navigateByUrl(teachersManageNav(this.router).addNew);
+    this.addTeacherModal.open();
   }
 
   getTotalSubjects(): number {
