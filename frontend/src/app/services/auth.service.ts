@@ -34,18 +34,31 @@ export class AuthService {
   private readonly logoutMessageKey = 'sessionMessage';
 
   constructor(private http: HttpClient, private router: Router) {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (token && user) {
-      this.currentUserSubject.next(JSON.parse(user));
-      this.startInactivityTracking();
-    }
+    // Enforce the Splash -> Login -> Dashboard flow on every app bootstrap.
+    // Wipe any persisted credentials so the user must re-authenticate each
+    // time the application is (re)loaded; the in-memory user is only ever
+    // populated again via a successful sign-in below.
+    this.clearStoredAuth();
 
     this.router.events.subscribe(() => {
       if (this.isAuthenticated()) {
         this.resetInactivityTimer();
       }
     });
+  }
+
+  /**
+   * Remove the persisted token/user without making a backend call or
+   * triggering navigation. Used on app bootstrap to force re-authentication.
+   */
+  private clearStoredAuth(): void {
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } catch {
+      // localStorage may be unavailable in some environments (e.g. SSR); ignore.
+    }
+    this.currentUserSubject.next(null);
   }
 
   login(identifier: string, password: string, teacherId?: string): Observable<any> {

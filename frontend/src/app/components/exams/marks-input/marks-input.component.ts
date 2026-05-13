@@ -4,6 +4,10 @@ import { ClassService } from '../../../services/class.service';
 import { SubjectService } from '../../../services/subject.service';
 import { StudentService } from '../../../services/student.service';
 import { SettingsService } from '../../../services/settings.service';
+import {
+  getGradeInfoFromSettingsRow,
+  scoreToPercent
+} from '../../../utils/gradingFromSettings';
 
 interface TermRow {
   id: string;
@@ -94,6 +98,12 @@ export class MarksInputComponent implements OnInit, OnDestroy {
   /** Debounce delay (ms) — short enough to feel "instant", long enough to coalesce keystrokes. */
   private readonly AUTO_SAVE_DELAY_MS = 1000;
 
+  /**
+   * Same settings row as Academic Settings → Grading (`getSettings()`).
+   * `undefined` = still loading; `null` = load failed.
+   */
+  private gradingSettingsRow: Record<string, unknown> | null | undefined = undefined;
+
   constructor(
     private examService: ExamService,
     private classService: ClassService,
@@ -103,9 +113,23 @@ export class MarksInputComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.loadGradingSettings();
     this.loadTerms();
     this.loadClasses();
     this.loadAllSubjects();
+  }
+
+  private loadGradingSettings(): void {
+    this.settingsService.getSettings().subscribe({
+      next: (data: any) => {
+        const row = Array.isArray(data) && data.length ? data[0] : data;
+        this.gradingSettingsRow =
+          row && typeof row === 'object' ? { ...(row as Record<string, unknown>) } : {};
+      },
+      error: () => {
+        this.gradingSettingsRow = null;
+      }
+    });
   }
 
   // ---------- Loaders ----------
@@ -280,9 +304,15 @@ export class MarksInputComponent implements OnInit, OnDestroy {
           const list = Array.isArray(data) ? data : data?.data || [];
           this.students = list
             .filter((s: any) => s.isActive !== false)
-            .sort((a: any, b: any) =>
-              `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
-            )
+            .sort((a: any, b: any) => {
+              const ln = String(a.lastName || '').localeCompare(String(b.lastName || ''), undefined, {
+                sensitivity: 'base'
+              });
+              if (ln !== 0) return ln;
+              return String(a.firstName || '').localeCompare(String(b.firstName || ''), undefined, {
+                sensitivity: 'base'
+              });
+            })
             .map((s: any) => ({
               id: s.id,
               firstName: s.firstName,
@@ -317,7 +347,8 @@ export class MarksInputComponent implements OnInit, OnDestroy {
               const row = this.marks[m.studentId];
               if (row) {
                 row.score = typeof m.score === 'number' ? m.score : Number(m.score) || null;
-                row.remarks = m.remarks || '';
+                // Backend / DB field is `comments` (per-subject teacher remark)
+                row.remarks = m.comments ?? m.remarks ?? '';
                 row.dirty = false;
               }
             });
@@ -340,9 +371,14 @@ export class MarksInputComponent implements OnInit, OnDestroy {
     }
     const q = this.filterText.toLowerCase().trim();
     this.filteredStudents = this.students.filter((s) => {
-      const name = `${s.firstName} ${s.lastName}`.toLowerCase();
+      const full = `${s.lastName} ${s.firstName}`.toLowerCase();
       const number = (s.studentNumber || '').toLowerCase();
-      return name.includes(q) || number.includes(q);
+      return (
+        full.includes(q) ||
+        (s.lastName || '').toLowerCase().includes(q) ||
+        (s.firstName || '').toLowerCase().includes(q) ||
+        number.includes(q)
+      );
     });
   }
 
@@ -413,7 +449,7 @@ export class MarksInputComponent implements OnInit, OnDestroy {
         studentId: s.id,
         subjectId: this.selectedSubjectId,
         score: r.score as number,
-        remarks: r.remarks || ''
+        comments: r.remarks || '',
       };
     });
 
@@ -464,22 +500,27 @@ export class MarksInputComponent implements OnInit, OnDestroy {
     return this.students.some((s) => this.marks[s.id]?.dirty);
   }
 
-  gradeLetter(score: number | null | undefined): string {
+  /** Grade label from Academic Settings → Grading (percentage of `score / maxScore`). */
+  gradeLabel(score: number | null | undefined): string {
     if (score === null || score === undefined) return '';
+    if (this.gradingSettingsRow === undefined) return '';
+    if (this.gradingSettingsRow === null) return '—';
     const s = Number(score);
     if (Number.isNaN(s)) return '';
-    if (s >= 80) return 'A';
-    if (s >= 70) return 'B';
-    if (s >= 60) return 'C';
-    if (s >= 50) return 'D';
-    if (s >= 40) return 'E';
-    return 'U';
+    const pct = scoreToPercent(s, this.maxScore);
+    return getGradeInfoFromSettingsRow(pct, this.gradingSettingsRow).label;
   }
 
+  /** CSS tier keyed like backend (`veryGood`, …, `band5`, `fail`). */
   gradeClass(score: number | null | undefined): string {
-    const g = this.gradeLetter(score);
-    if (!g) return '';
-    return `mi-grade mi-grade--${g.toLowerCase()}`;
+    if (score === null || score === undefined) return '';
+    if (this.gradingSettingsRow === undefined) return '';
+    if (this.gradingSettingsRow === null) return 'mi-grade mi-grade--fail';
+    const s = Number(score);
+    if (Number.isNaN(s)) return '';
+    const pct = scoreToPercent(s, this.maxScore);
+    const { key } = getGradeInfoFromSettingsRow(pct, this.gradingSettingsRow);
+    return `mi-grade mi-grade--${key}`;
   }
 
   // ---------- Save ----------
@@ -498,10 +539,10 @@ export class MarksInputComponent implements OnInit, OnDestroy {
           studentId: s.id,
           subjectId: this.selectedSubjectId,
           score: row.score,
-          remarks: row.remarks || ''
+          comments: row.remarks || '',
         };
       })
-      .filter((x): x is { studentId: string; subjectId: string; score: number; remarks: string } => !!x);
+      .filter((x): x is { studentId: string; subjectId: string; score: number; comments: string } => !!x);
 
     if (payload.length === 0) {
       this.error = 'No marks to save — enter at least one score.';

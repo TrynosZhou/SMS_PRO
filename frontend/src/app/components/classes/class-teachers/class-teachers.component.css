@@ -16,6 +16,16 @@
   line-height: 1.45;
 }
 
+.ct-hint-muted {
+  margin: -0.35rem 0 1rem;
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+.ct-hint-muted strong {
+  color: #334155;
+}
+
 .ct-loading {
   display: flex;
   align-items: center;
@@ -79,6 +89,19 @@
   background: #f8fafc;
 }
 
+.ct-row-clickable {
+  cursor: pointer;
+}
+
+.ct-row-clickable:hover {
+  background: #f0fdfa !important;
+}
+
+.ct-row-clickable:focus-within {
+  outline: 2px solid #0d9488;
+  outline-offset: -2px;
+}
+
 .ct-table tbody td {
   padding: 0.75rem 0.75rem;
   vertical-align: top;
@@ -101,8 +124,44 @@
   font-size: 0.9rem;
 }
 
-.ct-td-teachers {
-  min-width: 200px;
+.ct-td-class {
+  position: relative;
+}
+
+.ct-edit-hint {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #0d9488;
+  vertical-align: middle;
+}
+
+.ct-td-ct {
+  min-width: 160px;
+}
+
+.ct-class-teacher-name {
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.ct-td-other {
+  min-width: 180px;
+}
+
+.ct-teacher-list-compact {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  color: #475569;
+}
+
+.ct-muted {
+  color: #94a3b8;
+  font-size: 0.9rem;
 }
 
 .ct-teacher-list {
@@ -123,4 +182,203 @@
   text-align: center;
   color: #94a3b8;
   margin: 0;
+}
+
+/* ── Modal editor ─────────────────────────────────────────────────────── */
+
+.ct-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1040;
+  animation: ct-fade-in 0.15s ease-out;
+}
+
+.ct-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 2rem));
+  max-height: min(85vh, 640px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: ct-slide-up 0.2s ease-out;
+}
+
+@keyframes ct-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ct-slide-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.ct-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(92deg, #0f766e 0%, #0d9488 45%, #14b8a6 100%);
+  color: #fff;
+}
+
+.ct-modal-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.ct-modal-close {
+  flex-shrink: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ct-modal-close:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.ct-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ct-modal-body {
+  padding: 1rem 1.1rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ct-modal-hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.86rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.ct-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.85rem 1.1rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.ct-search-row {
+  margin-bottom: 0.75rem;
+}
+
+.ct-search-input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+
+.ct-selected-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  margin-bottom: 0.85rem;
+  padding: 0.5rem 0.65rem;
+  background: #f1f5f9;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.ct-selected-label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.ct-clear-btn {
+  padding: 0 !important;
+  margin-left: auto;
+  font-size: 0.88rem !important;
+}
+
+.ct-teacher-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.15rem 0;
+}
+
+.ct-teacher-chip {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: #0f172a;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.ct-teacher-chip:hover:not(:disabled) {
+  border-color: #14b8a6;
+  background: #f0fdfa;
+}
+
+.ct-chip-selected {
+  border-color: #0d9488 !important;
+  background: #ccfbf1 !important;
+  font-weight: 700;
+}
+
+.ct-teacher-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ct-picker-empty {
+  width: 100%;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.88rem;
+  margin: 0.5rem 0 0;
+}
+
+.ct-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

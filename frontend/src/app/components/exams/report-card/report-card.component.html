@@ -383,7 +383,7 @@
                   <td class="score">{{ subject.score !== null && subject.score !== undefined ? subject.score : '-' }}</td>
                   <td class="max-score">{{ subject.maxScore !== null && subject.maxScore !== undefined ? subject.maxScore : '-' }}</td>
                   <td class="class-average">{{ subject.classAverage !== null && subject.classAverage !== undefined ? subject.classAverage : '-' }}</td>
-                  <td>
+                  <td class="grade-cell">
                     <span class="grade-badge grade-{{ subject.grade?.toLowerCase().replace(' ', '-') }}">
                       {{ subject.grade }}
                     </span>

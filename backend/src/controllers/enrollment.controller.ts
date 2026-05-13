@@ -7,12 +7,8 @@ import { AuthRequest } from '../middleware/auth';
 import { Settings } from '../entities/Settings';
 import { Invoice, InvoiceStatus } from '../entities/Invoice';
 import { generateInvoiceNumber, parseAmount, roundMoney } from '../utils/numberUtils';
-import { buildNewStudentRegistrationInvoice } from '../utils/registrationInvoiceBundle';
-import {
-  applyExemptionForStudent,
-  computeManagedFeesForStudent,
-} from '../utils/managedFeesBilling';
 import { invoicesIncludeTerm } from '../utils/termMatch';
+import { computeOpeningInvoiceBundle } from '../utils/openingInvoiceCompute';
 
 /**
  * Enroll a student into a class
@@ -127,59 +123,19 @@ export const enrollStudent = async (req: AuthRequest, res: Response) => {
             termForEnrollment
           );
         } else {
-          let { total, feeLineItems, lineDescriptions } = buildNewStudentRegistrationInvoice({
-            feesSettings: settings.feesSettings,
-            studentType: student.studentType,
-            isStaffChild: Boolean(student.isStaffChild),
-            usesDiningHall: Boolean(student.usesDiningHall),
+          const stWithClassForFees = await studentRepository.findOne({
+            where: { id: student.id },
+            relations: ['classEntity'],
           });
-
-          if (student.id) {
-            const bundleLines = feeLineItems.map(l => ({
-              description: l.description,
-              amount: roundMoney(parseAmount((l as any).amount)),
-            }));
-            const bundleSum = roundMoney(bundleLines.reduce((s, l) => s + l.amount, 0));
-            const applied = await applyExemptionForStudent(
-              AppDataSource,
-              student.id,
-              bundleLines,
-              bundleSum
-            );
-            feeLineItems = applied.lines.map(l => ({
-              description: l.description,
-              amount: roundMoney(l.amount),
-            })) as typeof feeLineItems;
-            total = applied.total;
-            lineDescriptions = applied.lines.map(
-              l => `${l.description}: ${roundMoney(l.amount)}`
-            );
-          }
-
-          if (total <= 0.005 && !student.isStaffChild) {
-            const stWithClass = await studentRepository.findOne({
-              where: { id: student.id },
-              relations: ['classEntity'],
+          const studentForInvoice = (stWithClassForFees ?? student) as any;
+          const bundle = await computeOpeningInvoiceBundle(AppDataSource, studentForInvoice);
+          const { total, feeLineItems, lineDescriptions } = bundle;
+          if (bundle.source !== 'none') {
+            console.log('💰 Enrollment invoice bundle:', {
+              source: bundle.source,
+              total,
+              items: lineDescriptions,
             });
-            if (stWithClass) {
-              try {
-                const managed = await computeManagedFeesForStudent(AppDataSource, stWithClass as any, {
-                  hasPreviousInvoice: false,
-                });
-                if (managed.total > 0.005 && managed.lines.length > 0) {
-                  total = managed.total;
-                  feeLineItems = managed.lines.map(l => ({
-                    description: l.description,
-                    amount: roundMoney(l.amount),
-                  }));
-                  lineDescriptions = managed.lines.map(
-                    l => `${l.description}: ${roundMoney(l.amount)}`
-                  );
-                }
-              } catch (e) {
-                console.warn('⚠️ Managed fees fallback on enrollment failed:', e);
-              }
-            }
           }
 
           if (total > 0.005) {

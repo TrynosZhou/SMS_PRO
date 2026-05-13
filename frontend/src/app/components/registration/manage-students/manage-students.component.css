@@ -442,11 +442,13 @@
 .ms-modal-panel {
   position: relative;
   width: 100%;
-  max-width: 780px;
+  max-width: 820px;
   margin: 12px auto 24px;
-  border-radius: 16px;
-  background: #e8eaef;
-  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.28);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow:
+    0 28px 70px rgba(15, 23, 42, 0.32),
+    0 2px 4px rgba(15, 23, 42, 0.08);
   overflow: hidden;
   max-height: calc(100vh - 32px - env(safe-area-inset-top));
   display: flex;
@@ -461,17 +463,20 @@
 
 .ms-modal-close {
   position: absolute;
-  right: 12px;
-  top: 12px;
+  right: 14px;
+  top: 14px;
   z-index: 3;
-  width: 40px;
-  height: 40px;
-  border: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
-  color: #1e293b;
-  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 1.25rem;
   line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -481,7 +486,8 @@
 }
 
 .ms-modal-close:hover {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.32);
+  border-color: rgba(255, 255, 255, 0.7);
   transform: scale(1.05);
 }
 

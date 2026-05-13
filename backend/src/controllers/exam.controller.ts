@@ -774,6 +774,13 @@ export const captureMarks = async (req: AuthRequest, res: Response) => {
     };
     
     for (const mark of marksData) {
+      const hasOwn = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+      /** API field is `comments`; some clients still send `remarks`. */
+      const incomingComments = hasOwn(mark, 'comments')
+        ? (mark as any).comments
+        : hasOwn(mark, 'remarks')
+          ? (mark as any).remarks
+          : undefined;
       // Ensure student belongs to current school
       const student = await studentRepository.findOne({
         where: { id: String(mark.studentId) }
@@ -823,9 +830,9 @@ export const captureMarks = async (req: AuthRequest, res: Response) => {
           existing.score = Math.round(parsedScore);
         }
         existing.maxScore = Math.round(resolvedMaxScore);
-        // Always update comments if provided (even if empty string, to allow clearing)
-        if (mark.comments !== undefined && mark.comments !== null) {
-          existing.comments = mark.comments;
+        // Always update comments when provided (even empty string, to allow clearing)
+        if (incomingComments !== undefined && incomingComments !== null) {
+          existing.comments = incomingComments;
         }
         marksToSave.push(existing);
       } else {
@@ -847,7 +854,8 @@ export const captureMarks = async (req: AuthRequest, res: Response) => {
           subjectId: String(mark.subjectId),
           score: Math.round(parsedScore),
           maxScore: Math.round(resolvedMaxScore),
-          comments: mark.comments !== undefined && mark.comments !== null ? mark.comments : null,
+          comments:
+            incomingComments !== undefined && incomingComments !== null ? incomingComments : null,
         });
         console.log('Creating new mark:', {
           examId: newMark.examId,

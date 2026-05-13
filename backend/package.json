@@ -26,6 +26,7 @@
     "ensure:subject-category": "npx ts-node scripts/ensure-subject-category.ts",
     "delete-payroll-runs-2026-mar-dec": "npx ts-node scripts/delete-payroll-runs-2026-mar-dec.ts",
     "revoke-furniture-student": "npx ts-node scripts/revoke-furniture-for-student-number.ts",
+    "rebuild-opening-invoice": "npx ts-node scripts/rebuild-student-opening-invoice.ts",
     "migration:run:prod": "typeorm -d dist/config/database.js migration:run"
   },
   "dependencies": {

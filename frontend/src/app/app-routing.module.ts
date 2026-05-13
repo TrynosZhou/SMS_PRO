@@ -647,6 +647,10 @@ const routes: Routes = [
 @NgModule({
   imports: [
     RouterModule.forRoot(routes, {
+      // Initial navigation is performed manually from AppComponent so that
+      // every app bootstrap goes through the Splash -> Login -> Dashboard
+      // flow, regardless of which URL the browser landed on.
+      initialNavigation: 'disabled',
       anchorScrolling: 'enabled',
       scrollPositionRestoration: 'enabled',
     }),

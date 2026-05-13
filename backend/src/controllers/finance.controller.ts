@@ -23,6 +23,7 @@ import {
   resolveInvoiceGrossTotal,
 } from '../utils/invoiceBalanceResolve';
 import { termsLooselyMatch, invoicesIncludeTerm } from '../utils/termMatch';
+import { rebuildOpeningInvoiceForStudent } from '../utils/openingInvoiceCompute';
 
 // Helper function to determine next term
 function getNextTerm(currentTerm: string): string {
@@ -1778,6 +1779,52 @@ export const generateReceiptPDF = async (req: AuthRequest, res: Response) => {
     res.send(pdfBuffer);
   } catch (error: any) {
     console.error('Error generating receipt PDF:', error);
+    res.status(500).json({ message: 'Server error', error: error.message || 'Unknown error' });
+  }
+};
+
+/**
+ * Rebuild the student's opening (first) term invoice from the current Finance → Manage → Fees
+ * catalog + Settings, preserving payments. Body: { studentId?: string, studentNumber?: string, invoiceId?: string }.
+ */
+export const rebuildOpeningInvoice = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!AppDataSource.isInitialized) {
+      await AppDataSource.initialize();
+    }
+    const studentId =
+      typeof req.body?.studentId === 'string' ? req.body.studentId.trim() : '';
+    const studentNumber =
+      typeof req.body?.studentNumber === 'string' ? req.body.studentNumber.trim() : '';
+    const invoiceId =
+      typeof req.body?.invoiceId === 'string' ? req.body.invoiceId.trim() : '';
+
+    if (!studentId && !studentNumber && !invoiceId) {
+      return res.status(400).json({
+        message: 'Provide studentId, studentNumber, or invoiceId in the request body.',
+      });
+    }
+
+    const result = await rebuildOpeningInvoiceForStudent(AppDataSource, {
+      studentId: studentId || undefined,
+      studentNumber: studentNumber || undefined,
+      invoiceId: invoiceId || undefined,
+    });
+
+    if (!result.ok) {
+      const code = result.reason === 'Student not found' ? 404 : 400;
+      return res.status(code).json({
+        message: result.reason || 'Rebuild failed',
+        ...result,
+      });
+    }
+
+    res.json({
+      message: 'Opening invoice rebuilt from the current Finance fee catalog.',
+      ...result,
+    });
+  } catch (error: any) {
+    console.error('[Finance] rebuildOpeningInvoice:', error);
     res.status(500).json({ message: 'Server error', error: error.message || 'Unknown error' });
   }
 };

@@ -15,7 +15,8 @@ import {
   correctPrepaidCarryForward,
   applyCreditNote,
   applyDebitNote,
-  addUniformToInvoice
+  addUniformToInvoice,
+  rebuildOpeningInvoice,
 } from '../controllers/finance.controller';
 import {
   listFeeExemptions,
@@ -36,6 +37,12 @@ router.post('/correct-prepaid', authenticate, authorize(UserRole.ADMIN, UserRole
 router.post('/credit-note', authenticate, authorize(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.ACCOUNTANT, UserRole.DEMO_USER), applyCreditNote);
 router.post('/debit-note', authenticate, authorize(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.ACCOUNTANT, UserRole.DEMO_USER), applyDebitNote);
 router.post('/add-uniform', authenticate, authorize(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.ACCOUNTANT, UserRole.DEMO_USER), addUniformToInvoice);
+router.post(
+  '/invoices/rebuild-opening',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.ACCOUNTANT, UserRole.DEMO_USER),
+  rebuildOpeningInvoice
+);
 router.post(
   '/exemptions/recalculate-invoices',
   authenticate,

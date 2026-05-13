@@ -11,9 +11,22 @@
     </div>
 
     <header class="sf-modern-hero">
-      <span class="sf-modern-hero-icon" aria-hidden="true">🎓</span>
+      <div class="sf-modern-hero-avatar" aria-hidden="true">
+        <span class="sf-modern-hero-icon">🎓</span>
+      </div>
       <h1 class="sf-modern-title" id="sm-add-student-title">Add New Student</h1>
-      <p class="sf-modern-sub">Fill in the student details below</p>
+      <p class="sf-modern-sub">Register a new student in just a few steps</p>
+
+      <!-- Completion progress -->
+      <div class="sf-progress" aria-label="Form completion">
+        <div class="sf-progress-label">
+          <span>Form completion</span>
+          <strong>{{ getCompletionPercent() }}%</strong>
+        </div>
+        <div class="sf-progress-track">
+          <div class="sf-progress-fill" [style.width.%]="getCompletionPercent()"></div>
+        </div>
+      </div>
     </header>
 
     <div class="sf-modern-body">
@@ -105,19 +118,30 @@
               />
               <span class="sf-input-ico" aria-hidden="true">📅</span>
             </div>
+            <p class="sf-hint sf-age-hint" *ngIf="getAgePreview()">
+              <span aria-hidden="true">🎂</span> Age preview: <strong>{{ getAgePreview() }} years</strong>
+            </p>
           </div>
         </div>
 
-        <div class="sf-field sf-field-gender">
+        <div class="sf-field sf-field-gender full-width">
           <span class="sf-label">Gender <span class="sf-req">*</span></span>
           <div class="sf-gender-options">
-            <label class="sf-radio-pill">
+            <label class="sf-radio-pill sf-radio-pill--male">
               <input type="radio" name="gender" value="Male" [(ngModel)]="student.gender" required />
-              <span class="sf-radio-face"><span aria-hidden="true">♂</span> Male</span>
+              <span class="sf-radio-face">
+                <span class="sf-radio-glyph" aria-hidden="true">♂</span>
+                <span class="sf-radio-text">Male</span>
+                <span class="sf-radio-check" aria-hidden="true">✓</span>
+              </span>
             </label>
-            <label class="sf-radio-pill">
+            <label class="sf-radio-pill sf-radio-pill--female">
               <input type="radio" name="gender" value="Female" [(ngModel)]="student.gender" required />
-              <span class="sf-radio-face"><span aria-hidden="true">♀</span> Female</span>
+              <span class="sf-radio-face">
+                <span class="sf-radio-glyph" aria-hidden="true">♀</span>
+                <span class="sf-radio-text">Female</span>
+                <span class="sf-radio-check" aria-hidden="true">✓</span>
+              </span>
             </label>
           </div>
           <p class="sf-error" *ngIf="studentForm.submitted && !student.gender">Please select a gender</p>
@@ -267,18 +291,49 @@
             </div>
           </div>
         </div>
-        <label class="sf-staff-row">
-          <input type="checkbox" [(ngModel)]="student.isStaffChild" name="isStaffChild" (change)="onStaffChildChange()" />
-          <span><strong>Staff child</strong> — adjusted fees per school policy</span>
+        <!-- Bootstrap-style switch toggles -->
+        <label class="sf-switch sf-switch-staff">
+          <input
+            type="checkbox"
+            [(ngModel)]="student.isStaffChild"
+            name="isStaffChild"
+            (change)="onStaffChildChange()"
+            class="sf-switch-input"
+          />
+          <span class="sf-switch-slider" aria-hidden="true"></span>
+          <span class="sf-switch-body">
+            <span class="sf-switch-title"><span aria-hidden="true">👨‍🏫</span> Staff child</span>
+            <span class="sf-switch-sub">Adjusted fees per school policy (no tuition, 50% dining, free transport).</span>
+          </span>
         </label>
-        <div class="sf-day-options" *ngIf="student.studentType === 'Day Scholar'">
-          <label class="sf-check">
-            <input type="checkbox" [(ngModel)]="student.usesTransport" name="usesTransport" [disabled]="student.isStaffChild" />
-            School transport
+
+        <div class="sf-switch-group" *ngIf="student.studentType === 'Day Scholar'">
+          <label class="sf-switch">
+            <input
+              type="checkbox"
+              [(ngModel)]="student.usesTransport"
+              name="usesTransport"
+              [disabled]="student.isStaffChild"
+              class="sf-switch-input"
+            />
+            <span class="sf-switch-slider" aria-hidden="true"></span>
+            <span class="sf-switch-body">
+              <span class="sf-switch-title"><span aria-hidden="true">🚌</span> School transport</span>
+              <span class="sf-switch-sub">Adds the school transport fee to the invoice.</span>
+            </span>
           </label>
-          <label class="sf-check">
-            <input type="checkbox" [(ngModel)]="student.usesDiningHall" name="usesDiningHall" />
-            Dining hall meals
+          <label class="sf-switch">
+            <input
+              type="checkbox"
+              [(ngModel)]="student.usesDiningHall"
+              name="usesDiningHall"
+              class="sf-switch-input"
+            />
+            <span class="sf-switch-slider" aria-hidden="true"></span>
+            <span class="sf-switch-body">
+              <span class="sf-switch-title"><span aria-hidden="true">🍽️</span> Dining hall meals</span>
+              <span class="sf-switch-sub">Adds the dining hall meal fee to the invoice.</span>
+            </span>
           </label>
         </div>
       </section>

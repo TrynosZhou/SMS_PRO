@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../services/finance.service';
 import { StudentService } from '../../../services/student.service';
-import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
@@ -10,7 +11,7 @@ import { AuthService } from '../../../services/auth.service';
   templateUrl: './debit-note.component.html',
   styleUrls: ['./debit-note.component.css']
 })
-export class DebitNoteComponent implements OnInit {
+export class DebitNoteComponent implements OnInit, OnDestroy {
   searchValue = '';
   studentData: any = null;
   loading = false;
@@ -19,30 +20,35 @@ export class DebitNoteComponent implements OnInit {
   success = '';
   debitAmount = 0;
 
-  currencySymbol = 'KES';
+  // Pulled from System Settings → General tab via the shared CurrencyService.
+  currencySymbol: string = CurrencyService.DEFAULT_SYMBOL;
 
   nameSearchResults: any[] = [];
   showStudentPicker = false;
   nameSearchLoading = false;
   nameSearchSelectedStudentKey = '';
 
+  private currencySub?: Subscription;
+
   constructor(
     private financeService: FinanceService,
     private studentService: StudentService,
-    private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private authService: AuthService,
     private router: Router
-  ) {}
+  ) {
+    this.currencySymbol = this.currencyService.current;
+  }
 
   ngOnInit(): void {
-    this.settingsService.getSettings().subscribe({
-      next: (settings: any) => {
-        this.currencySymbol = settings?.currencySymbol || 'KES';
-      },
-      error: () => {
-        this.currencySymbol = 'KES';
-      }
-    });
+    this.currencyService.refresh();
+    this.currencySub = this.currencyService.symbol$.subscribe(
+      s => (this.currencySymbol = s)
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.currencySub?.unsubscribe();
   }
 
   canSearchByName(): boolean {

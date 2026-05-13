@@ -50,6 +50,15 @@ export class ClassService {
     return this.http.put(`${this.apiUrl}/classes/${id}`, classData);
   }
 
+  /**
+   * Convenience helper for setting (or clearing) the home/class teacher for a class.
+   * Pass `null` to remove the class teacher. The backend automatically links the
+   * teacher to the class's teacher list when needed.
+   */
+  updateClassTeacher(id: string, classTeacherId: string | null): Observable<any> {
+    return this.http.put(`${this.apiUrl}/classes/${id}`, { classTeacherId });
+  }
+
   deleteClass(id: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/classes/${id}`);
   }

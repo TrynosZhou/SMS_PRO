@@ -91,15 +91,15 @@
           <tr *ngFor="let subject of reportCard.subjects; let i = index">
             <td>{{ subject.name || 'N/A' }}</td>
             <td>{{ subject.code || '-' }}</td>
-            <td>{{ subject.score !== null && subject.score !== undefined ? subject.score : 'N/A' }}</td>
+            <td class="cell-mgc">{{ subject.score !== null && subject.score !== undefined ? subject.score : 'N/A' }}</td>
             <td>{{ subject.maxScore !== null && subject.maxScore !== undefined ? subject.maxScore : '-' }}</td>
             <td>{{ subject.classAverage !== null && subject.classAverage !== undefined ? subject.classAverage : '-' }}</td>
-            <td>
+            <td class="cell-mgc grade-cell-student">
               <span class="grade-badge" [class]="getGradeClass(subject.grade)">
                 {{ subject.grade || 'N/A' }}
               </span>
             </td>
-            <td>{{ subject.comment || subject.comments || '-' }}</td>
+            <td class="cell-mgc">{{ subject.comment || subject.comments || '-' }}</td>
           </tr>
           <tr *ngIf="!reportCard.subjects || reportCard.subjects.length === 0">
             <td colspan="7" style="text-align: center; padding: 20px; color: #999;">

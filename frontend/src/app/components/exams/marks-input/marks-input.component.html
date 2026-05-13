@@ -167,7 +167,8 @@
             <tr>
               <th class="mi-th-num">#</th>
               <th>Student #</th>
-              <th>Name</th>
+              <th>LastName</th>
+              <th>FirstName</th>
               <th>Gender</th>
               <th class="mi-th-score">Score / {{ maxScore }}</th>
               <th>Grade</th>
@@ -181,7 +182,8 @@
             >
               <td>{{ i + 1 }}</td>
               <td>{{ s.studentNumber }}</td>
-              <td class="mi-cell-name">{{ s.firstName }} {{ s.lastName }}</td>
+              <td class="mi-cell-name">{{ s.lastName }}</td>
+              <td class="mi-cell-name">{{ s.firstName }}</td>
               <td>{{ s.gender }}</td>
               <td>
                 <div class="mi-score-cell">
@@ -205,7 +207,7 @@
               </td>
               <td>
                 <span [ngClass]="gradeClass(marks[s.id]?.score)" *ngIf="marks[s.id]?.score !== null && marks[s.id]?.score !== undefined">
-                  {{ gradeLetter(marks[s.id]?.score) }}
+                  {{ gradeLabel(marks[s.id]?.score) }}
                 </span>
               </td>
               <td>
@@ -219,7 +221,7 @@
               </td>
             </tr>
             <tr *ngIf="filteredStudents.length === 0">
-              <td colspan="7" class="mi-table-empty">No students match your filter.</td>
+              <td colspan="8" class="mi-table-empty">No students match your filter.</td>
             </tr>
           </tbody>
         </table>

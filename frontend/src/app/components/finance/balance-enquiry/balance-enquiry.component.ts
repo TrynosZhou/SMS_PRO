@@ -1,7 +1,8 @@
-import { Component, EventEmitter, HostListener, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../services/finance.service';
 import { StudentService } from '../../../services/student.service';
-import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
@@ -9,7 +10,7 @@ import { AuthService } from '../../../services/auth.service';
   templateUrl: './balance-enquiry.component.html',
   styleUrls: ['./balance-enquiry.component.css']
 })
-export class BalanceEnquiryComponent implements OnInit {
+export class BalanceEnquiryComponent implements OnInit, OnDestroy {
   @Input() modalMode = false;
   @Output() closeModal = new EventEmitter<void>();
 
@@ -19,7 +20,8 @@ export class BalanceEnquiryComponent implements OnInit {
   error = '';
   copyFeedback = '';
 
-  currencySymbol = 'KES';
+  // Pulled from System Settings → General tab via the shared CurrencyService.
+  currencySymbol: string = CurrencyService.DEFAULT_SYMBOL;
   showInvoiceBreakdown = false;
 
   // Name search fallback (Admin/Accountant only)
@@ -29,24 +31,26 @@ export class BalanceEnquiryComponent implements OnInit {
   nameSearchSelectedStudentKey = '';
 
   private copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+  private currencySub?: Subscription;
 
   constructor(
     private financeService: FinanceService,
     private studentService: StudentService,
-    private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private authService: AuthService
-  ) { }
+  ) {
+    this.currencySymbol = this.currencyService.current;
+  }
 
   ngOnInit(): void {
-    this.settingsService.getSettings().subscribe({
-      next: (settings: any) => {
-        const raw = Array.isArray(settings) && settings.length > 0 ? settings[0] : settings;
-        this.currencySymbol = raw?.currencySymbol || 'KES';
-      },
-      error: () => {
-        this.currencySymbol = 'KES';
-      }
-    });
+    this.currencyService.refresh();
+    this.currencySub = this.currencyService.symbol$.subscribe(
+      s => (this.currencySymbol = s)
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.currencySub?.unsubscribe();
   }
 
   canSearchByName(): boolean {

@@ -774,14 +774,45 @@
   color: #000000;
 }
 
+/* Mark, grade, and teacher comments — one typographic style (bold sans-serif, dark) */
+.report-table td.score,
+.report-table td.comments,
+.report-table td.grade-cell {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.report-table td.grade-cell .grade-badge {
+  background: transparent !important;
+  color: #0f172a !important;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  display: inline;
+}
+
 .class-average {
   font-weight: 700;
   color: #000000;
 }
 
 .comments {
-  font-size: 12px;
-  color: #6c757d;
+  font-size: inherit;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .report-table th.points-header,
@@ -867,6 +898,26 @@
   font-size: 24px;
   font-weight: 700;
   color: #000000;
+}
+
+.performance-value .grade-badge {
+  background: transparent !important;
+  color: #0f172a !important;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-weight: 700;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .performance-value.highlight {

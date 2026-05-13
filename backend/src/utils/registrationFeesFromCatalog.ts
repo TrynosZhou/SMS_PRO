@@ -89,16 +89,17 @@ export async function resolveRegistrationFeesFromCatalog(
       if (amount <= 0.001) continue;
 
       const labelHay = `${item.itemName} ${cat.name}`;
-      const sub = (item.subCategory || '').trim().toLowerCase();
-      const isBoarderSub = sub.includes('board');
-      const isDayScholarSub = !isBoarderSub && (sub.includes('day') || sub === '' || sub === 'all');
 
-      // Tuition — sub-category determines which tuition column it fills.
+      // Tuition — map catalog subCategory to day-scholar vs boarder columns the same
+      // way as computeManagedFeesForStudent. Empty / "All" applies to both; otherwise
+      // boarders were only reading boarderTuitionFee from rows whose subCategory text
+      // literally contained "board", and generic tuition rows wrongly filled day-scholar only.
       if (TUITION_RX.test(labelHay)) {
-        if (isBoarderSub) {
+        const subRaw = item.subCategory || '';
+        if (subCategoryMatchesResidence(subRaw, true)) {
           boarderTuitionFee = Math.max(boarderTuitionFee, amount);
         }
-        if (isDayScholarSub) {
+        if (subCategoryMatchesResidence(subRaw, false)) {
           dayScholarTuitionFee = Math.max(dayScholarTuitionFee, amount);
         }
         continue;

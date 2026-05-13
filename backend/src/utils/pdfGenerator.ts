@@ -405,29 +405,34 @@ export function createReportCardPDF(
         const fill = index % 2 === 0 ? '#ffffff' : RC.rowAlt;
         doc.rect(tableLeft, y, tw, rowH).fill(fill);
 
-        doc.font('Helvetica').fontSize(rowFont);
-        doc.fillColor('#000000').text(String(index + 1), colX(0) + 2, y + rowTextDy, {
+        doc.font('Helvetica').fontSize(rowFont).fillColor('#000000');
+        doc.text(String(index + 1), colX(0) + 2, y + rowTextDy, {
           width: cols.ser - 4,
           align: 'center',
         });
-        doc.fillColor('#000000').text(subjDisplay, colX(1) + 2, y + rowTextDy, { width: cols.subject - 4 });
-        doc.fillColor(RC.valueBlue).text(markStr, colX(2) + 1, y + rowTextDy, {
+        doc.font('Helvetica').fillColor('#000000').text(subjDisplay, colX(1) + 2, y + rowTextDy, { width: cols.subject - 4 });
+
+        /* Mark, grade, and teacher comment — same bold weight and colour (matches on_SCREEN report table) */
+        doc.font('Helvetica-Bold').fillColor('#0f172a').text(markStr, colX(2) + 1, y + rowTextDy, {
           width: cols.mark - 2,
           align: 'center',
         });
-        doc.fillColor('#000000').text(avgStr, colX(3) + 1, y + rowTextDy, {
+
+        doc.font('Helvetica').fontSize(rowFont).fillColor('#000000').text(avgStr, colX(3) + 1, y + rowTextDy, {
           width: cols.avg - 2,
           align: 'center',
         });
-        doc.fillColor('#000000').text(posStr, colX(4) + 1, y + rowTextDy, {
+        doc.font('Helvetica').fillColor('#000000').text(posStr, colX(4) + 1, y + rowTextDy, {
           width: cols.pos - 2,
           align: 'center',
         });
-        doc.fillColor('#000000').text(gradeStr, colX(5) + 1, y + rowTextDy, {
+
+        doc.font('Helvetica-Bold').fillColor('#0f172a').text(gradeStr, colX(5) + 1, y + rowTextDy, {
           width: cols.grade - 2,
           align: 'center',
         });
-        doc.fillColor('#374151').text(comStr, colX(6) + 2, y + rowTextDy, { width: cols.comment - 4 });
+
+        doc.font('Helvetica-Bold').fillColor('#0f172a').text(comStr, colX(6) + 2, y + rowTextDy, { width: cols.comment - 4 });
 
         for (let i = 0; i <= 7; i++) {
           doc.moveTo(colX(i), y).lineTo(colX(i), y + rowH).stroke();
@@ -452,7 +457,7 @@ export function createReportCardPDF(
         doc.text('Average Mark', colX(1) + 2, y + avgTextDy, { width: cols.subject + cols.ser - 4 });
         const ov = parseFloat(reportCard.overallAverage);
         const avgTxt = Number.isFinite(ov) ? ov.toFixed(2) : reportCard.overallAverage;
-        doc.fillColor(RC.valueBlue).text(avgTxt, colX(2) + 1, y + avgTextDy, {
+        doc.font('Helvetica-Bold').fillColor('#0f172a').text(avgTxt, colX(2) + 1, y + avgTextDy, {
           width: cols.mark - 2,
           align: 'center',
         });

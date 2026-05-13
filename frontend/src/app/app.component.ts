@@ -68,26 +68,37 @@ export class AppComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    // Load school name from settings if authenticated
-    if (this.authService.isAuthenticated()) {
-      this.settingsService.getSettings().subscribe({
-        next: (settings: any) => {
-          this.schoolName = settings?.schoolName || 'School Management System';
-        },
-        error: () => {
-          // ignore settings fetch errors to avoid blocking UI
-        }
-      });
-
-      // Load module access settings
-      this.moduleAccessService.loadModuleAccess();
-    }
+    // Enforce Splash -> Login -> Dashboard on every app bootstrap.
+    // Angular's initial navigation is disabled in AppRoutingModule, so we
+    // kick off navigation here and always start at the splash screen,
+    // regardless of the URL the browser landed on. The splash then routes
+    // the user to /login, and successful sign-in takes them to their
+    // role-specific dashboard.
+    this.router.navigateByUrl('/', { replaceUrl: true }).catch(() => { });
 
     // Seed currentUrl on first load (NavigationEnd fires only after subsequent navigations).
     this.currentUrl = this.router.url || '';
 
-    // Build the modern sidebar nav once the user identity is known.
-    this.buildNavMenu();
+    // React to auth state changes so role-specific settings/menu items
+    // appear right after the user signs in and disappear after logout.
+    // On bootstrap currentUserSubject starts as null (AuthService clears
+    // persisted credentials), so this is the only place those calls run.
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.settingsService.getSettings().subscribe({
+          next: (settings: any) => {
+            this.schoolName = settings?.schoolName || 'School Management System';
+          },
+          error: () => {
+            // ignore settings fetch errors to avoid blocking UI
+          }
+        });
+        this.moduleAccessService.loadModuleAccess();
+      } else {
+        this.schoolName = 'School Management System';
+      }
+      this.buildNavMenu();
+    });
 
     // Track menu access (used by Activity Log)
     this.router.events

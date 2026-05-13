@@ -2,10 +2,14 @@
   <header class="ct-header">
     <h2 id="class-teacher-title">Class teachers</h2>
     <p class="ct-lead">
-      Every class below lists teachers currently assigned to that class (from class–teacher assignments).
+      Each row shows the <strong>home / class teacher</strong> for that class. Administrators may click a row to change who leads the class.
+    </p>
+    <p class="ct-hint ct-hint-muted" *ngIf="!canEdit()">
+      Read-only: sign in as an administrator (or demo account) to edit the class teacher.
     </p>
   </header>
 
+  <div class="alert alert-success" *ngIf="successMessage">{{ successMessage }}</div>
   <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
 
   <div class="ct-loading" *ngIf="loading">
@@ -20,27 +24,114 @@
           <th scope="col" class="ct-th-num">#</th>
           <th scope="col">Class</th>
           <th scope="col">Form</th>
-          <th scope="col">Class teacher(s)</th>
+          <th scope="col">Class teacher</th>
+          <th scope="col">Other teachers on class</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let c of classes; let i = index">
+        <tr
+          *ngFor="let c of classes; let i = index"
+          [class.ct-row-clickable]="canEdit()"
+          (click)="canEdit() && openEditor(c)"
+          [attr.aria-label]="canEdit() ? 'Edit class teacher for ' + c.name : null"
+        >
           <td class="ct-td-num">{{ i + 1 }}</td>
-          <td class="ct-td-class"><strong>{{ c.name }}</strong></td>
+          <td class="ct-td-class">
+            <strong>{{ c.name }}</strong>
+            <span class="ct-edit-hint" *ngIf="canEdit()">Edit</span>
+          </td>
           <td class="ct-td-form">{{ c.form || '—' }}</td>
-          <td class="ct-td-teachers">
-            <ng-container *ngIf="teachersForClass(c).length; else noTeachers">
-              <ul class="ct-teacher-list">
-                <li *ngFor="let t of teachersForClass(c)">{{ teacherLabel(t) }}</li>
+          <td class="ct-td-ct">
+            <ng-container *ngIf="classTeacherLabel(c); else noCT">
+              <span class="ct-class-teacher-name">{{ classTeacherLabel(c) }}</span>
+            </ng-container>
+            <ng-template #noCT>
+              <span class="ct-none">None assigned</span>
+            </ng-template>
+          </td>
+          <td class="ct-td-other">
+            <ng-container *ngIf="otherTeachersForClass(c).length; else noOther">
+              <ul class="ct-teacher-list ct-teacher-list-compact">
+                <li *ngFor="let t of otherTeachersForClass(c)">{{ teacherLabel(t) }}</li>
               </ul>
             </ng-container>
-            <ng-template #noTeachers>
-              <span class="ct-none">No teachers assigned</span>
+            <ng-template #noOther>
+              <span class="ct-muted">—</span>
             </ng-template>
           </td>
         </tr>
       </tbody>
     </table>
     <p class="ct-empty" *ngIf="classes.length === 0">No classes found.</p>
+  </div>
+
+  <!-- Editor panel / overlay -->
+  <div
+    class="ct-modal-backdrop"
+    *ngIf="editingClass"
+    (click)="closeEditor()"
+    role="presentation"
+    aria-hidden="true"
+  ></div>
+  <div class="ct-modal" *ngIf="editingClass" role="dialog" aria-modal="true" aria-labelledby="ct-editor-title" (click)="$event.stopPropagation()">
+    <div class="ct-modal-header">
+      <h3 id="ct-editor-title">
+        Class teacher — {{ editingClass.name }}
+      </h3>
+      <button type="button" class="ct-modal-close" (click)="closeEditor()" [disabled]="saving" aria-label="Close">
+        ×
+      </button>
+    </div>
+    <div class="ct-modal-body">
+      <p class="ct-modal-hint">
+        The class teacher must already be assigned to teach this class (timetable / allocate class teachers).
+        To add someone new, use <strong>Allocate Class Teachers</strong> first, then pick them here.
+      </p>
+      <div class="alert alert-danger" *ngIf="editorError">{{ editorError }}</div>
+
+      <div class="ct-search-row">
+        <label class="ct-sr-only" for="ct-teacher-search">Search teachers</label>
+        <input
+          id="ct-teacher-search"
+          type="search"
+          class="ct-search-input"
+          placeholder="Search teachers…"
+          [(ngModel)]="editingTeacherSearch"
+          [disabled]="saving || loadingTeachers"
+        />
+      </div>
+
+      <div class="ct-selected-row">
+        <span class="ct-selected-label">Selected:</span>
+        <strong *ngIf="editingTeacherId">{{ selectedEditingTeacherLabel() }}</strong>
+        <em *ngIf="!editingTeacherId" class="ct-none">No class teacher (clear)</em>
+        <button type="button" class="btn btn-link ct-clear-btn" (click)="clearTeacherSelection()" [disabled]="saving">
+          Clear
+        </button>
+      </div>
+
+      <div class="ct-teacher-picker" *ngIf="!loadingTeachers; else teachersLoading">
+        <button
+          type="button"
+          class="ct-teacher-chip"
+          *ngFor="let t of filteredTeachers"
+          [class.ct-chip-selected]="isSelected(t.id)"
+          (click)="selectTeacher(t.id)"
+          [disabled]="saving"
+        >
+          {{ teacherLabel(t) }}
+        </button>
+        <p class="ct-picker-empty" *ngIf="filteredTeachers.length === 0">No teachers match your search.</p>
+      </div>
+      <ng-template #teachersLoading>
+        <p class="ct-muted">Loading teachers…</p>
+      </ng-template>
+    </div>
+    <div class="ct-modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeEditor()" [disabled]="saving">Cancel</button>
+      <button type="button" class="btn btn-primary" (click)="saveClassTeacher()" [disabled]="saving">
+        {{ saving ? 'Saving…' : 'Save class teacher' }}
+      </button>
+    </div>
   </div>
 </section>

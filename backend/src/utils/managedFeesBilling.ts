@@ -31,7 +31,10 @@ const A_LEVEL_FEE_RX =
  * Infer O vs A level from class name/form (e.g. Form 1–4 → O, Form 5–6 → A).
  */
 export function inferStudentFeeLevelBand(classEntity: Class | null | undefined): StudentFeeLevelBand {
-  if (!classEntity) return 'UNKNOWN';
+  // No class yet (e.g. registered before enrolment): assume O-level band so Finance
+  // catalog rows tagged "O Level" still resolve. UNKNOWN would exclude those rows
+  // and force a fallback to Settings fees (often stale placeholders).
+  if (!classEntity) return 'O_LEVEL';
   const raw = `${classEntity.form || ''} ${classEntity.name || ''}`.trim();
   if (!raw) return 'UNKNOWN';
   const low = raw.toLowerCase();

@@ -18,16 +18,8 @@ import QRCode from 'qrcode';
 import { createStudentIdCardPDF, createClassStudentIdCardsPDF } from '../utils/studentIdCardPdf';
 import { isDemoUser } from '../utils/demoDataFilter';
 import { parseAmount, generateInvoiceNumber, roundMoney } from '../utils/numberUtils';
-import { buildNewStudentRegistrationInvoice } from '../utils/registrationInvoiceBundle';
-import {
-  applyExemptionForStudent,
-  computeManagedFeesForStudent,
-} from '../utils/managedFeesBilling';
-import {
-  resolveRegistrationFeesFromCatalog,
-  buildMergedFeesSettingsForRegistration,
-} from '../utils/registrationFeesFromCatalog';
 import { invoicesIncludeTerm } from '../utils/termMatch';
+import { computeOpeningInvoiceBundle } from '../utils/openingInvoiceCompute';
 import { calculateAge } from '../utils/ageUtils';
 import { In } from 'typeorm';
 import { buildPaginationResponse, parsePaginationParams } from '../utils/pagination';
@@ -275,6 +267,8 @@ export const registerStudent = async (req: AuthRequest, res: Response) => {
     });
 
     // Initial invoice for every new registration: tuition + desk + registration (staff exempt).
+    // All catalog → settings → managed-fallback logic lives in computeOpeningInvoiceBundle so
+    // the same numbers are produced by registration, enrollment, and the rebuild endpoint.
     try {
       const settings = await settingsRepository.findOne({
         where: {},
@@ -284,78 +278,15 @@ export const registerStudent = async (req: AuthRequest, res: Response) => {
       if (!settings) {
         console.warn('⚠️ No school settings — registration invoice not created');
       } else {
-        // Prefer amounts entered on the Finance page (FeeCategory + FeeItem) for
-        // Tuition / Desk Fee / Registration Fee. Anything missing in the catalog
-        // falls back to Settings → School Fees so existing setups keep working.
-        const catalogFees = await resolveRegistrationFeesFromCatalog(AppDataSource, {
-          studentType: validStudentType,
-          classEntity: savedStudent?.classEntity ?? classEntity ?? null,
-        });
-        const mergedFeesSettings = buildMergedFeesSettingsForRegistration(
-          catalogFees,
-          settings.feesSettings as any
-        );
-        if (catalogFees.hasAny) {
-          console.log('💰 Registration fees pulled from Finance catalog:', {
-            dayScholarTuitionFee: catalogFees.dayScholarTuitionFee,
-            boarderTuitionFee: catalogFees.boarderTuitionFee,
-            deskFee: catalogFees.deskFee,
-            registrationFee: catalogFees.registrationFee,
-          });
-        }
-
-        let { total, feeLineItems, lineDescriptions } = buildNewStudentRegistrationInvoice({
-          feesSettings: mergedFeesSettings,
-          studentType: validStudentType,
-          isStaffChild: isStaffChildFlag,
-          usesDiningHall: usesDiningHallFlag,
+        const studentForInvoice = (savedStudent ?? student) as any;
+        const bundle = await computeOpeningInvoiceBundle(AppDataSource, studentForInvoice);
+        console.log('💰 Registration invoice bundle:', {
+          source: bundle.source,
+          total: bundle.total,
+          items: bundle.lineDescriptions,
         });
 
-        if (savedStudent?.id) {
-          const bundleLines = feeLineItems.map(l => ({
-            description: l.description,
-            amount: roundMoney(parseAmount((l as any).amount)),
-          }));
-          const bundleSum = roundMoney(bundleLines.reduce((s, l) => s + l.amount, 0));
-          const applied = await applyExemptionForStudent(
-            AppDataSource,
-            savedStudent.id,
-            bundleLines,
-            bundleSum
-          );
-          feeLineItems = applied.lines.map(l => ({
-            description: l.description,
-            amount: roundMoney(l.amount),
-          })) as typeof feeLineItems;
-          total = applied.total;
-          lineDescriptions = applied.lines.map(
-            l => `${l.description}: ${roundMoney(l.amount)}`
-          );
-        }
-
-        if (total <= 0.005 && !isStaffChildFlag && savedStudent) {
-          try {
-            const managed = await computeManagedFeesForStudent(AppDataSource, savedStudent as any, {
-              hasPreviousInvoice: false,
-            });
-            if (managed.total > 0.005 && managed.lines.length > 0) {
-              total = managed.total;
-              feeLineItems = managed.lines.map(l => ({
-                description: l.description,
-                amount: roundMoney(l.amount),
-              }));
-              lineDescriptions = managed.lines.map(
-                l => `${l.description}: ${roundMoney(l.amount)}`
-              );
-            }
-          } catch (e) {
-            console.warn('⚠️ Managed fees fallback for registration failed:', e);
-          }
-        }
-
-        console.log('💰 Registration invoice bundle:', { total, items: lineDescriptions });
-
-        if (total > 0.005) {
+        if (bundle.total > 0.005) {
           const registrationTerm =
             settings.currentTerm || (settings as any).activeTerm || `Term 1 ${new Date().getFullYear()}`;
           const existingForStudent = await invoiceRepository.find({
@@ -367,20 +298,19 @@ export const registerStudent = async (req: AuthRequest, res: Response) => {
               registrationTerm
             );
           } else {
-            const lineSum = feeLineItems.reduce(
+            const lineSum = bundle.feeLineItems.reduce(
               (s, row) => s + roundMoney(parseAmount((row as any).amount)),
               0
             );
-            const amountValue = lineSum > 0.005 ? roundMoney(lineSum) : roundMoney(total);
+            const amountValue = lineSum > 0.005 ? roundMoney(lineSum) : roundMoney(bundle.total);
 
             const invoiceNumber = generateInvoiceNumber();
             const dueDate = new Date();
             dueDate.setDate(dueDate.getDate() + 30);
-            const term = registrationTerm;
 
             const description =
-              lineDescriptions.length > 0
-                ? `New student registration: ${lineDescriptions.join(', ')}`
+              bundle.lineDescriptions.length > 0
+                ? `New student registration: ${bundle.lineDescriptions.join(', ')}`
                 : 'New student registration';
 
             const studentIdForInvoice = savedStudent?.id || student.id;
@@ -395,10 +325,10 @@ export const registerStudent = async (req: AuthRequest, res: Response) => {
               prepaidAmount: 0,
               uniformTotal: 0,
               dueDate,
-              term,
+              term: registrationTerm,
               description,
               status: InvoiceStatus.PENDING,
-              feeLineItems,
+              feeLineItems: bundle.feeLineItems,
               uniformItems: [],
             });
 

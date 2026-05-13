@@ -36,7 +36,9 @@ export class SettingsComponent implements OnInit {
     currentTerm: `Term 1 ${new Date().getFullYear()}`,
     schoolLogo: null,
     schoolLogo2: null,
-    currencySymbol: 'KES',
+    // Default matches CurrencyService.DEFAULT_SYMBOL. The actual symbol is
+    // overwritten from /api/settings on load (System Settings → General tab).
+    currencySymbol: '$',
     promotionRules: {
       'ECD A': 'ECD B',
       'ECD B': 'Grade 1',
@@ -168,7 +170,7 @@ export class SettingsComponent implements OnInit {
           delete this.settings.feesSettings.tuitionFee;
         }
         if (!this.settings.currencySymbol) {
-          this.settings.currencySymbol = 'KES';
+          this.settings.currencySymbol = '$';
         }
         if (!this.settings.currentTerm) {
           const currentYear = new Date().getFullYear();
@@ -414,9 +416,10 @@ export class SettingsComponent implements OnInit {
       this.settings.feesSettings.diningHallCost = Number(this.settings.feesSettings.diningHallCost) || 0;
     }
 
-    // Ensure currencySymbol is set and not empty
+    // Ensure currencySymbol is set and not empty. Use the safe '$' default so we
+    // never override a user's saved currency with an arbitrary regional one.
     if (!this.settings.currencySymbol || this.settings.currencySymbol.trim() === '') {
-      this.settings.currencySymbol = 'KES';
+      this.settings.currencySymbol = '$';
     }
 
     const payload = { ...this.settings };
