@@ -68,8 +68,11 @@ export class RankingsComponent implements OnInit {
   }
 
   loadSubjects() {
-    this.subjectService.getSubjects().subscribe({
-      next: (data: any) => this.subjects = data,
+    this.subjectService.getSubjects({ page: 1, limit: 500 }).subscribe({
+      next: (data: any) => {
+        const list = Array.isArray(data) ? data : data?.data || [];
+        this.subjects = list;
+      },
       error: (err: any) => console.error(err)
     });
   }
@@ -108,12 +111,15 @@ export class RankingsComponent implements OnInit {
       // For class rankings, we need to get exams by type and class, then aggregate
       request = this.examService.getClassRankingsByType(this.selectedExamType, this.selectedClass);
     } else if (this.rankingType === 'subject') {
-      if (!this.selectedExamType || !this.selectedSubject) {
+      if (!this.selectedExamType || !this.selectedSubject || !this.selectedForm) {
         this.loading = false;
         return;
       }
-      // For subject rankings, we need to get exams by type and subject, then aggregate
-      request = this.examService.getSubjectRankingsByType(this.selectedExamType, this.selectedSubject);
+      request = this.examService.getSubjectRankingsByType(
+        this.selectedExamType,
+        this.selectedSubject,
+        this.selectedForm
+      );
     } else if (this.rankingType === 'overall-performance') {
       if (!this.selectedForm || !this.selectedExamType) {
         this.loading = false;
@@ -190,7 +196,7 @@ export class RankingsComponent implements OnInit {
       headers.push('Average (%)');
     }
     if (this.rankingType === 'subject') {
-      headers.push('Score', 'Percentage (%)');
+      headers.push('Class', 'Score', 'Percentage (%)');
     }
     headers.push('Performance');
 
@@ -204,7 +210,7 @@ export class RankingsComponent implements OnInit {
         row.push(r.average.toFixed(2));
       }
       if (this.rankingType === 'subject') {
-        row.push(`${r.score} / ${r.maxScore}`, r.percentage.toFixed(2));
+        row.push(r.class || 'N/A', `${r.score} / ${r.maxScore}`, r.percentage.toFixed(2));
       }
       row.push(this.getPerformanceLabel(r));
       return row;
@@ -277,7 +283,7 @@ export class RankingsComponent implements OnInit {
           ? `${sub.code} — ${sub.name}`
           : sub.name
         : 'Subject';
-      return `Subject: ${label}`;
+      return `Form: ${this.selectedForm || '—'} · Subject: ${label}`;
     }
     if (this.rankingType === 'overall-performance') {
       return `Form: ${this.selectedForm || '—'}`;

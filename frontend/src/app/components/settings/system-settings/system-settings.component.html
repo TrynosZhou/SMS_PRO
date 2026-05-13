@@ -17,7 +17,7 @@
     class="ss-tab"
     [class.ss-tab-active]="activeTab === t.id"
     (click)="setTab(t.id)"
-  >{{ t.label }}</button>
+  >{{ t.icon }} {{ t.label }}</button>
 </nav>
 
 <!-- Loading -->
@@ -452,6 +452,183 @@
       <span *ngIf="!saving">💾 Save General Settings</span>
       <span *ngIf="saving">Saving…</span>
     </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     SCHOOL SETTINGS TAB (class promotion rules)
+════════════════════════════════════════════════ -->
+<div class="ss-body" *ngIf="!loading && activeTab === 'school-settings'">
+  <div class="ss-section-header">
+    <span class="ss-section-ico" aria-hidden="true">⬆️</span>
+    <div>
+      <h2 class="ss-section-title">Class promotion rules</h2>
+      <p class="ss-section-sub">
+        Define how students move to the next class during year-end promotion. These rules power the
+        <strong>Migrate class</strong> / class promotion pages. Optional minimum averages use end-of-term marks for the
+        school&rsquo;s active term.
+      </p>
+    </div>
+  </div>
+
+  <div class="ss-card ss-promotion-rule-form">
+    <h3 class="ss-card-title">{{ editingPromotionRule ? '✏️ Edit rule' : '➕ Add rule' }}</h3>
+
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label class="ss-lbl">From class *</label>
+        <select
+          class="ss-input"
+          [(ngModel)]="promotionRuleForm.fromClassId"
+          [disabled]="!!editingPromotionRule">
+          <option value="">— Select —</option>
+          <option *ngFor="let cls of getAvailableFromClasses()" [value]="cls.id">
+            {{ promotionClassDisplayName(cls) }} ({{ cls.form }})
+          </option>
+        </select>
+        <span class="ss-hint">Class students are in before promotion</span>
+      </div>
+      <div class="ss-field">
+        <label class="ss-lbl">To class *</label>
+        <select
+          class="ss-input"
+          [(ngModel)]="promotionRuleForm.toClassId"
+          [disabled]="promotionRuleForm.isFinalClass"
+          (change)="onPromotionToClassChange()">
+          <option value="">— Select —</option>
+          <option value="COMPLETED">✅ Completed / graduated</option>
+          <option *ngFor="let cls of getAvailableToClasses()" [value]="cls.id">
+            {{ promotionClassDisplayName(cls) }} ({{ cls.form }})
+          </option>
+        </select>
+        <span class="ss-hint">Target class after promotion</span>
+      </div>
+    </div>
+
+    <div class="ss-field" *ngIf="!promotionRuleForm.isFinalClass">
+      <label class="ss-lbl">Minimum end-of-term average (%)</label>
+      <input
+        class="ss-input"
+        style="max-width: 14rem"
+        type="number"
+        min="0"
+        max="100"
+        step="0.1"
+        placeholder="Optional"
+        [(ngModel)]="promotionRuleForm.minimumAveragePercent" />
+      <span class="ss-hint">Leave empty to promote every student with a next class. Otherwise compares to marks for the active term.</span>
+    </div>
+
+    <div class="ss-toggle-list" style="margin-top: 1rem;">
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Final class</span>
+          <span class="ss-toggle-hint">Students in this class graduate; no next class</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="promotionRuleForm.isFinalClass" (change)="onPromotionFinalClassChange()" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+      <div class="ss-toggle-row">
+        <div class="ss-toggle-info">
+          <span class="ss-toggle-label">Rule active</span>
+          <span class="ss-toggle-hint">Inactive rules are ignored for promotion</span>
+        </div>
+        <label class="ss-switch">
+          <input type="checkbox" [(ngModel)]="promotionRuleForm.isActive" />
+          <span class="ss-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="ss-pr-promotion-actions">
+      <button
+        type="button"
+        class="ss-save-btn"
+        (click)="savePromotionRule()"
+        [disabled]="!promotionRuleForm.fromClassId || (!promotionRuleForm.isFinalClass && !promotionRuleForm.toClassId)">
+        {{ editingPromotionRule ? '💾 Update rule' : '➕ Add rule' }}
+      </button>
+      <button type="button" class="ss-btn-secondary" *ngIf="editingPromotionRule" (click)="cancelEditPromotionRule()">
+        Cancel
+      </button>
+    </div>
+
+    <div class="ss-card-test" *ngIf="editingPromotionRule" style="margin-top: 1rem;">
+      <strong>Editing:</strong> {{ promotionClassDisplayName(editingPromotionRule.fromClass) }} →
+      {{ editingPromotionRule.isFinalClass ? 'Completed' : promotionClassDisplayName(editingPromotionRule.toClass) }}
+    </div>
+  </div>
+
+  <p class="ss-pr-muted" *ngIf="loadingPromotionRules" style="padding: 1rem;">Loading rules…</p>
+
+  <div class="ss-pr-table-wrap" *ngIf="!loadingPromotionRules && promotionRules.length > 0">
+    <table class="ss-pr-table">
+      <thead>
+        <tr>
+          <th>From</th>
+          <th>To</th>
+          <th>Min avg %</th>
+          <th>Final</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let rule of promotionRules" [class.ss-pr-editing]="editingPromotionRule?.id === rule.id">
+          <td>
+            <strong>{{ promotionClassDisplayName(rule.fromClass) }}</strong>
+            <div class="ss-pr-muted">{{ rule.fromClass?.form }}</div>
+          </td>
+          <td>
+            <span *ngIf="rule.isFinalClass" class="ss-pr-tag-ok">Completed</span>
+            <ng-container *ngIf="!rule.isFinalClass">
+              <strong>{{ promotionClassDisplayName(rule.toClass) }}</strong>
+              <div class="ss-pr-muted">{{ rule.toClass?.form }}</div>
+            </ng-container>
+          </td>
+          <td class="ss-pr-num">
+            <span *ngIf="!rule.isFinalClass && rule.minimumAveragePercent != null">{{ rule.minimumAveragePercent }}%</span>
+            <span *ngIf="rule.isFinalClass || rule.minimumAveragePercent == null" class="ss-pr-muted">—</span>
+          </td>
+          <td class="ss-pr-num">{{ rule.isFinalClass ? '✓' : '—' }}</td>
+          <td class="ss-pr-num">
+            <label class="ss-switch ss-pr-switch-sm">
+              <input type="checkbox" [checked]="rule.isActive" (change)="toggleRuleStatus(rule)" />
+              <span class="ss-slider"></span>
+            </label>
+            <div class="ss-pr-muted-small">{{ rule.isActive ? 'Active' : 'Off' }}</div>
+          </td>
+          <td class="ss-pr-icon-actions">
+            <button
+              type="button"
+              class="ss-pr-icon-btn"
+              (click)="editPromotionRule(rule)"
+              [disabled]="!!editingPromotionRule && editingPromotionRule.id !== rule.id"
+              title="Edit">✏️</button>
+            <button
+              type="button"
+              class="ss-pr-icon-btn ss-pr-danger"
+              (click)="deletePromotionRule(rule)"
+              [disabled]="editingPromotionRule?.id === rule.id"
+              title="Delete">🗑️</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ss-pr-empty" *ngIf="!loadingPromotionRules && promotionRules.length === 0">
+    <p>No promotion rules yet. Add a rule above to connect each class to its next class.</p>
+  </div>
+
+  <div class="ss-pr-warn-block" *ngIf="!loadingPromotionRules && promotionClasses.length > 0">
+    <ng-container *ngFor="let cls of promotionClasses">
+      <p class="ss-pr-warn-line" *ngIf="cls.isActive && promotionClassHasNoRule(cls.id)">
+        ⚠️ <strong>{{ promotionClassDisplayName(cls) }}</strong> has no active promotion rule.
+      </p>
+    </ng-container>
   </div>
 </div>
 

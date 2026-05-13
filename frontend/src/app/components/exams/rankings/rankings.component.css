@@ -105,10 +105,15 @@
 
 .form-grid {
   display: grid;
-  /* Keep dropdowns on one row (desktop); stack on small screens. */
+  /* Default: up to three filters per row (class / form position). */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
   margin-bottom: 24px;
+}
+
+/* Subject position: four filters (type, exam, form, subject) on one row on desktop. */
+.form-grid.form-grid--subject {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .form-group {
@@ -521,7 +526,8 @@
     padding: 20px;
   }
 
-  .form-grid {
+  .form-grid,
+  .form-grid.form-grid--subject {
     grid-template-columns: 1fr;
   }
 

@@ -28,6 +28,8 @@ import {
   buildSubjectPositionLookup,
   subjectPositionLookupKey,
 } from '../utils/reportCardSubjectRankings';
+import { computeStudentOverallPercentForTerm } from '../utils/promotionEligibility';
+import { ExamType } from '../entities/Exam';
 import { getGradeInfoFromSettings, getGradeLabelOnly } from '../utils/gradeBandsResolve';
 import { createClassListPDF } from '../utils/classListPdfGenerator';
 
@@ -846,6 +848,137 @@ export const getPromotePreview = async (req: AuthRequest, res: Response) => {
     );
 
     res.json(preview);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
+ * GET /students/promote/eligibility-overview
+ * Year-end promotion: classes missing rules + per-student checks (optional min end-of-term % on rule).
+ */
+export const getPromotionEligibilityOverview = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!AppDataSource.isInitialized) await AppDataSource.initialize();
+
+    const settingsRepo = AppDataSource.getRepository(Settings);
+    const settingsList = await settingsRepo.find({ order: { createdAt: 'DESC' }, take: 1 });
+    const settingsRow = settingsList[0] || null;
+    const termFromSettings = String(settingsRow?.activeTerm || settingsRow?.currentTerm || '').trim();
+
+    const classRepo = AppDataSource.getRepository(Class);
+    const studentRepo = AppDataSource.getRepository(Student);
+    const ruleRepo = AppDataSource.getRepository(PromotionRule);
+
+    const rules = await ruleRepo.find({
+      where: { isActive: true },
+      relations: ['fromClass', 'toClass'],
+    });
+
+    const anyRuleNeedsMarksTerm = rules.some((r) => {
+      if (r.isFinalClass || !r.toClassId) {
+        return false;
+      }
+      if (r.minimumAveragePercent == null) {
+        return false;
+      }
+      const n = Number(r.minimumAveragePercent);
+      return Number.isFinite(n);
+    });
+
+    if (anyRuleNeedsMarksTerm && !termFromSettings) {
+      return res.status(400).json({
+        message:
+          'Set an active term in Academic / System settings before running year-end promotion checks.',
+        code: 'ACTIVE_TERM_REQUIRED_FOR_MIN_AVERAGE',
+      });
+    }
+
+    const activeTerm = termFromSettings;
+
+    const ruleByFromId = new Map(rules.map((r) => [r.fromClassId, r]));
+
+    const allClasses = await classRepo.find();
+
+    const students = await studentRepo.find({ relations: ['classEntity'] });
+    const activeStudents = students.filter((s) => s.isActive !== false && s.classId);
+
+    const classIdsWithStudents = new Set(activeStudents.map((s) => s.classId!));
+    const classesMissingRules: { classId: string; className: string; studentCount: number }[] = [];
+
+    for (const cid of classIdsWithStudents) {
+      if (!ruleByFromId.has(cid)) {
+        const c = allClasses.find((x) => x.id === cid);
+        classesMissingRules.push({
+          classId: cid,
+          className: c?.name || 'Class',
+          studentCount: activeStudents.filter((s) => s.classId === cid).length,
+        });
+      }
+    }
+    classesMissingRules.sort((a, b) => a.className.localeCompare(b.className));
+
+    const studentRows: any[] = [];
+
+    for (const s of activeStudents) {
+      const rule = ruleByFromId.get(s.classId!);
+      const hasPath = !!(rule && !rule.isFinalClass && rule.toClassId);
+
+      let overallPercent: number | null = null;
+      let eligible = true;
+      const reasons: string[] = [];
+
+      if (hasPath && rule) {
+        const minPct =
+          rule.minimumAveragePercent != null && Number.isFinite(Number(rule.minimumAveragePercent))
+            ? Number(rule.minimumAveragePercent)
+            : null;
+
+        if (minPct != null) {
+          overallPercent = await computeStudentOverallPercentForTerm(
+            s.id,
+            s.classId!,
+            activeTerm,
+            ExamType.END_TERM
+          );
+          if (overallPercent === null) {
+            eligible = false;
+            reasons.push(
+              `Requires ≥${minPct}% end-of-term average for ${activeTerm} — no marks found`
+            );
+          } else if (overallPercent + 1e-6 < minPct) {
+            eligible = false;
+            reasons.push(
+              `Requires ≥${minPct}% end-of-term average — got ${overallPercent.toFixed(1)}%`
+            );
+          }
+        }
+      }
+
+      studentRows.push({
+        studentId: s.id,
+        classId: s.classId,
+        studentNumber: s.studentNumber,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        className: s.classEntity?.name || '',
+        hasPromotionPath: hasPath,
+        overallPercent: overallPercent != null ? Math.round(overallPercent * 10) / 10 : null,
+        eligible,
+        reasons,
+        minimumRequired:
+          hasPath && rule && rule.minimumAveragePercent != null
+            ? Number(rule.minimumAveragePercent)
+            : null,
+      });
+    }
+
+    res.json({
+      activeTerm: activeTerm || null,
+      examType: 'end_term',
+      classesMissingRules,
+      students: studentRows,
+    });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

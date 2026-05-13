@@ -19,7 +19,10 @@
       </h2>
     </div>
     <form (ngSubmit)="loadRankings()" class="filter-form">
-      <div class="form-grid">
+      <div
+        class="form-grid"
+        [class.form-grid--subject]="rankingType === 'subject'"
+      >
         <div class="form-group">
           <label for="rankingType">
             <span class="label-icon">📊</span>
@@ -71,6 +74,24 @@
           </select>
         </div>
 
+        <div class="form-group" *ngIf="rankingType === 'subject' || rankingType === 'overall-performance'">
+          <label for="selectedGradeSubjectOrForm">
+            <span class="label-icon">📋</span>
+            Form <span class="required">*</span>
+          </label>
+          <select 
+            id="selectedGradeSubjectOrForm"
+            [(ngModel)]="selectedForm" 
+            name="gradeFormForSubjectOrOverall" 
+            required
+            class="form-select">
+            <option value="">Select Form</option>
+            <option *ngFor="let grade of availableGrades" [value]="grade">
+              {{ grade }}
+            </option>
+          </select>
+        </div>
+
         <div class="form-group" *ngIf="rankingType === 'subject'">
           <label for="selectedSubject">
             <span class="label-icon">📚</span>
@@ -85,24 +106,6 @@
             <option value="">Select Subject</option>
             <option *ngFor="let subject of subjects" [value]="subject.id">
               {{ subject.code ? (subject.code + ' ' + subject.name) : subject.name }}
-            </option>
-          </select>
-        </div>
-
-        <div class="form-group" *ngIf="rankingType === 'overall-performance'">
-          <label for="selectedGrade">
-            <span class="label-icon">📋</span>
-            Form <span class="required">*</span>
-          </label>
-          <select 
-            id="selectedGrade"
-            [(ngModel)]="selectedForm" 
-            name="grade" 
-            required
-            class="form-select">
-            <option value="">Select Form</option>
-            <option *ngFor="let grade of availableGrades" [value]="grade">
-              {{ grade }}
             </option>
           </select>
         </div>
@@ -188,7 +191,7 @@
           <tr>
             <th class="position-col">Position</th>
             <th class="student-col">Student Name</th>
-            <th *ngIf="rankingType === 'overall-performance'" class="class-col">Class</th>
+            <th *ngIf="rankingType === 'overall-performance' || rankingType === 'subject'" class="class-col">Class</th>
             <th *ngIf="rankingType === 'class' || rankingType === 'overall-performance'" class="score-col">Average (%)</th>
             <th *ngIf="rankingType === 'subject'" class="score-col">Score</th>
             <th *ngIf="rankingType === 'subject'" class="score-col">Percentage (%)</th>
@@ -215,7 +218,7 @@
                 <span class="student-name">{{ ranking.studentName }}</span>
               </div>
             </td>
-            <td *ngIf="rankingType === 'overall-performance'" class="class-cell">
+            <td *ngIf="rankingType === 'overall-performance' || rankingType === 'subject'" class="class-cell">
               {{ ranking.class || 'N/A' }}
             </td>
             <td *ngIf="rankingType === 'class' || rankingType === 'overall-performance'" class="score-cell">

@@ -590,11 +590,6 @@
         <section class="db-action-group" *ngIf="isAdmin()">
           <h3 class="db-action-group-title">Communication</h3>
           <div class="quick-actions modern-actions">
-            <a (click)="openBulkMessage()" class="action-btn modern-action-btn secondary-action" style="cursor: pointer;">
-              <span class="action-icon">📧</span>
-              <span class="action-text">Bulk Message</span>
-              <span class="action-arrow">→</span>
-            </a>
             <a routerLink="/communication_manage" class="action-btn modern-action-btn secondary-action">
               <span class="action-icon">💬</span>
               <span class="action-text">Communications</span>
@@ -713,9 +708,6 @@
       </div>
     </div>
   </main>
-
-  <!-- Bulk Message Modal -->
-  <app-bulk-message *ngIf="showBulkMessage" (close)="closeBulkMessage()"></app-bulk-message>
 
   <!-- Command Palette (Ctrl+K) -->
   <div class="db-cmd-overlay" *ngIf="commandPaletteOpen" (click)="closeCommandPalette()">

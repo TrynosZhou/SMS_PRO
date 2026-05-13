@@ -11,6 +11,7 @@ import {
   promoteStudents,
   promoteAllStudents,
   getPromotePreview,
+  getPromotionEligibilityOverview,
   generateStudentIdCard,
   generateClassStudentIdCardsPDF,
   getDHServicesReport,
@@ -30,6 +31,7 @@ router.get('/', authenticate, getStudents);
 // Enrollment is now handled by /api/enrollments endpoint
 // router.post('/enroll', authenticate, authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.ACCOUNTANT, UserRole.DEMO_USER), enrollStudent);
 router.get('/promote/preview', authenticate, authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.DEMO_USER), getPromotePreview);
+router.get('/promote/eligibility-overview', authenticate, authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.DEMO_USER), getPromotionEligibilityOverview);
 router.post('/promote', authenticate, authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.DEMO_USER), promoteStudents);
 router.post('/promote-all', authenticate, authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.DEMO_USER), promoteAllStudents);
 router.get('/reports/dh-services', authenticate, authorize(UserRole.SUPERADMIN, UserRole.ADMIN), getDHServicesReport);

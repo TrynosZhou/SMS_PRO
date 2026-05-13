@@ -181,3 +181,122 @@ textarea:not(:placeholder-shown) ~ .ss-float-lbl {
 }
 .ss-save-btn:hover { background: #1d4ed8; }
 .ss-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── School Settings: class promotion rules ── */
+.ss-pr-promotion-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 1rem;
+}
+.ss-btn-secondary {
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.ss-btn-secondary:hover { background: #e2e8f0; }
+
+.ss-pr-table-wrap {
+  overflow-x: auto;
+  margin-top: 1.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+.ss-pr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.ss-pr-table th,
+.ss-pr-table td {
+  padding: 0.75rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+.ss-pr-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #475569;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.ss-pr-table tbody tr:hover { background: #fafafa; }
+.ss-pr-editing { background: #eff6ff !important; }
+
+.ss-pr-muted { font-size: 0.8rem; color: #64748b; }
+.ss-pr-muted-small { font-size: 0.72rem; color: #94a3b8; text-align: center; }
+.ss-pr-tag-ok {
+  color: #059669;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.ss-pr-num { text-align: center; vertical-align: middle; }
+
+.ss-switch.ss-pr-switch-sm {
+  width: 36px;
+  height: 20px;
+}
+.ss-switch.ss-pr-switch-sm .ss-slider::before {
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  bottom: 3px;
+}
+.ss-switch.ss-pr-switch-sm input:checked + .ss-slider::before {
+  transform: translateX(16px);
+}
+
+.ss-pr-icon-actions {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+.ss-pr-icon-btn {
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: #f1f5f9;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.ss-pr-icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ss-pr-icon-btn.ss-pr-danger { background: #fef2f2; }
+.ss-pr-icon-btn.ss-pr-danger:hover:not(:disabled) { background: #fee2e2; }
+
+.ss-pr-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 10px;
+  margin-top: 1rem;
+}
+.ss-pr-warn-block { margin-top: 1.25rem; }
+.ss-pr-warn-line {
+  font-size: 0.82rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0 0 0.35rem 0;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  color: #92400e;
+  border-radius: 4px;
+}
+
+.ss-promotion-rule-form .ss-toggle-list {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 0.75rem;
+  margin-top: 0.75rem;
+}
+.ss-promotion-rule-form .ss-toggle-row { padding: 0.65rem 0; }

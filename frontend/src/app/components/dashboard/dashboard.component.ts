@@ -34,7 +34,7 @@ interface NavChild {
   label: string;
   route?: string;
   icon?: string;
-  action?: 'bulkMessage' | 'addTeacher';
+  action?: 'addTeacher';
   queryParams?: Record<string, string>;
 }
 
@@ -64,7 +64,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   schoolName: string = '';
   /** Single banner line: alternates school name and each non-empty motto (never both at once). */
   displayedHeadline: string = '';
-  showBulkMessage = false;
   private headlineRotateInterval: any;
   teacherName: string = '';
 
@@ -329,8 +328,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           id: 'communication', label: 'Communication', icon: '💬',
           children: [
             { label: 'Send Message', icon: '📤', route: '/communication_manage/send' },
-            { label: 'View Messages', icon: '📥', route: '/communication_manage/view' },
-            { label: 'Bulk Message', icon: '📧', action: 'bulkMessage' }
+            { label: 'View Messages', icon: '📥', route: '/communication_manage/view' }
           ]
         },
         {
@@ -585,10 +583,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.navFilter = '';
   }
 
-  /** Handle clicks on submenu items that map to component actions (e.g. bulk message). */
+  /** Handle clicks on submenu items that map to component actions (e.g. add teacher). */
   runNavAction(action: string | undefined) {
     if (!action) return;
-    if (action === 'bulkMessage') this.openBulkMessage();
     if (action === 'addTeacher') this.addTeacherModal.open();
     this.closeSidebar();
   }
@@ -884,14 +881,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   isStudent(): boolean {
     return this.authService.hasRole('student');
-  }
-
-  openBulkMessage() {
-    this.showBulkMessage = true;
-  }
-
-  closeBulkMessage() {
-    this.showBulkMessage = false;
   }
 
   toggleSection(section: string) {
@@ -1380,7 +1369,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         { label: 'Timetable', icon: '📅', route: '/timetable/manage', group: 'Modules' },
         { label: 'E-learning', icon: '💻', route: '/elearning', group: 'Modules' },
         { label: 'Messages', icon: '💬', route: '/communication_manage', group: 'Modules' },
-        { label: 'Bulk Message', icon: '📧', action: () => this.openBulkMessage(), group: 'Actions' },
         { label: 'Settings', icon: '⚙️', route: '/settings', group: 'Modules' },
         { label: 'Academic Settings', icon: '🎓', route: '/academic-settings', group: 'Modules' },
         { label: 'Manage Accounts', icon: '👤', route: '/admin/manage-accounts', group: 'Admin' },

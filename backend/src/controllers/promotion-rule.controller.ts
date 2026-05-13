@@ -62,7 +62,7 @@ export const createPromotionRule = async (req: AuthRequest, res: Response) => {
       await AppDataSource.initialize();
     }
 
-    const { fromClassId, toClassId, isFinalClass, isActive } = req.body;
+    const { fromClassId, toClassId, isFinalClass, isActive, minimumAveragePercent } = req.body;
 
     // Validation
     if (!fromClassId) {
@@ -109,12 +109,22 @@ export const createPromotionRule = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    let minAvg: number | null = null;
+    if (minimumAveragePercent !== undefined && minimumAveragePercent !== null && minimumAveragePercent !== '') {
+      const n = Number(minimumAveragePercent);
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        return res.status(400).json({ message: 'minimumAveragePercent must be between 0 and 100' });
+      }
+      minAvg = n;
+    }
+
     // Create the rule
     const rule = promotionRuleRepository.create({
       fromClassId,
       toClassId: isFinalClass ? null : toClassId,
       isFinalClass: isFinalClass || false,
-      isActive: isActive !== undefined ? isActive : true
+      isActive: isActive !== undefined ? isActive : true,
+      minimumAveragePercent: minAvg,
     });
 
     const savedRule = await promotionRuleRepository.save(rule);
@@ -151,7 +161,7 @@ export const updatePromotionRule = async (req: AuthRequest, res: Response) => {
     }
 
     const { id } = req.params;
-    const { fromClassId, toClassId, isFinalClass, isActive } = req.body;
+    const { fromClassId, toClassId, isFinalClass, isActive, minimumAveragePercent } = req.body;
 
     const promotionRuleRepository = AppDataSource.getRepository(PromotionRule);
     const classRepository = AppDataSource.getRepository(Class);
@@ -208,6 +218,18 @@ export const updatePromotionRule = async (req: AuthRequest, res: Response) => {
       }
     }
     if (isActive !== undefined) rule.isActive = isActive;
+
+    if (minimumAveragePercent !== undefined) {
+      if (minimumAveragePercent === null || minimumAveragePercent === '') {
+        rule.minimumAveragePercent = null;
+      } else {
+        const n = Number(minimumAveragePercent);
+        if (!Number.isFinite(n) || n < 0 || n > 100) {
+          return res.status(400).json({ message: 'minimumAveragePercent must be between 0 and 100' });
+        }
+        rule.minimumAveragePercent = n;
+      }
+    }
 
     const updatedRule = await promotionRuleRepository.save(rule);
 

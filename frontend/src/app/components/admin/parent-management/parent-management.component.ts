@@ -66,6 +66,7 @@ export class ParentManagementComponent implements OnInit, OnDestroy {
   linking = false;
   private linkSearchDebounceTimer: any = null;
   private readonly LINK_SEARCH_DEBOUNCE_MS = 300;
+  lastLoadedAt: Date | null = null;
 
   constructor(
     private parentMgmtService: ParentManagementService,
@@ -74,6 +75,18 @@ export class ParentManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadParents();
+  }
+
+  clearSuccess(): void {
+    this.success = '';
+  }
+
+  clearError(): void {
+    this.error = '';
+  }
+
+  trackByParentId(_: number, p: any): string {
+    return p?.id ?? String(_);
   }
 
   ngOnDestroy() {
@@ -99,6 +112,7 @@ export class ParentManagementComponent implements OnInit, OnDestroy {
         this.parents = res.parents || [];
         this.stats = res.stats || { total: 0, notLinked: 0, linkedStudents: 0, studentAccounts: 0 };
         this.loading = false;
+        this.lastLoadedAt = new Date();
       },
       error: (err: any) => {
         this.error = err.error?.message || 'Failed to load parents';

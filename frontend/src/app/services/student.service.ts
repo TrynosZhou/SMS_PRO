@@ -86,6 +86,11 @@ export class StudentService {
     return this.http.get<any[]>(`${this.apiUrl}/students/promote/preview`);
   }
 
+  /** Year-end: active term, classes missing rules, per-student eligibility vs rule minimum average. */
+  getPromotionEligibilityOverview(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/students/promote/eligibility-overview`);
+  }
+
   promoteAllStudents(): Observable<any> {
     return this.http.post(`${this.apiUrl}/students/promote-all`, {});
   }

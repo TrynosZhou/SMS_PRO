@@ -57,8 +57,8 @@ export class ExamService {
     return this.http.get(`${this.apiUrl}/exams/rankings/subject`, { params });
   }
 
-  getSubjectRankingsByType(examType: string, subjectId: string): Observable<any> {
-    const params: any = { examType, subjectId };
+  getSubjectRankingsByType(examType: string, subjectId: string, form: string): Observable<any> {
+    const params: any = { examType, subjectId, form };
     return this.http.get(`${this.apiUrl}/exams/rankings/subject-by-type`, { params });
   }
 

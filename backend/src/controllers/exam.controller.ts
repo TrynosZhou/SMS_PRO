@@ -1485,7 +1485,7 @@ export const getClassRankingsByType = async (req: AuthRequest, res: Response) =>
 
 export const getSubjectRankingsByType = async (req: AuthRequest, res: Response) => {
   try {
-    const { examType, subjectId } = req.query;
+    const { examType, subjectId, form } = req.query;
     
     if (!examType || !subjectId) {
       return res.status(400).json({ message: 'Exam type and subject ID are required' });
@@ -1493,16 +1493,35 @@ export const getSubjectRankingsByType = async (req: AuthRequest, res: Response) 
 
     const marksRepository = AppDataSource.getRepository(Marks);
     const examRepository = AppDataSource.getRepository(Exam);
+    const classRepository = AppDataSource.getRepository(Class);
 
-    // Get all exams of the specified type
-    const exams = await examRepository.find({
-      where: {
-        type: examType as ExamType,
+    let exams: Exam[];
+
+    if (form) {
+      const classes = await classRepository.find({ where: { form: form as string } });
+      if (classes.length === 0) {
+        return res.status(404).json({ message: `No classes found for form: ${form}` });
       }
-    });
+      const classIds = classes.map(c => c.id);
+      exams = await examRepository.find({
+        where: {
+          type: examType as ExamType,
+          classId: In(classIds),
+        }
+      });
+    } else {
+      exams = await examRepository.find({
+        where: {
+          type: examType as ExamType,
+        }
+      });
+    }
 
     if (exams.length === 0) {
-      return res.status(404).json({ message: `No exams found with exam type: ${examType}` });
+      const msg = form
+        ? `No exams found for form ${form} with exam type: ${examType}`
+        : `No exams found with exam type: ${examType}`;
+      return res.status(404).json({ message: msg });
     }
 
     const examIds = exams.map(e => e.id);
@@ -1513,7 +1532,7 @@ export const getSubjectRankingsByType = async (req: AuthRequest, res: Response) 
         examId: In(examIds),
         subjectId: subjectId as string,
       },
-      relations: ['student', 'subject']
+      relations: ['student', 'subject', 'student.classEntity']
     });
 
     // Calculate percentage and aggregate by student (average across all exams)
@@ -1537,12 +1556,14 @@ export const getSubjectRankingsByType = async (req: AuthRequest, res: Response) 
       .map(studentData => {
         const totalScore = studentData.scores.reduce((a, b) => a + b, 0);
         const totalMaxScore = studentData.maxScores.reduce((a, b) => a + b, 0);
+        const stu = studentData.student;
         return {
-          studentId: studentData.student.id,
-          studentName: `${studentData.student.firstName} ${studentData.student.lastName}`,
+          studentId: stu.id,
+          studentName: `${stu.firstName} ${stu.lastName}`,
           score: totalScore,
           maxScore: totalMaxScore,
-          percentage: totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0
+          percentage: totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0,
+          class: stu.classEntity?.name || 'N/A',
         };
       })
       .sort((a, b) => b.percentage - a.percentage);

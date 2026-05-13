@@ -95,6 +95,37 @@
         </div>
       </div>
 
+      <!-- Academic calendar -->
+      <div class="form-section">
+        <h2>Academic calendar</h2>
+        <p class="section-description">
+          These values drive exams, report cards, finance, and <strong>year-end promotion</strong> when a rule sets a minimum end-of-term average.
+          Use the same wording as on exams (e.g. <code>Term 1 2026</code>).
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label>Current term *</label>
+            <input
+              type="text"
+              [(ngModel)]="settings.currentTerm"
+              name="currentTerm"
+              placeholder="e.g. Term 1 2026"
+              maxlength="80">
+            <small>General label for the term in progress.</small>
+          </div>
+          <div class="form-group">
+            <label>Active term *</label>
+            <input
+              type="text"
+              [(ngModel)]="settings.activeTerm"
+              name="activeTerm"
+              placeholder="e.g. Term 1 2026"
+              maxlength="80">
+            <small>Term used when loading end-of-term marks for promotion rules. Usually matches current term.</small>
+          </div>
+        </div>
+      </div>
+
       <!-- Promotion Rules -->
       <div class="form-section">
         <h2>⬆️ Class Promotion Rules</h2>
@@ -130,7 +161,7 @@
                   name="toClassId"
                   class="form-control"
                   [disabled]="promotionRuleForm.isFinalClass"
-                  (change)="promotionRuleForm.toClassId === 'COMPLETED' ? promotionRuleForm.isFinalClass = true : null">
+                  (change)="onPromotionToClassChange()">
                   <option value="">-- Select To Class --</option>
                   <option value="COMPLETED">✅ Completed/Graduated</option>
                   <option *ngFor="let cls of getAvailableToClasses()" [value]="cls.id">
@@ -140,6 +171,21 @@
                 <small>Select the class students will be promoted to, or "Completed" for final classes</small>
               </div>
             </div>
+
+            <div class="form-group" style="margin-bottom: 15px;" *ngIf="!promotionRuleForm.isFinalClass">
+              <label>Minimum end-of-term average (%)</label>
+              <input
+                type="number"
+                class="form-control"
+                name="minimumAveragePercent"
+                [(ngModel)]="promotionRuleForm.minimumAveragePercent"
+                min="0"
+                max="100"
+                step="0.1"
+                placeholder="Optional — leave empty for no grade requirement"
+                style="max-width: 280px;">
+              <small>Year-end promotion on the Migrate Class page skips students below this average for the <strong>active term</strong> (uses end-of-term marks). Leave empty to promote all students who have a next class.</small>
+            </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
               <div class="form-group">
@@ -148,7 +194,7 @@
                     type="checkbox" 
                     [(ngModel)]="promotionRuleForm.isFinalClass" 
                     name="isFinalClass"
-                    (change)="promotionRuleForm.isFinalClass ? promotionRuleForm.toClassId = null : null">
+                    (change)="onPromotionFinalClassChange()">
                   <span><strong>Is Final Class?</strong></span>
                 </label>
                 <small>Check if this class leads to completion/graduation (no further promotion)</small>
@@ -200,6 +246,7 @@
                 <tr style="background: #f5f5f5;">
                   <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">From Class</th>
                   <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">To Class</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd;">Min avg %</th>
                   <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd;">Final Class</th>
                   <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>
                   <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd;">Actions</th>
@@ -219,6 +266,10 @@
                       <br>
                       <small style="color: #666;">{{ rule.toClass?.form }}</small>
                     </span>
+                  </td>
+                  <td style="padding: 12px; text-align: center;">
+                    <span *ngIf="!rule.isFinalClass && rule.minimumAveragePercent != null" style="font-weight: 600;">{{ rule.minimumAveragePercent }}%</span>
+                    <span *ngIf="rule.isFinalClass || rule.minimumAveragePercent == null" style="color: #999;">—</span>
                   </td>
                   <td style="padding: 12px; text-align: center;">
                     <span *ngIf="rule.isFinalClass" style="color: #28a745; font-weight: bold;">✓</span>

@@ -4,10 +4,46 @@
     <div class="header-content">
       <h1>
         <span class="icon">⬆️</span>
-        Class Promotion
+        Year-end class promotion
       </h1>
-      <p class="subtitle">Promote students to the next higher grade/class level across all classes</p>
+      <p class="subtitle">
+        Move students to the next class using <strong>promotion rules</strong> (configured under
+        <a routerLink="/settings">Settings → Class Promotion Rules</a>).
+        Students below a rule&rsquo;s minimum end-of-term average for the <strong>active term</strong> are not promoted automatically.
+      </p>
     </div>
+  </div>
+
+  <div class="alert alert-info" *ngIf="eligibilityOverview?.activeTerm && !eligibilityError" [@fadeInOut]>
+    <span class="alert-icon">📅</span>
+    <span>
+      Eligibility uses the active term <strong>{{ eligibilityOverview?.activeTerm }}</strong> (end-of-term marks).
+      <span *ngIf="eligibilityLoading"> Loading rule check…</span>
+    </span>
+  </div>
+
+  <div class="alert alert-error eligibility-error-alert" *ngIf="eligibilityError" [@fadeInOut]>
+    <span class="alert-icon">✕</span>
+    <div class="eligibility-error-body">
+      <p class="eligibility-error-msg">{{ eligibilityError }}</p>
+      <p class="eligibility-error-help" *ngIf="eligibilityErrorCode === 'ACTIVE_TERM_REQUIRED_FOR_MIN_AVERAGE'">
+        At least one promotion rule uses a <strong>minimum end-of-term average</strong>, so the school must have an
+        <strong>active term</strong> set (the same value used for exams and report cards). Open
+        <a routerLink="/settings">School settings</a>, set <strong>Current term</strong> and <strong>Active term</strong>, then save.
+        You can also use <a routerLink="/academic-settings">Academic settings</a> if your school updates terms there.
+      </p>
+    </div>
+  </div>
+
+  <div class="alert alert-warning" *ngIf="eligibilityOverview?.classesMissingRules?.length && !eligibilityError" [@fadeInOut]>
+    <span class="alert-icon">⚠️</span>
+    <span>
+      <strong>Rules gap:</strong> these classes have students but no active promotion rule:
+      <span *ngFor="let c of eligibilityOverview.classesMissingRules; let last = last">
+        {{ c.className }} ({{ c.studentCount }})<span *ngIf="!last">, </span>
+      </span>.
+      Add rules in <a routerLink="/settings">Settings</a> before running promotion.
+    </span>
   </div>
 
   <!-- Alert Messages -->
@@ -26,35 +62,35 @@
       <div class="stat-icon total">👥</div>
       <div class="stat-content">
         <div class="stat-value">{{ getTotalStudents() }}</div>
-        <div class="stat-label">Total Students</div>
+        <div class="stat-label">Total students</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon eligible">✅</div>
+      <div class="stat-icon eligible">📚</div>
       <div class="stat-content">
         <div class="stat-value">{{ getEligibleStudents() }}</div>
-        <div class="stat-label">Eligible for Promotion</div>
+        <div class="stat-label">With next class</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon classes">📚</div>
+      <div class="stat-icon ready">✅</div>
       <div class="stat-content">
-        <div class="stat-value">{{ getClassesWithStudents() }}</div>
-        <div class="stat-label">Classes with Students</div>
+        <div class="stat-value">{{ getRuleReadyStudentCount() }}</div>
+        <div class="stat-label">Ready (rules + marks)</div>
       </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-icon selected" *ngIf="promotionMode === 'individual'">
-        <div class="stat-content">
-          <div class="stat-value">{{ getSelectedCount() }}</div>
-          <div class="stat-label">Selected Students</div>
-        </div>
+    <div class="stat-card" *ngIf="getRuleBlockedStudentCount() > 0">
+      <div class="stat-icon warning">⛔</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getRuleBlockedStudentCount() }}</div>
+        <div class="stat-label">Blocked by rules</div>
       </div>
-      <div class="stat-icon ready" *ngIf="promotionMode === 'all'">
-        <div class="stat-content">
-          <div class="stat-value">{{ getEligibleStudents() }}</div>
-          <div class="stat-label">Ready to Promote</div>
-        </div>
+    </div>
+    <div class="stat-card" *ngIf="promotionMode === 'individual'">
+      <div class="stat-icon selected">👤</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getSelectedCount() }}</div>
+        <div class="stat-label">Selected (promotable)</div>
       </div>
     </div>
   </div>
@@ -196,17 +232,19 @@
             <div 
               *ngFor="let student of classData.filteredStudents" 
               class="student-card"
-              [class.selected]="isStudentSelected(student)"
-              [class.disabled]="!classData.nextClass"
+              [class.selected]="isStudentSelected(student) && isStudentSelectable(student, classData)"
+              [class.disabled]="!classData.nextClass || !isStudentSelectable(student, classData)"
+              [class.rule-blocked]="classData.nextClass && isStudentBlockedByRules(student, classData)"
+              [attr.title]="studentEligibilityTitle(student, classData)"
               (click)="toggleStudentSelection(student, classData)"
               [@fadeInUp]>
               <div class="student-checkbox" *ngIf="promotionMode === 'individual'">
                 <input 
                   type="checkbox" 
-                  [checked]="isStudentSelected(student)"
+                  [checked]="isStudentSelected(student) && isStudentSelectable(student, classData)"
                   (click)="$event.stopPropagation()"
                   (change)="toggleStudentSelection(student, classData)"
-                  [disabled]="!classData.nextClass">
+                  [disabled]="!classData.nextClass || !isStudentSelectable(student, classData)">
               </div>
               <div class="student-avatar">
                 {{ getStudentInitials(student) }}
@@ -218,9 +256,13 @@
                   {{ student.studentNumber }}
                 </div>
               </div>
-              <div class="promotion-indicator" *ngIf="classData.nextClass">
+              <div class="promotion-indicator" *ngIf="classData.nextClass && isStudentRulePromotable(student, classData)">
                 <span class="indicator-icon">→</span>
                 <span class="indicator-text">{{ classData.nextClass.name }}</span>
+              </div>
+              <div class="promotion-indicator blocked-indicator" *ngIf="classData.nextClass && isStudentBlockedByRules(student, classData)">
+                <span class="indicator-icon">⛔</span>
+                <span class="indicator-text">Held back</span>
               </div>
               <div class="no-promotion" *ngIf="!classData.nextClass">
                 <span class="warning-icon">⚠️</span>
@@ -263,8 +305,8 @@
         <span class="summary-value">{{ promotionMode === 'all' ? 'Promote All' : 'Selective Promotion' }}</span>
       </div>
       <div class="summary-item" *ngIf="promotionMode === 'all'">
-        <span class="summary-label">Students to Promote:</span>
-        <span class="summary-value highlight">{{ getEligibleStudents() }}</span>
+        <span class="summary-label">Students to promote:</span>
+        <span class="summary-value highlight">{{ getRuleReadyStudentCount() }}</span>
       </div>
       <div class="summary-item" *ngIf="promotionMode === 'individual'">
         <span class="summary-label">Selected Students:</span>
@@ -333,7 +375,11 @@
 
         <div class="confirmation-warning">
           <span class="warning-icon">⚠️</span>
-          <p><strong>This action cannot be undone.</strong> All selected students will be moved to their next class level.</p>
+          <p>
+            <strong>This action cannot be undone easily.</strong>
+            Only students who pass promotion rules (next class + minimum average when set) are moved.
+            Others stay in their current class until marks or rules change.
+          </p>
         </div>
 
         <!-- Promotion Preview by Class -->

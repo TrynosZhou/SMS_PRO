@@ -34,6 +34,7 @@ export class SettingsComponent implements OnInit {
     schoolMotto3: '',
     academicYear: new Date().getFullYear().toString(),
     currentTerm: `Term 1 ${new Date().getFullYear()}`,
+    activeTerm: `Term 1 ${new Date().getFullYear()}`,
     schoolLogo: null,
     schoolLogo2: null,
     // Default matches CurrencyService.DEFAULT_SYMBOL. The actual symbol is
@@ -64,11 +65,14 @@ export class SettingsComponent implements OnInit {
     toClassId: string | null;
     isFinalClass: boolean;
     isActive: boolean;
+    /** Optional; end-of-term overall % required when set (year-end promotion). */
+    minimumAveragePercent: number | null;
   } = {
     fromClassId: '',
     toClassId: null,
     isFinalClass: false,
-    isActive: true
+    isActive: true,
+    minimumAveragePercent: null
   };
   loadingPromotionRules = false;
   resettingCoreData: boolean = false;
@@ -242,6 +246,20 @@ export class SettingsComponent implements OnInit {
     return this.classes.filter(c => c.isActive);
   }
 
+  onPromotionToClassChange() {
+    if (this.promotionRuleForm.toClassId === 'COMPLETED') {
+      this.promotionRuleForm.isFinalClass = true;
+      this.promotionRuleForm.minimumAveragePercent = null;
+    }
+  }
+
+  onPromotionFinalClassChange() {
+    if (this.promotionRuleForm.isFinalClass) {
+      this.promotionRuleForm.toClassId = null;
+      this.promotionRuleForm.minimumAveragePercent = null;
+    }
+  }
+
   // Add or update promotion rule
   savePromotionRule() {
     if (!this.promotionRuleForm.fromClassId) {
@@ -268,11 +286,20 @@ export class SettingsComponent implements OnInit {
       : this.promotionRuleForm.toClassId;
     const isFinalClass = this.promotionRuleForm.toClassId === 'COMPLETED' || this.promotionRuleForm.isFinalClass;
 
+    let minimumAveragePercent: number | null = null;
+    if (!isFinalClass && this.promotionRuleForm.minimumAveragePercent != null && this.promotionRuleForm.minimumAveragePercent !== ('' as unknown as number)) {
+      const n = Number(this.promotionRuleForm.minimumAveragePercent);
+      if (!Number.isNaN(n)) {
+        minimumAveragePercent = Math.min(100, Math.max(0, n));
+      }
+    }
+
     const ruleData = {
       fromClassId: this.promotionRuleForm.fromClassId,
       toClassId: toClassId,
       isFinalClass: isFinalClass,
-      isActive: this.promotionRuleForm.isActive
+      isActive: this.promotionRuleForm.isActive,
+      minimumAveragePercent
     };
 
     if (this.editingPromotionRule) {
@@ -313,7 +340,9 @@ export class SettingsComponent implements OnInit {
       fromClassId: rule.fromClassId,
       toClassId: rule.isFinalClass ? 'COMPLETED' : rule.toClassId,
       isFinalClass: rule.isFinalClass,
-      isActive: rule.isActive
+      isActive: rule.isActive,
+      minimumAveragePercent:
+        rule.minimumAveragePercent != null && !rule.isFinalClass ? Number(rule.minimumAveragePercent) : null
     };
     
     // Scroll to form
@@ -356,7 +385,8 @@ export class SettingsComponent implements OnInit {
       fromClassId: '',
       toClassId: null,
       isFinalClass: false,
-      isActive: true
+      isActive: true,
+      minimumAveragePercent: null
     };
   }
 

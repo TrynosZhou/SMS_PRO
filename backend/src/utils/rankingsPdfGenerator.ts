@@ -127,7 +127,7 @@ export function createRankingsPDF(payload: RankingsPdfPayload, settings: Setting
 
       const headers: string[] = ['Position', 'Student Name'];
       const baseWidths: number[] = [52, 210];
-      if (rankingType === 'overall-performance') {
+      if (rankingType === 'overall-performance' || rankingType === 'subject') {
         headers.push('Class');
         baseWidths.push(130);
       }
@@ -199,7 +199,7 @@ export function createRankingsPDF(payload: RankingsPdfPayload, settings: Setting
         const perf = performanceLabel(perfScore);
 
         const cells: string[] = [String(pos), name];
-        if (rankingType === 'overall-performance') {
+        if (rankingType === 'overall-performance' || rankingType === 'subject') {
           cells.push(String(r.class || 'N/A'));
         }
         if (rankingType === 'class' || rankingType === 'overall-performance') {

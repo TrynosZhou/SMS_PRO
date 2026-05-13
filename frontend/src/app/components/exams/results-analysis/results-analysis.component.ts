@@ -41,6 +41,21 @@ export class ResultsAnalysisComponent implements OnInit {
   subjectLoading = false;
   subjectError = '';
   subjectAnalysis: any = null;
+  /** Set when main analysis completes successfully. */
+  lastAnalysisAt: Date | null = null;
+
+  get summaryStats(): { subjectCount: number; avgPass: number; needsAttentionCount: number } | null {
+    if (!this.results?.length) {
+      return null;
+    }
+    const subjectCount = this.results.length;
+    const avgPass =
+      Math.round(
+        (this.results.reduce((sum, r) => sum + Number(r.passRate || 0), 0) / subjectCount) * 10
+      ) / 10;
+    const needsAttentionCount = this.results.filter((r) => Number(r.passRate) < 40).length;
+    return { subjectCount, avgPass, needsAttentionCount };
+  }
 
   get filteredResults() {
     const q = (this.query || '').trim().toLowerCase();
@@ -149,6 +164,7 @@ export class ResultsAnalysisComponent implements OnInit {
       next: (res: any) => {
         this.loading = false;
         this.results = res?.results || [];
+        this.lastAnalysisAt = new Date();
         this.loadSubjectsForClass();
       },
       error: (err: any) => {
@@ -232,6 +248,14 @@ export class ResultsAnalysisComponent implements OnInit {
 
   trackBySubject(_: number, r: any): string {
     return String(r?.subjectCode || r?.subject || _);
+  }
+
+  clearPageError(): void {
+    this.error = '';
+  }
+
+  clearSubjectError(): void {
+    this.subjectError = '';
   }
 }
 

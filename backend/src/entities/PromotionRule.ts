@@ -27,6 +27,10 @@ export class PromotionRule {
   @Column({ default: true })
   isActive: boolean;
 
+  /** If set (e.g. 50), student must have at least this overall % (active term, end-of-term) to be treated as eligible for promotion. */
+  @Column({ type: 'float', nullable: true })
+  minimumAveragePercent: number | null;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 

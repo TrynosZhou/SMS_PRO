@@ -59,6 +59,31 @@
   border: 1px solid #f5c6cb;
 }
 
+.eligibility-error-alert {
+  align-items: flex-start;
+}
+
+.eligibility-error-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.eligibility-error-msg {
+  margin: 0 0 8px 0;
+}
+
+.eligibility-error-help {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.eligibility-error-help a {
+  color: #491217;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 .alert-icon {
   font-size: 18px;
   font-weight: bold;
@@ -122,6 +147,10 @@
 .stat-icon.status.ready,
 .stat-icon.ready {
   background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.stat-icon.warning {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
 }
 
 .stat-content {
@@ -450,6 +479,11 @@
   cursor: not-allowed;
 }
 
+.student-card.rule-blocked {
+  border: 1px dashed #dc3545;
+  background: #fff8f8;
+}
+
 .student-card.selected {
   background: linear-gradient(135deg, #e7f3ff 0%, #d0e7ff 100%);
   border: 2px solid #667eea;
@@ -479,6 +513,11 @@
   font-size: 11px;
   color: #155724;
   font-weight: 600;
+}
+
+.promotion-indicator.blocked-indicator {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  color: #721c24;
 }
 
 .indicator-icon {

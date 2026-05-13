@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { SettingsService } from '../../../services/settings.service';
 import { CurrencyService } from '../../../services/currency.service';
+import { PromotionRuleService } from '../../../services/promotion-rule.service';
+import { ClassService } from '../../../services/class.service';
 
 type TabId =
   | 'school-info'
@@ -8,6 +10,7 @@ type TabId =
   | 'notifications'
   | 'security'
   | 'general'
+  | 'school-settings'
   | 'student-id';
 
 @Component({
@@ -87,13 +90,34 @@ export class SystemSettingsComponent implements OnInit {
   /** The currently saved prefix as fetched from the API; used to detect changes. */
   savedStudentIdPrefix = 'SCH';
 
+  /** Loaded when "School Settings" tab is opened (promotion rules). */
+  private promotionDataLoaded = false;
+  promotionRules: any[] = [];
+  promotionClasses: any[] = [];
+  editingPromotionRule: any | null = null;
+  promotionRuleForm: {
+    fromClassId: string;
+    toClassId: string | null;
+    isFinalClass: boolean;
+    isActive: boolean;
+    minimumAveragePercent: number | null;
+  } = {
+    fromClassId: '',
+    toClassId: null,
+    isFinalClass: false,
+    isActive: true,
+    minimumAveragePercent: null
+  };
+  loadingPromotionRules = false;
+
   readonly tabs: { id: TabId; label: string; icon: string }[] = [
-    { id: 'school-info',   label: 'School Information', icon: '🏫' },
-    { id: 'general',       label: 'General',            icon: '⚙️' },
-    { id: 'student-id',    label: 'Student ID Prefix',  icon: '🆔' },
-    { id: 'email',         label: 'Email Settings',     icon: '✉️' },
-    { id: 'notifications', label: 'Notifications',      icon: '🔔' },
-    { id: 'security',      label: 'Security',           icon: '🔒' },
+    { id: 'school-info',     label: 'School Information', icon: '🏫' },
+    { id: 'general',         label: 'General',            icon: '⚙️' },
+    { id: 'school-settings', label: 'School Settings',    icon: '⬆️' },
+    { id: 'student-id',      label: 'Student ID Prefix',  icon: '🆔' },
+    { id: 'email',           label: 'Email Settings',      icon: '✉️' },
+    { id: 'notifications',   label: 'Notifications',       icon: '🔔' },
+    { id: 'security',        label: 'Security',           icon: '🔒' },
   ];
 
   readonly timezones = [
@@ -113,7 +137,9 @@ export class SystemSettingsComponent implements OnInit {
 
   constructor(
     private settingsService: SettingsService,
-    private currencyService: CurrencyService
+    private currencyService: CurrencyService,
+    private promotionRuleService: PromotionRuleService,
+    private classService: ClassService
   ) {}
 
   ngOnInit() { this.loadSettings(); }
@@ -121,6 +147,11 @@ export class SystemSettingsComponent implements OnInit {
   setTab(id: TabId) {
     this.activeTab = id;
     this.clearFeedback();
+    if (id === 'school-settings' && !this.promotionDataLoaded) {
+      this.promotionDataLoaded = true;
+      this.loadPromotionClasses();
+      this.loadPromotionRules();
+    }
   }
 
   loadSettings() {
@@ -221,6 +252,9 @@ export class SystemSettingsComponent implements OnInit {
         if (cur) this.general.currencySymbol = cur.symbol;
         payload = { generalSettings: { ...this.general }, currencySymbol: this.general.currencySymbol };
         break;
+      case 'school-settings':
+        this.saving = false;
+        return;
       case 'student-id': {
         const cleaned = this.sanitizeStudentIdPrefix(this.studentIdPrefixInput);
         if (cleaned.length !== 3) {
@@ -277,4 +311,200 @@ export class SystemSettingsComponent implements OnInit {
   }
 
   clearFeedback() { this.successMsg = ''; this.errorMsg = ''; }
+
+  // ── School Settings: class promotion rules ─────────────────
+  loadPromotionClasses() {
+    this.classService.getClasses().subscribe({
+      next: (response: any) => {
+        const list = Array.isArray(response) ? response : (response?.classes || []);
+        this.promotionClasses = this.classService.sortClasses(list);
+      },
+      error: () => {
+        this.promotionClasses = [];
+      }
+    });
+  }
+
+  loadPromotionRules() {
+    this.loadingPromotionRules = true;
+    this.promotionRuleService.getPromotionRules().subscribe({
+      next: (rules: any) => {
+        this.promotionRules = Array.isArray(rules) ? rules : [];
+        this.loadingPromotionRules = false;
+      },
+      error: () => {
+        this.promotionRules = [];
+        this.loadingPromotionRules = false;
+        this.errorMsg = 'Failed to load promotion rules.';
+        setTimeout(() => this.errorMsg = '', 5000);
+      }
+    });
+  }
+
+  getAvailableFromClasses(): any[] {
+    const editingFromClassId = this.editingPromotionRule?.fromClassId;
+    return this.promotionClasses.filter(c =>
+      c.isActive &&
+      (c.id === editingFromClassId || !this.promotionRules.find(r => r.fromClassId === c.id))
+    );
+  }
+
+  getAvailableToClasses(): any[] {
+    return this.promotionClasses.filter(c => c.isActive);
+  }
+
+  onPromotionToClassChange() {
+    if (this.promotionRuleForm.toClassId === 'COMPLETED') {
+      this.promotionRuleForm.isFinalClass = true;
+      this.promotionRuleForm.minimumAveragePercent = null;
+    }
+  }
+
+  onPromotionFinalClassChange() {
+    if (this.promotionRuleForm.isFinalClass) {
+      this.promotionRuleForm.toClassId = null;
+      this.promotionRuleForm.minimumAveragePercent = null;
+    }
+  }
+
+  savePromotionRule() {
+    if (!this.promotionRuleForm.fromClassId) {
+      this.errorMsg = 'Please select a From Class';
+      setTimeout(() => this.errorMsg = '', 4000);
+      return;
+    }
+
+    if (!this.promotionRuleForm.isFinalClass && !this.promotionRuleForm.toClassId) {
+      this.errorMsg = 'Please select a To Class or mark as Final Class';
+      setTimeout(() => this.errorMsg = '', 4000);
+      return;
+    }
+
+    if (this.promotionRuleForm.fromClassId === this.promotionRuleForm.toClassId) {
+      this.errorMsg = 'From Class and To Class cannot be the same';
+      setTimeout(() => this.errorMsg = '', 4000);
+      return;
+    }
+
+    const toClassId = this.promotionRuleForm.toClassId === 'COMPLETED' || this.promotionRuleForm.isFinalClass
+      ? null
+      : this.promotionRuleForm.toClassId;
+    const isFinalClass = this.promotionRuleForm.toClassId === 'COMPLETED' || this.promotionRuleForm.isFinalClass;
+
+    let minimumAveragePercent: number | null = null;
+    if (!isFinalClass && this.promotionRuleForm.minimumAveragePercent != null &&
+        this.promotionRuleForm.minimumAveragePercent !== ('' as unknown as number)) {
+      const n = Number(this.promotionRuleForm.minimumAveragePercent);
+      if (!Number.isNaN(n)) {
+        minimumAveragePercent = Math.min(100, Math.max(0, n));
+      }
+    }
+
+    const ruleData = {
+      fromClassId: this.promotionRuleForm.fromClassId,
+      toClassId,
+      isFinalClass,
+      isActive: this.promotionRuleForm.isActive,
+      minimumAveragePercent
+    };
+
+    if (this.editingPromotionRule) {
+      this.promotionRuleService.updatePromotionRule(this.editingPromotionRule.id, ruleData).subscribe({
+        next: () => {
+          this.successMsg = 'Promotion rule updated successfully.';
+          this.loadPromotionRules();
+          this.resetPromotionRuleForm();
+          setTimeout(() => this.successMsg = '', 4000);
+        },
+        error: (err: any) => {
+          this.errorMsg = err.error?.message || 'Failed to update promotion rule.';
+          setTimeout(() => this.errorMsg = '', 5000);
+        }
+      });
+    } else {
+      this.promotionRuleService.createPromotionRule(ruleData).subscribe({
+        next: () => {
+          this.successMsg = 'Promotion rule created successfully.';
+          this.loadPromotionRules();
+          this.resetPromotionRuleForm();
+          setTimeout(() => this.successMsg = '', 4000);
+        },
+        error: (err: any) => {
+          this.errorMsg = err.error?.message || 'Failed to create promotion rule.';
+          setTimeout(() => this.errorMsg = '', 5000);
+        }
+      });
+    }
+  }
+
+  editPromotionRule(rule: any) {
+    this.editingPromotionRule = rule;
+    this.promotionRuleForm = {
+      fromClassId: rule.fromClassId,
+      toClassId: rule.isFinalClass ? 'COMPLETED' : rule.toClassId,
+      isFinalClass: rule.isFinalClass,
+      isActive: rule.isActive,
+      minimumAveragePercent:
+        rule.minimumAveragePercent != null && !rule.isFinalClass ? Number(rule.minimumAveragePercent) : null
+    };
+
+    setTimeout(() => {
+      document.querySelector('.ss-promotion-rule-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  }
+
+  deletePromotionRule(rule: any) {
+    if (!confirm(`Delete the promotion rule from "${rule.fromClass?.name || rule.fromClass?.form}"?`)) {
+      return;
+    }
+    this.promotionRuleService.deletePromotionRule(rule.id).subscribe({
+      next: () => {
+        this.successMsg = 'Promotion rule deleted.';
+        this.loadPromotionRules();
+        setTimeout(() => this.successMsg = '', 4000);
+      },
+      error: (err: any) => {
+        this.errorMsg = err.error?.message || 'Failed to delete promotion rule.';
+        setTimeout(() => this.errorMsg = '', 5000);
+      }
+    });
+  }
+
+  cancelEditPromotionRule() {
+    this.resetPromotionRuleForm();
+  }
+
+  resetPromotionRuleForm() {
+    this.editingPromotionRule = null;
+    this.promotionRuleForm = {
+      fromClassId: '',
+      toClassId: null,
+      isFinalClass: false,
+      isActive: true,
+      minimumAveragePercent: null
+    };
+  }
+
+  toggleRuleStatus(rule: any) {
+    this.promotionRuleService.updatePromotionRule(rule.id, {
+      isActive: !rule.isActive
+    }).subscribe({
+      next: () => this.loadPromotionRules(),
+      error: (err: any) => {
+        this.errorMsg = err.error?.message || 'Failed to update rule status.';
+        setTimeout(() => this.errorMsg = '', 5000);
+      }
+    });
+  }
+
+  promotionClassDisplayName(classItem: any): string {
+    if (!classItem) {
+      return '';
+    }
+    return classItem.name || classItem.form || 'Unknown';
+  }
+
+  promotionClassHasNoRule(classId: string): boolean {
+    return !this.promotionRules.find(r => r.fromClassId === classId && r.isActive);
+  }
 }
