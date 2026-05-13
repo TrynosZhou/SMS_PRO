@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { FinanceService } from '../../../services/finance.service';
 import { StudentService } from '../../../services/student.service';
 import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { AuthService } from '../../../services/auth.service';
 
 type BillingMode = 'invoice' | 'cash';
@@ -27,7 +28,7 @@ export class UniformListComponent implements OnInit {
   applying = false;
   error = '';
   success = '';
-  currencySymbol = 'KES';
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
 
   /** Uniform catalog: names & unit prices from Settings → Uniform Items (API). */
   uniformCatalog: any[] = [];
@@ -53,19 +54,13 @@ export class UniformListComponent implements OnInit {
     private financeService: FinanceService,
     private studentService: StudentService,
     private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private authService: AuthService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.settingsService.getSettings().subscribe({
-      next: (s: any) => {
-        this.currencySymbol = s?.currencySymbol || 'KES';
-      },
-      error: () => {
-        this.currencySymbol = 'KES';
-      }
-    });
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.loadUniformCatalog();
   }
 

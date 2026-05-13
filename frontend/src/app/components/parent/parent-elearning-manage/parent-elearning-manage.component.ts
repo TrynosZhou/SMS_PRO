@@ -4,6 +4,7 @@ import { ParentService } from '../../../services/parent.service';
 import { AuthService } from '../../../services/auth.service';
 import { MessageService } from '../../../services/message.service';
 import { FinanceService } from '../../../services/finance.service';
+import { CurrencyService } from '../../../services/currency.service';
 
 export type ParentElTab = 'overview' | 'messages' | 'records';
 
@@ -18,7 +19,7 @@ export class ParentElearningManageComponent implements OnInit {
   loading = false;
   error = '';
   unreadCount = 0;
-  currencySymbol = 'KES';
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
   mobileMenuOpen = false;
   isMobile = false;
 
@@ -31,6 +32,7 @@ export class ParentElearningManageComponent implements OnInit {
     private authService: AuthService,
     private messageService: MessageService,
     private financeService: FinanceService,
+    private currencyService: CurrencyService,
     private router: Router
   ) {}
 
@@ -40,6 +42,7 @@ export class ParentElearningManageComponent implements OnInit {
       this.router.navigate(['/dashboard']);
       return;
     }
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.loadStudents();
     this.loadUnreadBadge();
     this.checkMobile();

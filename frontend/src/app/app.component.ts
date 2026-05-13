@@ -276,7 +276,6 @@ export class AppComponent implements OnInit {
           id: 'registration', label: 'Registration', icon: '📝',
           children: [
             { label: 'Teachers', icon: '👨‍🏫', route: '/teachers' },
-            { label: 'Departments', icon: '🏢', route: '/departments' },
             { label: 'Students', icon: '🎓', route: '/students' },
             { label: 'Parents', icon: '👪', route: '/parents' }
           ]
@@ -414,7 +413,6 @@ export class AppComponent implements OnInit {
           id: 'system-administration', label: 'System Administration', icon: '🛠️',
           children: [
             { label: 'User Management', icon: '👥', route: '/user-management' },
-            { label: 'Departments', icon: '🏢', route: '/departments' },
             { label: 'Role & Permissions', icon: '🔐', route: '/roles-permissions' },
             { label: 'Academic Settings', icon: '🎓', route: '/academic-settings' },
             { label: 'System Settings', icon: '⚙️', route: '/system-settings' },

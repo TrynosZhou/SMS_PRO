@@ -5,6 +5,7 @@ import { FinanceService } from '../../../services/finance.service';
 import { StudentService } from '../../../services/student.service';
 import { AuthService } from '../../../services/auth.service';
 import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 
 @Component({
   selector: 'app-invoice-list',
@@ -48,7 +49,7 @@ export class InvoiceListComponent implements OnInit {
   studentIdLookup = '';
   studentBalanceInfo: any = null;
   loadingBalance = false;
-  currencySymbol = '$'; // Default, will be loaded from settings
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
   academicYear = ''; // Will be loaded from settings
   currentTermFromSettings = ''; // Current term from settings
   quickPaymentAmount = 0;
@@ -266,6 +267,7 @@ export class InvoiceListComponent implements OnInit {
     public authService: AuthService,
     private router: Router,
     private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private sanitizer: DomSanitizer
   ) { }
 
@@ -282,6 +284,7 @@ export class InvoiceListComponent implements OnInit {
       this.loadStudents();
     }
     this.loadInvoices();
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.loadSettings();
     this.loadTermsForBilling();
   }
@@ -290,7 +293,6 @@ export class InvoiceListComponent implements OnInit {
     this.settingsService.getSettings().subscribe({
       next: (data: any) => {
         const row = Array.isArray(data) && data.length ? data[0] : data;
-        this.currencySymbol = row?.currencySymbol || '$';
         this.academicYear = row?.academicYear || new Date().getFullYear().toString();
         this.currentTermFromSettings = row?.currentTerm || `Term 1 ${new Date().getFullYear()}`;
         

@@ -36,16 +36,19 @@ export class ModuleAccessGuard implements CanActivate {
           case 'parent':
             this.router.navigate(['/parent/dashboard']);
             break;
+          case 'student':
+            this.router.navigate(['/student/dashboard']);
+            break;
           case 'admin':
           case 'superadmin':
             this.router.navigate(['/admin/dashboard']);
             break;
           default:
-            this.router.navigate(['/']);
+            this.router.navigate(['/dashboard']);
         }
       } else {
-        // Send unauthenticated users through the splash screen first.
-        this.router.navigate(['/']);
+        // Send unauthenticated users to the login page.
+        this.router.navigate(['/login']);
       }
       return false;
     }

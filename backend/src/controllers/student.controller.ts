@@ -23,6 +23,10 @@ import {
   applyExemptionForStudent,
   computeManagedFeesForStudent,
 } from '../utils/managedFeesBilling';
+import {
+  resolveRegistrationFeesFromCatalog,
+  buildMergedFeesSettingsForRegistration,
+} from '../utils/registrationFeesFromCatalog';
 import { invoicesIncludeTerm } from '../utils/termMatch';
 import { calculateAge } from '../utils/ageUtils';
 import { In } from 'typeorm';
@@ -280,8 +284,28 @@ export const registerStudent = async (req: AuthRequest, res: Response) => {
       if (!settings) {
         console.warn('⚠️ No school settings — registration invoice not created');
       } else {
+        // Prefer amounts entered on the Finance page (FeeCategory + FeeItem) for
+        // Tuition / Desk Fee / Registration Fee. Anything missing in the catalog
+        // falls back to Settings → School Fees so existing setups keep working.
+        const catalogFees = await resolveRegistrationFeesFromCatalog(AppDataSource, {
+          studentType: validStudentType,
+          classEntity: savedStudent?.classEntity ?? classEntity ?? null,
+        });
+        const mergedFeesSettings = buildMergedFeesSettingsForRegistration(
+          catalogFees,
+          settings.feesSettings as any
+        );
+        if (catalogFees.hasAny) {
+          console.log('💰 Registration fees pulled from Finance catalog:', {
+            dayScholarTuitionFee: catalogFees.dayScholarTuitionFee,
+            boarderTuitionFee: catalogFees.boarderTuitionFee,
+            deskFee: catalogFees.deskFee,
+            registrationFee: catalogFees.registrationFee,
+          });
+        }
+
         let { total, feeLineItems, lineDescriptions } = buildNewStudentRegistrationInvoice({
-          feesSettings: settings.feesSettings,
+          feesSettings: mergedFeesSettings,
           studentType: validStudentType,
           isStaffChild: isStaffChildFlag,
           usesDiningHall: usesDiningHallFlag,
@@ -382,7 +406,9 @@ export const registerStudent = async (req: AuthRequest, res: Response) => {
             console.log('✅ Registration invoice created:', invoiceNumber, 'Amount:', amountValue);
           }
         } else if (!isStaffChildFlag) {
-          console.warn('⚠️ Registration invoice total is 0 — check Settings fees (tuition, desk, registration)');
+          console.warn(
+            '⚠️ Registration invoice total is 0 — set Tuition / Desk Fee / Registration Fee on the Finance page (or as a fallback in Settings → School Fees)'
+          );
         } else {
           console.log('ℹ️ Staff child — no tuition/desk/registration; invoice only if DH applies');
         }

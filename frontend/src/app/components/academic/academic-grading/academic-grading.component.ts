@@ -174,13 +174,6 @@ export class AcademicGradingComponent implements OnInit {
         return 'Minimum percentages must be strictly higher for each band above the next (no ties).';
       }
     }
-    const f = (this.failLabel || '').trim();
-    if (!f) {
-      return 'Fail / unclassified remark is required.';
-    }
-    if (f.length > 80) {
-      return 'Fail remark must be at most 80 characters.';
-    }
     return null;
   }
 
@@ -216,8 +209,10 @@ export class AcademicGradingComponent implements OnInit {
       fail: this.failLabel.trim(),
     };
 
+    // Only send the fields this screen owns. The backend merges field-by-field,
+    // so we avoid sending unrelated nullable fields (feesSettings, moduleAccess,
+    // etc.) that this screen never edits.
     const payload = {
-      ...this.allSettings,
       gradeBands: gradeBandsPayload,
       gradeLabels,
     };
@@ -229,7 +224,7 @@ export class AcademicGradingComponent implements OnInit {
       next: () => {
         this.saving = false;
         this.success = 'Grade boundaries and remarks saved.';
-        this.allSettings = { ...payload };
+        this.allSettings = { ...this.allSettings, ...payload };
         setTimeout(() => (this.success = ''), 5000);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },

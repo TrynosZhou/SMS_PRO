@@ -5,6 +5,7 @@ import { FinanceService } from '../../../services/finance.service';
 import { StudentService } from '../../../services/student.service';
 import { AuthService } from '../../../services/auth.service';
 import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 
 @Component({
@@ -49,7 +50,7 @@ export class InvoiceStatementsComponent implements OnInit {
     notes: '',
     isPrepayment: false
   };
-  currencySymbol = 'KES'; // Default, will be loaded from settings
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
   submitting = false;
   
   // Form validation
@@ -71,7 +72,8 @@ export class InvoiceStatementsComponent implements OnInit {
     public router: Router,
     private route: ActivatedRoute,
     private sanitizer: DomSanitizer,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private currencyService: CurrencyService
   ) { }
 
   ngOnInit() {
@@ -97,7 +99,7 @@ export class InvoiceStatementsComponent implements OnInit {
       this.loadStudents();
     }
     this.loadInvoices();
-    this.loadSettings();
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.loadTerms();
   }
 
@@ -132,18 +134,6 @@ export class InvoiceStatementsComponent implements OnInit {
 
   onTermChange() {
     // term filter is client-side via filteredInvoices, no extra fetch required
-  }
-
-  loadSettings() {
-    this.settingsService.getSettings().subscribe({
-      next: (data: any) => {
-        this.currencySymbol = data.currencySymbol || 'KES';
-      },
-      error: (err: any) => {
-        console.error('Error loading settings:', err);
-        // Keep default 'KES' if settings fail to load
-      }
-    });
   }
 
   loadStudents() {

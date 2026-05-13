@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { SettingsService } from '../../services/settings.service';
+import { CurrencyService } from '../../services/currency.service';
 import { StudentService } from '../../services/student.service';
 import { TeacherService } from '../../services/teacher.service';
 import { ClassService } from '../../services/class.service';
@@ -43,6 +44,13 @@ interface NavItem {
   icon: string;
   route?: string;        // present when item is a direct link (no submenu)
   children?: NavChild[]; // present when item has a submenu
+}
+
+interface NavSection {
+  id: string;
+  title: string;        // e.g. "OVERVIEW", "ACADEMICS", "FINANCE"
+  icon?: string;        // small icon shown next to section title
+  items: NavItem[];
 }
 
 @Component({
@@ -151,16 +159,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ── Sidebar / shell navigation ────────────────────────────────────────
   /** Mobile drawer open state (visible on small screens). */
   sidebarOpen = false;
-  /** Which submenu group is expanded — keyed by NavItem.id. Only one at a time. */
-  openSubmenu: string | null = null;
+  /** Set of submenu group IDs that are currently expanded. Multiple may be open at once. */
+  openSubmenus: Set<string> = new Set();
 
-  /** Top-level navigation items shown in the left sidebar. */
+  /** Top-level navigation items shown in the left sidebar (flat, kept for backwards compatibility). */
   navItems: NavItem[] = [];
+
+  /** Sidebar navigation grouped into logical sections for the modern grouped UI. */
+  navSections: NavSection[] = [];
+
+  /** Live filter applied to the sidebar (case-insensitive, matches labels and child labels). */
+  navFilter: string = '';
 
   constructor(
     private authService: AuthService,
     private router: Router,
     private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private studentService: StudentService,
     private teacherService: TeacherService,
     private classService: ClassService,
@@ -193,6 +208,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Load module access from service
     this.moduleAccessService.loadModuleAccess();
     this.loadSettings();
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     if (this.isAdmin() || this.isAccountant()) {
       this.loadStatistics();
     }
@@ -210,7 +226,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           id: 'registration', label: 'Registration', icon: '📝',
           children: [
             { label: 'Teachers', icon: '👨‍🏫', route: '/teachers' },
-            { label: 'Departments', icon: '🏢', route: '/departments' },
             { label: 'Students', icon: '🎓', route: '/students' },
             { label: 'Parents', icon: '👪', route: '/parents' }
           ]
@@ -348,7 +363,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           id: 'system-administration', label: 'System Administration', icon: '🛠️',
           children: [
             { label: 'User Management', icon: '👥', route: '/user-management' },
-            { label: 'Departments', icon: '🏢', route: '/departments' },
             { label: 'Role & Permissions', icon: '🔐', route: '/roles-permissions' },
             { label: 'Academic Settings', icon: '🎓', route: '/academic-settings' },
             { label: 'System Settings', icon: '⚙️', route: '/system-settings' },
@@ -432,6 +446,90 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.navItems = items;
+    this.navSections = this.buildNavSections(items);
+    this.autoExpandActiveGroup();
+  }
+
+  /**
+   * Group the flat `navItems` list into logical sidebar sections so the menu is
+   * easier to scan. Section assignment is driven by the item id — anything not
+   * matched falls back to "More".
+   */
+  private buildNavSections(items: NavItem[]): NavSection[] {
+    const byId = new Map<string, NavItem>(items.map(i => [i.id, i]));
+    const used = new Set<string>();
+
+    const take = (ids: string[]): NavItem[] => {
+      const picked: NavItem[] = [];
+      for (const id of ids) {
+        const it = byId.get(id);
+        if (it && !used.has(id)) {
+          picked.push(it);
+          used.add(id);
+        }
+      }
+      return picked;
+    };
+
+    const sections: NavSection[] = [];
+
+    // OVERVIEW — Dashboard / parent dashboard
+    const overview = take(['dashboard', 'parent-dash']);
+    if (overview.length) {
+      sections.push({ id: 'sec-overview', title: 'Overview', icon: '🏠', items: overview });
+    }
+
+    // PEOPLE — Registration, parents/students directory
+    const people = take(['registration']);
+    if (people.length) {
+      sections.push({ id: 'sec-people', title: 'People', icon: '👥', items: people });
+    }
+
+    // ACADEMICS — Enrolment, attendance, marks, reports, results
+    const academics = take(['enrolment', 'attendance', 'marks', 'progress', 'results', 'parent-reports']);
+    if (academics.length) {
+      sections.push({ id: 'sec-academics', title: 'Academics', icon: '🎓', items: academics });
+    }
+
+    // FINANCE — Fees, financial reports, payroll, parent invoices
+    const finance = take(['finance', 'financial-reports', 'payroll', 'parent-invoices']);
+    if (finance.length) {
+      sections.push({ id: 'sec-finance', title: 'Finance', icon: '💰', items: finance });
+    }
+
+    // OPERATIONS — Timetable, communication, misc reports, e-learning, inventory
+    const operations = take(['timetable', 'communication', 'reports', 'elearning', 'inventory', 'parent-comm', 'parent-inbox', 'parent-link']);
+    if (operations.length) {
+      sections.push({ id: 'sec-operations', title: 'Operations', icon: '🧰', items: operations });
+    }
+
+    // SYSTEM — admin only
+    const system = take(['system-administration']);
+    if (system.length) {
+      sections.push({ id: 'sec-system', title: 'System', icon: '🛠️', items: system });
+    }
+
+    // Anything left over goes into "More" so nothing is hidden by accident
+    const leftover = items.filter(i => !used.has(i.id));
+    if (leftover.length) {
+      sections.push({ id: 'sec-more', title: 'More', icon: '✨', items: leftover });
+    }
+
+    return sections;
+  }
+
+  /** After the menu is built, auto-expand the section containing the active route. */
+  private autoExpandActiveGroup() {
+    try {
+      const url = (this.router.url || '').split('?')[0];
+      if (!url) return;
+      for (const item of this.navItems) {
+        if (item.children && item.children.length) {
+          const match = item.children.some(c => !!c.route && (url === c.route || url.startsWith(c.route + '/')));
+          if (match) this.openSubmenus.add(item.id);
+        }
+      }
+    } catch { /* ignore */ }
   }
 
   // ── Sidebar interactions ──────────────────────────────────────────────
@@ -444,11 +542,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   toggleSubmenu(id: string) {
-    this.openSubmenu = this.openSubmenu === id ? null : id;
+    if (this.openSubmenus.has(id)) {
+      this.openSubmenus.delete(id);
+    } else {
+      this.openSubmenus.add(id);
+    }
   }
 
   isSubmenuOpen(id: string): boolean {
-    return this.openSubmenu === id;
+    // While the user is searching the sidebar, auto-expand any group that has matches
+    // so the filtered items become visible without an extra click.
+    if (this.openSubmenus.has(id)) return true;
+    const q = (this.navFilter || '').trim();
+    if (!q) return false;
+    const item = this.navItems.find(i => i.id === id);
+    return !!item && this.matchesFilter(item);
+  }
+
+  /** True if any child label (or the group label itself) matches `navFilter`. */
+  matchesFilter(item: NavItem): boolean {
+    const q = (this.navFilter || '').trim().toLowerCase();
+    if (!q) return true;
+    if ((item.label || '').toLowerCase().includes(q)) return true;
+    if (item.children && item.children.some(c => (c.label || '').toLowerCase().includes(q))) return true;
+    return false;
+  }
+
+  /** Only show children that match the current `navFilter` (used when a query is active). */
+  visibleChildren(item: NavItem): NavChild[] {
+    const q = (this.navFilter || '').trim().toLowerCase();
+    if (!q || !item.children) return item.children || [];
+    return item.children.filter(c => (c.label || '').toLowerCase().includes(q));
+  }
+
+  /** True if the section has at least one visible item under the current filter. */
+  sectionHasVisible(section: NavSection): boolean {
+    return section.items.some(i => this.matchesFilter(i));
+  }
+
+  /** Reset the live filter (used by the small clear button). */
+  clearNavFilter() {
+    this.navFilter = '';
   }
 
   /** Handle clicks on submenu items that map to component actions (e.g. bulk message). */
@@ -693,7 +827,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         } else {
           this.schoolName = row?.schoolName || '';
         }
-        this.currencySymbol = row?.currencySymbol || '';
         this.academicYear = row?.academicYear || '';
         this.currentTerm = row?.currentTerm || '';
         this.moduleAccess = row?.moduleAccess || {};
@@ -708,7 +841,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         console.error('Error loading settings:', err);
         this.schoolName = '';
-        this.currencySymbol = '';
         this.academicYear = '';
         this.currentTerm = '';
         this.startHeadlineRotation({});

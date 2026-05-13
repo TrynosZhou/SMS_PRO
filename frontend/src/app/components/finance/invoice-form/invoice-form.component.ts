@@ -4,6 +4,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FinanceService } from '../../../services/finance.service';
 import { StudentService } from '../../../services/student.service';
 import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
@@ -24,7 +25,7 @@ export class InvoiceFormComponent implements OnInit {
   selectedStudentData: any = null;
   studentSearchQuery = '';
   nextTermBalance: any = null;
-  currencySymbol = '$';
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
   currentTerm = '';
   suggestedTerm = '';
   error = '';
@@ -60,6 +61,7 @@ export class InvoiceFormComponent implements OnInit {
     private financeService: FinanceService,
     private studentService: StudentService,
     private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private authService: AuthService,
     private sanitizer: DomSanitizer,
     public router: Router
@@ -85,6 +87,7 @@ export class InvoiceFormComponent implements OnInit {
       this.invoice.amount = 0;
     }
     this.loadStudents();
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.loadSettings();
     this.loadUniformItems();
   }
@@ -93,7 +96,6 @@ export class InvoiceFormComponent implements OnInit {
     this.settingsService.getSettings().subscribe({
       next: (data: any) => {
         const row = Array.isArray(data) && data.length ? data[0] : data;
-        this.currencySymbol = row?.currencySymbol || '$';
         this.currentTerm = row?.currentTerm || '';
         this.suggestedTerm = this.getSuggestedTerm(this.currentTerm);
         // Pre-fill term if available
@@ -103,7 +105,6 @@ export class InvoiceFormComponent implements OnInit {
       },
       error: (err: any) => {
         console.error('Error loading settings:', err);
-        this.currencySymbol = '$';
       }
     });
   }

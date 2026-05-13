@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FinanceService } from '../../../services/finance.service';
 import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { StudentService } from '../../../services/student.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../../services/auth.service';
@@ -36,7 +37,7 @@ export class RecordPaymentComponent implements OnInit {
   showCardNumberInput = false;
   
   currentTerm = '';
-  currencySymbol = 'KES';
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
   submitting = false;
   receiptPdfUrl: SafeResourceUrl | null = null;
   receiptBlobUrl: string | null = null;
@@ -95,6 +96,7 @@ export class RecordPaymentComponent implements OnInit {
   constructor(
     private financeService: FinanceService,
     private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private studentService: StudentService,
     private authService: AuthService,
     private sanitizer: DomSanitizer,
@@ -102,6 +104,7 @@ export class RecordPaymentComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.loadCurrentTerm();
     
     // Check for query parameters from outstanding balance page
@@ -139,9 +142,6 @@ export class RecordPaymentComponent implements OnInit {
       next: (raw: any) => {
         const settings = Array.isArray(raw) && raw.length > 0 ? raw[0] : raw;
         if (settings) {
-          // Load currency symbol
-          this.currencySymbol = settings.currencySymbol || 'KES';
-          
           // Use currentTerm from settings, or fallback to activeTerm, or construct from term/year
           this.currentTerm = settings.currentTerm || settings.activeTerm || '';
           

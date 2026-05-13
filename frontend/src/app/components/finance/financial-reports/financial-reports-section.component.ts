@@ -1,29 +1,33 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { SettingsService } from '../../../services/settings.service';
+import { Subscription } from 'rxjs';
+import { CurrencyService } from '../../../services/currency.service';
 
 @Component({
   selector: 'app-financial-reports-section',
   templateUrl: './financial-reports-section.component.html',
   styleUrls: ['./financial-reports-section.component.css'],
 })
-export class FinancialReportsSectionComponent implements OnInit {
+export class FinancialReportsSectionComponent implements OnInit, OnDestroy {
   report = '';
   bundle: any = null;
-  currencySymbol = '$';
+  // Seed with whatever the service already knows (cached value from System Settings →
+  // General tab). Avoids a flash of the placeholder "$" on first paint. The real
+  // assignment happens in the constructor body since `currencyService` is injected.
+  currencySymbol: string = CurrencyService.DEFAULT_SYMBOL;
 
-  constructor(private route: ActivatedRoute, private settingsService: SettingsService) {}
+  private currencySub?: Subscription;
+
+  constructor(private route: ActivatedRoute, private currencyService: CurrencyService) {
+    this.currencySymbol = this.currencyService.current;
+  }
 
   ngOnInit(): void {
-    this.settingsService.getSettings().subscribe({
-      next: (data: any) => {
-        const row = Array.isArray(data) && data.length ? data[0] : data;
-        this.currencySymbol = row?.currencySymbol || '$';
-      },
-      error: () => {
-        this.currencySymbol = '$';
-      },
-    });
+    // Always pull the latest value the user saved under /system-settings → General.
+    // refresh() is idempotent: if no fetch is in flight it re-hits the API; otherwise
+    // it just keeps emitting through the existing subscription.
+    this.currencyService.refresh();
+    this.currencySub = this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
 
     this.route.data.subscribe(d => {
       this.report = d['report'] || '';
@@ -38,10 +42,30 @@ export class FinancialReportsSectionComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.currencySub?.unsubscribe();
+  }
+
   money(n: number | undefined | null): string {
     const x = Number(n);
     if (!Number.isFinite(x)) return '0.00';
     return x.toFixed(2);
+  }
+
+  /**
+   * Render an amount with the configured currency symbol. Adds a thin separator
+   * between the symbol and the value when the symbol is a multi-character code
+   * (KES, KSh, ZAR, USD, …) so it doesn't appear glued to the number — e.g.
+   * `KES 0.00` instead of `KES0.00`. Single-glyph symbols like `$`, `€`, `£`
+   * stay tight: `$0.00`.
+   */
+  formatCurrency(n: number | undefined | null): string {
+    const symbol = (this.currencySymbol || '').trim() || '$';
+    const value = this.money(n);
+    // If the symbol contains any letter or digit (e.g. "KES", "KSh", "GH₵"),
+    // give it a non-breaking space so it never wraps onto its own line.
+    const needsSpace = /[A-Za-z0-9]/.test(symbol) || symbol.length > 1;
+    return needsSpace ? `${symbol}\u00A0${value}` : `${symbol}${value}`;
   }
 
   objectKeys(obj: Record<string, unknown> | null | undefined): string[] {

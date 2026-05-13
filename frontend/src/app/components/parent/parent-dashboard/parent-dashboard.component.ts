@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { ParentService } from '../../../services/parent.service';
 import { AuthService } from '../../../services/auth.service';
 import { MessageService } from '../../../services/message.service';
-import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { FinanceService } from '../../../services/finance.service';
 
 @Component({
@@ -16,7 +16,7 @@ export class ParentDashboardComponent implements OnInit {
   filteredStudents: any[] = [];
   loading = false;
   error = '';
-  currencySymbol = 'KES';
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
   mobileMenuOpen = false;
   isMobile = false;
   searchTerm = '';
@@ -34,13 +34,13 @@ export class ParentDashboardComponent implements OnInit {
     private parentService: ParentService,
     private authService: AuthService,
     private messageService: MessageService,
-    private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private financeService: FinanceService,
     private router: Router
   ) {}
 
   ngOnInit() {
-    this.loadSettings();
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.loadStudents();
     this.loadUnreadBadge();
     this.checkMobile();
@@ -71,17 +71,6 @@ export class ParentDashboardComponent implements OnInit {
 
   closeMobileMenu() {
     this.mobileMenuOpen = false;
-  }
-
-  loadSettings() {
-    this.settingsService.getSettings().subscribe({
-      next: (data: any) => {
-        this.currencySymbol = data.currencySymbol || 'KES';
-      },
-      error: (err: any) => {
-        console.error('Error loading settings:', err);
-      }
-    });
   }
 
   loadStudents() {

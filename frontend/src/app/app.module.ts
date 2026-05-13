@@ -118,6 +118,7 @@ import { AcademicManageComponent } from './components/academic/academic-manage/a
 import { AcademicTermsComponent } from './components/academic/academic-terms/academic-terms.component';
 import { AcademicClassesComponent } from './components/academic/academic-classes/academic-classes.component';
 import { AcademicSubjectsComponent } from './components/academic/academic-subjects/academic-subjects.component';
+import { AcademicDepartmentsComponent } from './components/academic/academic-departments/academic-departments.component';
 import { AcademicReportReleasesComponent } from './components/academic/academic-report-releases/academic-report-releases.component';
 import { AcademicGradingComponent } from './components/academic/academic-grading/academic-grading.component';
 import { SystemSettingsComponent } from './components/settings/system-settings/system-settings.component';
@@ -248,6 +249,7 @@ import { MarksInputComponent } from './components/exams/marks-input/marks-input.
     AcademicTermsComponent,
     AcademicClassesComponent,
     AcademicSubjectsComponent,
+    AcademicDepartmentsComponent,
     AcademicReportReleasesComponent,
     AcademicGradingComponent,
     SystemSettingsComponent,

@@ -65,6 +65,71 @@ export class LoginComponent implements OnInit {
       this.error = storedMessage;
       sessionStorage.removeItem('sessionMessage');
     }
+
+    if (this.authService.isAuthenticated()) {
+      const user = this.authService.getCurrentUser();
+      if (user) {
+        this.routeAuthenticatedUserHome(user);
+      }
+    }
+  }
+
+  /**
+   * After splash (or direct /login), send users who already have a session
+   * to the same home as after a successful sign-in.
+   */
+  private routeAuthenticatedUserHome(user: any): void {
+    if (!user) {
+      return;
+    }
+
+    if (user.role === 'student') {
+      this.router.navigate(['/student/dashboard']).catch(err => {
+        console.error('Navigation error:', err);
+      });
+      return;
+    }
+
+    if ((user.role === 'teacher' || user.role === 'hod') && user.mustChangePassword) {
+      this.router.navigate(['/teacher/manage-account']).catch(err => {
+        console.error('Navigation error:', err);
+      });
+      return;
+    }
+
+    if (user.role === 'teacher' || user.role === 'hod') {
+      this.router.navigate(['/teacher/dashboard']).catch(err => {
+        console.error('Navigation error:', err);
+      });
+      return;
+    }
+
+    if (user.role === 'parent' && user.parent) {
+      this.authService.getParentStudents().subscribe({
+        next: (students: any[]) => {
+          if (students.length === 0) {
+            this.router.navigate(['/parent/link-students']).catch(err => {
+              console.error('Navigation error:', err);
+            });
+          } else {
+            this.router.navigate(['/parent/dashboard']).catch(err => {
+              console.error('Navigation error:', err);
+            });
+          }
+        },
+        error: (err) => {
+          console.error('Error fetching parent students:', err);
+          this.router.navigate(['/parent/link-students']).catch(navErr => {
+            console.error('Navigation error:', navErr);
+          });
+        },
+      });
+      return;
+    }
+
+    this.router.navigate(['/dashboard']).catch(err => {
+      console.error('Navigation error:', err);
+    });
   }
 
   togglePasswordVisibility() {
@@ -171,73 +236,8 @@ export class LoginComponent implements OnInit {
           this.error = 'Authentication failed. Please try again.';
           return;
         }
-        
-        // Navigate immediately - token and user are already stored
-        // Check if student login - redirect to student dashboard
-        if (user.role === 'student') {
-          this.router.navigate(['/student/dashboard']).catch(err => {
-            console.error('Navigation error:', err);
-            this.error = 'Failed to navigate. Please try again.';
-          });
-        }
-        // Check if teacher must change password
-        else if ((user.role === 'teacher' || user.role === 'hod') && user.mustChangePassword) {
-          // Navigate to manage account page
-          this.router.navigate(['/teacher/manage-account']).catch(err => {
-            console.error('Navigation error:', err);
-            this.error = 'Failed to navigate. Please try again.';
-          });
-        }
-        // Check if teacher login - redirect to teacher dashboard
-        else if (user.role === 'teacher' || user.role === 'hod') {
-          // Navigate to teacher dashboard
-          this.router.navigate(['/teacher/dashboard']).catch(err => {
-            console.error('Navigation error:', err);
-            this.error = 'Failed to navigate. Please try again.';
-          });
-        }
-        // Check if parent needs to link students
-        else if (user.role === 'parent' && user.parent) {
-          // Check if parent has linked students
-          this.authService.getParentStudents().subscribe({
-            next: (students: any[]) => {
-              if (students.length === 0) {
-                // Navigate to student linking page
-                this.router.navigate(['/parent/link-students']).catch(err => {
-                  console.error('Navigation error:', err);
-                  this.error = 'Failed to navigate. Please try again.';
-                });
-              } else {
-                // Navigate to parent dashboard
-                this.router.navigate(['/parent/dashboard']).catch(err => {
-                  console.error('Navigation error:', err);
-                  this.error = 'Failed to navigate. Please try again.';
-                });
-              }
-            },
-            error: (err) => {
-              console.error('Error fetching parent students:', err);
-              // Navigate to student linking page if error
-              this.router.navigate(['/parent/link-students']).catch(navErr => {
-                console.error('Navigation error:', navErr);
-                this.error = 'Failed to navigate. Please try again.';
-              });
-            }
-          });
-        }
-        // Check if student login - redirect to student dashboard
-        else if (user.role === 'student') {
-          this.router.navigate(['/student/dashboard']).catch(err => {
-            console.error('Navigation error:', err);
-            this.error = 'Failed to navigate. Please try again.';
-          });
-        } else {
-          // Navigate to regular dashboard for other roles
-          this.router.navigate(['/dashboard']).catch(err => {
-            console.error('Navigation error:', err);
-            this.error = 'Failed to navigate. Please try again.';
-          });
-        }
+
+        this.routeAuthenticatedUserHome(user);
       },
       error: (err: any) => {
         const msg = err.error?.message || err.message;
@@ -553,13 +553,9 @@ export class LoginComponent implements OnInit {
           this.error = 'Authentication failed. Please try again.';
           return;
         }
-        
-        // Navigate to student dashboard
+
         if (user.role === 'student') {
-          this.router.navigate(['/student/dashboard']).catch(err => {
-            console.error('Navigation error:', err);
-            this.error = 'Failed to navigate. Please try again.';
-          });
+          this.routeAuthenticatedUserHome(user);
         } else {
           this.error = 'Invalid user role';
         }

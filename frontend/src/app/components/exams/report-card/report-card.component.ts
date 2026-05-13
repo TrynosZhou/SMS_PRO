@@ -7,6 +7,7 @@ import { TeacherService } from '../../../services/teacher.service';
 import { AuthService } from '../../../services/auth.service';
 import { ParentService } from '../../../services/parent.service';
 import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 
 @Component({
@@ -60,7 +61,7 @@ export class ReportCardComponent implements OnInit, OnDestroy {
   isParent = false;
   parentStudentId: string | null = null;
   studentBalance: number | null = null;
-  currencySymbol = 'KES';
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
   accessDenied = false;
   availableTerms: string[] = [];
   loadingTerms = false;
@@ -96,8 +97,10 @@ export class ReportCardComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private parentService: ParentService,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private currencyService: CurrencyService
   ) {
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.canEditRemarks =
       this.authService.hasRole('teacher') ||
       this.authService.hasRole('admin') ||
@@ -306,7 +309,6 @@ export class ReportCardComponent implements OnInit, OnDestroy {
         if (!data) {
           return;
         }
-        this.currencySymbol = data.currencySymbol || 'KES';
         this.schoolName = (data.schoolName && String(data.schoolName).trim()) || '';
         this.schoolAddress = (data.schoolAddress && String(data.schoolAddress).trim()) || '';
         this.schoolEmail = (data.schoolEmail && String(data.schoolEmail).trim()) || '';
@@ -332,7 +334,6 @@ export class ReportCardComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         // Use default values if settings fail to load
-        this.currencySymbol = 'KES';
         this.gradeThresholds = {
           excellent: 90,
           veryGood: 80,

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FinanceService } from '../../../services/finance.service';
-import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
@@ -16,7 +16,7 @@ export class OutstandingBalanceComponent implements OnInit {
   loading = false;
   error = '';
   searchQuery = '';
-  currencySymbol = 'KES';
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
   activeTerm = '';
 
   // Modern UI controls (client-side) – default: balance descending
@@ -29,28 +29,14 @@ export class OutstandingBalanceComponent implements OnInit {
 
   constructor(
     private financeService: FinanceService,
-    private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private router: Router,
     private authService: AuthService
   ) { }
 
   ngOnInit(): void {
-    this.loadSettings();
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.loadOutstandingBalances();
-  }
-
-  loadSettings(): void {
-    this.settingsService.getSettings().subscribe({
-      next: (raw: any) => {
-        const settings = Array.isArray(raw) && raw.length > 0 ? raw[0] : raw;
-        if (settings) {
-          this.currencySymbol = settings.currencySymbol || 'KES';
-        }
-      },
-      error: (error) => {
-        console.error('Error loading settings:', error);
-      }
-    });
   }
 
   loadOutstandingBalances(): void {

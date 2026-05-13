@@ -52,6 +52,16 @@ export class FeesComponent implements OnInit {
   catError = '';
   catForm = { name: '', description: '' };
 
+  // Edit Category modal
+  showEditCatModal = false;
+  editCatSubmitting = false;
+  editCatError = '';
+  editCatForm: { id: string; name: string; description: string } = {
+    id: '',
+    name: '',
+    description: '',
+  };
+
   // Confirm delete
   showDeleteModal = false;
   deleteTarget: { type: 'item' | 'category'; id: string; label: string } | null = null;
@@ -192,6 +202,47 @@ export class FeesComponent implements OnInit {
       },
       error: e => { this.catError = e?.error?.message || 'Save failed'; this.catSubmitting = false; },
     });
+  }
+
+  // ── Edit Category Modal ───────────────────────────────────────────────────
+
+  openEditCategory(cat: FeeCategory) {
+    this.editCatForm = {
+      id: cat.id,
+      name: cat.name || '',
+      description: cat.description || '',
+    };
+    this.editCatError = '';
+    this.showEditCatModal = true;
+  }
+
+  cancelEditCat() {
+    this.showEditCatModal = false;
+    this.editCatError = '';
+  }
+
+  saveEditCat() {
+    if (!this.editCatForm.name.trim()) {
+      this.editCatError = 'Category name is required';
+      return;
+    }
+    this.editCatSubmitting = true;
+    this.editCatError = '';
+    const { id, ...payload } = this.editCatForm;
+    this.http
+      .put(`${this.apiUrl}/categories/${id}`, payload, { headers: this.headers() })
+      .subscribe({
+        next: () => {
+          this.editCatSubmitting = false;
+          this.showEditCatModal = false;
+          this.flash('Category updated');
+          this.load();
+        },
+        error: (e) => {
+          this.editCatError = e?.error?.message || 'Update failed';
+          this.editCatSubmitting = false;
+        },
+      });
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────

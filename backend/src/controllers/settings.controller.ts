@@ -325,7 +325,7 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
     if (teacherIdPrefix !== undefined) {
       settings.teacherIdPrefix = String(teacherIdPrefix).trim();
     }
-    if (feesSettings !== undefined) {
+    if (feesSettings !== undefined && feesSettings !== null) {
       // Migrate old tuitionFee to both dayScholarTuitionFee and boarderTuitionFee if needed
       const feesSettingsAny = feesSettings as any;
       if (feesSettingsAny.tuitionFee !== undefined && 
@@ -343,6 +343,9 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
         feesSettings.deskFee = 0;
       }
       settings.feesSettings = feesSettings;
+    } else if (feesSettings === null) {
+      // Caller explicitly cleared fees, or sent through a row that has no fees yet.
+      // Preserve whatever is already saved (do nothing) rather than overwriting with null.
     } else if (settings.feesSettings) {
       // Handle existing settings with old tuitionFee
       const feesSettingsAny = settings.feesSettings as any;

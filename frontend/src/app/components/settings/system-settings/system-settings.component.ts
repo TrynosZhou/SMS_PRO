@@ -1,7 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 
-type TabId = 'school-info' | 'email' | 'notifications' | 'security' | 'general';
+type TabId =
+  | 'school-info'
+  | 'email'
+  | 'notifications'
+  | 'security'
+  | 'general'
+  | 'student-id';
 
 @Component({
   selector: 'app-system-settings',
@@ -74,12 +81,19 @@ export class SystemSettingsComponent implements OnInit {
     academicYear: String(new Date().getFullYear()),
   };
 
+  // ── Student ID Prefix ───────────────────────────
+  /** Prefix used at the start of every generated student number (3 letters). */
+  studentIdPrefixInput = 'SCH';
+  /** The currently saved prefix as fetched from the API; used to detect changes. */
+  savedStudentIdPrefix = 'SCH';
+
   readonly tabs: { id: TabId; label: string; icon: string }[] = [
     { id: 'school-info',   label: 'School Information', icon: '🏫' },
+    { id: 'general',       label: 'General',            icon: '⚙️' },
+    { id: 'student-id',    label: 'Student ID Prefix',  icon: '🆔' },
     { id: 'email',         label: 'Email Settings',     icon: '✉️' },
     { id: 'notifications', label: 'Notifications',      icon: '🔔' },
     { id: 'security',      label: 'Security',           icon: '🔒' },
-    { id: 'general',       label: 'General',            icon: '⚙️' },
   ];
 
   readonly timezones = [
@@ -97,7 +111,10 @@ export class SystemSettingsComponent implements OnInit {
     { code: 'EUR', symbol: '€' }, { code: 'GBP', symbol: '£' },
   ];
 
-  constructor(private settingsService: SettingsService) {}
+  constructor(
+    private settingsService: SettingsService,
+    private currencyService: CurrencyService
+  ) {}
 
   ngOnInit() { this.loadSettings(); }
 
@@ -135,10 +152,43 @@ export class SystemSettingsComponent implements OnInit {
         if (data.generalSettings) {
           this.general = { ...this.general, ...data.generalSettings };
         }
+
+        // Student ID Prefix
+        const sanitizedPrefix = this.sanitizeStudentIdPrefix(data.studentIdPrefix);
+        this.studentIdPrefixInput = sanitizedPrefix;
+        this.savedStudentIdPrefix = sanitizedPrefix;
+
         this.loading = false;
       },
       error: () => { this.loading = false; }
     });
+  }
+
+  /**
+   * Mirrors the backend's prefix rules:
+   *  - letters only,
+   *  - upper-case,
+   *  - exactly 3 characters (defaults to "SCH", pads short values with "X").
+   */
+  sanitizeStudentIdPrefix(raw: string | null | undefined): string {
+    let p = String(raw ?? '').trim().toUpperCase().replace(/[^A-Z]/g, '');
+    if (!p) p = 'SCH';
+    if (p.length < 3) p = (p + 'XXX').slice(0, 3);
+    if (p.length > 3) p = p.slice(0, 3);
+    return p;
+  }
+
+  get studentIdPreview(): string {
+    const prefix = this.sanitizeStudentIdPrefix(this.studentIdPrefixInput);
+    const year = new Date().getFullYear();
+    return `${prefix}001${year}`;
+  }
+
+  onStudentIdPrefixInput() {
+    this.studentIdPrefixInput = String(this.studentIdPrefixInput || '')
+      .toUpperCase()
+      .replace(/[^A-Z]/g, '')
+      .slice(0, 3);
   }
 
   // ── Save per-tab ─────────────────────────────────
@@ -171,12 +221,35 @@ export class SystemSettingsComponent implements OnInit {
         if (cur) this.general.currencySymbol = cur.symbol;
         payload = { generalSettings: { ...this.general }, currencySymbol: this.general.currencySymbol };
         break;
+      case 'student-id': {
+        const cleaned = this.sanitizeStudentIdPrefix(this.studentIdPrefixInput);
+        if (cleaned.length !== 3) {
+          this.errorMsg = 'Student ID prefix must be exactly 3 letters.';
+          this.saving = false;
+          return;
+        }
+        this.studentIdPrefixInput = cleaned;
+        payload = { studentIdPrefix: cleaned };
+        break;
+      }
     }
 
     this.settingsService.updateSettings(payload).subscribe({
       next: () => {
         this.saving = false;
         this.successMsg = 'Settings saved successfully!';
+        // Push the freshly saved currency symbol to every subscriber so other
+        // open views (dashboard, invoices, reports, etc.) update in real time.
+        if (this.activeTab === 'general') {
+          this.currencyService.setSymbol(this.general.currencySymbol);
+        }
+        if (this.activeTab === 'student-id') {
+          // Backend re-syncs existing student numbers automatically; just remember
+          // the saved prefix so we don't show a stale "unsaved change" hint.
+          this.savedStudentIdPrefix = this.studentIdPrefixInput;
+          this.successMsg =
+            'Student ID prefix saved. Existing student IDs have been updated to the new prefix.';
+        }
         setTimeout(() => this.successMsg = '', 4000);
       },
       error: (err: any) => {

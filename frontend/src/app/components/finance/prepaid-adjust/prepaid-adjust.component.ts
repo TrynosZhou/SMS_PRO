@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FinanceService } from '../../../services/finance.service';
 import { StudentService } from '../../../services/student.service';
-import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
@@ -20,7 +20,7 @@ export class PrepaidAdjustComponent implements OnInit {
   /** Correct remaining prepaid carry-forward amount */
   correctedPrepaidAmount = 0;
 
-  currencySymbol = 'KES';
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
 
   nameSearchResults: any[] = [];
   showStudentPicker = false;
@@ -30,20 +30,13 @@ export class PrepaidAdjustComponent implements OnInit {
   constructor(
     private financeService: FinanceService,
     private studentService: StudentService,
-    private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private authService: AuthService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.settingsService.getSettings().subscribe({
-      next: (settings: any) => {
-        this.currencySymbol = settings?.currencySymbol || 'KES';
-      },
-      error: () => {
-        this.currencySymbol = 'KES';
-      }
-    });
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
   }
 
   canSearchByName(): boolean {

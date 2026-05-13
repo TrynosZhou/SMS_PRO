@@ -44,6 +44,7 @@
       </div>
       <div class="fs-cat-header-actions">
         <span class="fs-cat-total">Total: {{ fmt(catTotal(cat)) }} {{ cat.items[0]?.currency || 'USD' }}</span>
+        <button class="fs-icon-btn fs-edit-btn" title="Edit category" (click)="openEditCategory(cat)">&#9998;</button>
         <button class="fs-icon-btn fs-del-btn" title="Delete category" (click)="confirmDeleteCategory(cat)">&#128465;</button>
       </div>
     </div>
@@ -219,6 +220,32 @@
       <button class="fs-btn-cancel" (click)="cancelCat()" [disabled]="catSubmitting">Cancel</button>
       <button class="fs-btn-save" (click)="saveCat()" [disabled]="catSubmitting">
         {{ catSubmitting ? 'Saving…' : 'Create Category' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Edit Category Modal ───────────────────────────────────────── -->
+  <div class="fs-overlay" *ngIf="showEditCatModal" (click)="cancelEditCat()"></div>
+  <div class="fs-modal" *ngIf="showEditCatModal">
+    <div class="fs-modal-hdr">
+      <h3>Edit Fee Category</h3>
+      <button class="fs-modal-close" (click)="cancelEditCat()">&#10005;</button>
+    </div>
+    <div class="fs-modal-body">
+      <div class="fs-error-inline" *ngIf="editCatError">{{ editCatError }}</div>
+      <div class="fs-field">
+        <label>Category Name *</label>
+        <input type="text" [(ngModel)]="editCatForm.name" placeholder="e.g. A Level Fees" />
+      </div>
+      <div class="fs-field">
+        <label>Description</label>
+        <input type="text" [(ngModel)]="editCatForm.description" placeholder="e.g. Advanced Level Student Fees" />
+      </div>
+    </div>
+    <div class="fs-modal-footer">
+      <button class="fs-btn-cancel" (click)="cancelEditCat()" [disabled]="editCatSubmitting">Cancel</button>
+      <button class="fs-btn-save" (click)="saveEditCat()" [disabled]="editCatSubmitting">
+        {{ editCatSubmitting ? 'Saving…' : 'Update Category' }}
       </button>
     </div>
   </div>

@@ -4,7 +4,7 @@
     <div>
       <span class="ag-banner-title">Grading System</span>
       <p class="ag-banner-sub">
-        Define pass bands from highest to lowest minimum %. You can add extra bands beyond the traditional five. The fail label applies to 0% and missing marks.
+        Define pass bands from highest to lowest minimum %. You can add extra bands beyond the traditional five.
       </p>
     </div>
   </div>
@@ -27,7 +27,7 @@
   <ng-container *ngIf="!loading">
     <div class="ag-info">
       <p>
-        Percentages are <strong>minimum marks</strong> for each band. The system checks from the <strong>highest</strong> band downward. Percentages must <strong>strictly decrease</strong> down the list (no two bands may share the same minimum). A mark of <strong>0%</strong> uses the fail label below.
+        Percentages are <strong>minimum marks</strong> for each band. The system checks from the <strong>highest</strong> band downward. Percentages must <strong>strictly decrease</strong> down the list (no two bands may share the same minimum).
       </p>
       <p *ngIf="!canEditGrading()" class="ag-readonly-note">
         You can view boundaries here. Only <strong>Admin</strong> or <strong>SuperAdmin</strong> can save changes.
@@ -59,7 +59,7 @@
             />
           </label>
           <label class="ag-field ag-field-grow">
-            <span>Remark on reports</span>
+            <span>Grade</span>
             <input
               type="text"
               maxlength="80"
@@ -87,25 +87,6 @@
         <button type="button" class="ag-btn-secondary" (click)="addBand()">
           + Add grade band
         </button>
-      </div>
-
-      <div class="ag-band ag-band-fail" style="border-left-color: #dc2626;">
-        <div class="ag-band-head">
-          <h3>Fail / unclassified</h3>
-          <span class="ag-band-range">0% only (and missing marks)</span>
-        </div>
-        <div class="ag-band-fields">
-          <label class="ag-field ag-field-grow">
-            <span>Remark for 0% / N/A</span>
-            <input
-              type="text"
-              maxlength="80"
-              [(ngModel)]="failLabel"
-              name="lb_fail"
-              [disabled]="!canEditGrading() || isDemoUser()"
-            />
-          </label>
-        </div>
       </div>
     </div>
 

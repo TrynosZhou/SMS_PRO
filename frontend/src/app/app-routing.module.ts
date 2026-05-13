@@ -119,6 +119,7 @@ import { AcademicClassesComponent } from './components/academic/academic-classes
 import { AcademicSubjectsComponent } from './components/academic/academic-subjects/academic-subjects.component';
 import { AcademicReportReleasesComponent } from './components/academic/academic-report-releases/academic-report-releases.component';
 import { AcademicGradingComponent } from './components/academic/academic-grading/academic-grading.component';
+import { AcademicDepartmentsComponent } from './components/academic/academic-departments/academic-departments.component';
 import { SystemSettingsComponent } from './components/settings/system-settings/system-settings.component';
 import { RolesPermissionsComponent } from './components/settings/roles-permissions/roles-permissions.component';
 import { ManageStudentsComponent } from './components/registration/manage-students/manage-students.component';
@@ -602,6 +603,7 @@ const routes: Routes = [
       { path: 'terms', component: AcademicTermsComponent, canActivate: [AuthGuard] },
       { path: 'classes', component: AcademicClassesComponent, canActivate: [AuthGuard] },
       { path: 'subjects', component: AcademicSubjectsComponent, canActivate: [AuthGuard] },
+      { path: 'departments', component: AcademicDepartmentsComponent, canActivate: [AuthGuard] },
       { path: 'report-releases', component: AcademicReportReleasesComponent, canActivate: [AuthGuard] },
       { path: 'grading', component: AcademicGradingComponent, canActivate: [AuthGuard] },
     ],

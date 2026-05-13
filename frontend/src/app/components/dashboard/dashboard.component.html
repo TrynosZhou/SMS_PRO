@@ -45,33 +45,63 @@
 
   <!-- ─────────────  LEFT SIDEBAR  ───────────── -->
   <aside class="db-sidebar" (click)="$event.stopPropagation()">
-    <nav class="db-nav">
-      <ng-container *ngFor="let item of navItems">
-        <!-- Direct link (no submenu) -->
-        <a *ngIf="item.route && !item.children" [routerLink]="item.route" routerLinkActive="db-nav-item--active" [routerLinkActiveOptions]="{exact: true}" class="db-nav-item" (click)="closeSidebar()">
-          <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
-          <span class="db-nav-label">{{ item.label }}</span>
-        </a>
+    <!-- Modern grouped navigation -->
+    <nav class="db-nav db-nav--grouped">
 
-        <!-- Group with submenu -->
-        <div *ngIf="item.children && item.children.length > 0" class="db-nav-group" [class.db-nav-group--open]="isSubmenuOpen(item.id)">
-          <button type="button" class="db-nav-item db-nav-item--group" (click)="toggleSubmenu(item.id)" [attr.aria-expanded]="isSubmenuOpen(item.id)">
-            <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
-            <span class="db-nav-label">{{ item.label }}</span>
-            <span class="db-nav-chev" aria-hidden="true">›</span>
-          </button>
-          <ul class="db-nav-sub" *ngIf="isSubmenuOpen(item.id)">
-            <li *ngFor="let child of item.children">
-              <a *ngIf="child.route" [routerLink]="child.route" [queryParams]="child.queryParams || null" routerLinkActive="db-nav-sub-item--active" [routerLinkActiveOptions]="{ exact: !!child.queryParams }" class="db-nav-sub-item" (click)="closeSidebar()">
-                <span class="db-nav-sub-ico" aria-hidden="true">{{ child.icon || '•' }}</span>
-                <span class="db-nav-sub-label">{{ child.label }}</span>
-              </a>
-              <button *ngIf="!child.route && child.action" type="button" class="db-nav-sub-item db-nav-sub-item--btn" (click)="runNavAction(child.action)">
-                <span class="db-nav-sub-ico" aria-hidden="true">{{ child.icon || '•' }}</span>
-                <span class="db-nav-sub-label">{{ child.label }}</span>
-              </button>
-            </li>
-          </ul>
+      <!-- Live filter -->
+      <div class="db-nav-search">
+        <span class="db-nav-search-ico" aria-hidden="true">🔍</span>
+        <input type="text"
+               class="db-nav-search-input"
+               placeholder="Filter menu…"
+               [(ngModel)]="navFilter"
+               autocomplete="off"
+               spellcheck="false" />
+        <button *ngIf="navFilter" type="button" class="db-nav-search-clear" (click)="clearNavFilter()" aria-label="Clear filter">✕</button>
+      </div>
+
+      <ng-container *ngFor="let section of navSections">
+        <div class="db-nav-section" *ngIf="sectionHasVisible(section)">
+          <div class="db-nav-section-head">
+            <span class="db-nav-section-ico" aria-hidden="true">{{ section.icon }}</span>
+            <span class="db-nav-section-title">{{ section.title }}</span>
+          </div>
+
+          <div class="db-nav-section-items">
+            <ng-container *ngFor="let item of section.items">
+              <ng-container *ngIf="matchesFilter(item)">
+
+                <!-- Direct link (no submenu) -->
+                <a *ngIf="item.route && !item.children" [routerLink]="item.route" routerLinkActive="db-nav-item--active" [routerLinkActiveOptions]="{exact: true}" class="db-nav-item" (click)="closeSidebar()">
+                  <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
+                  <span class="db-nav-label">{{ item.label }}</span>
+                </a>
+
+                <!-- Group with submenu -->
+                <div *ngIf="item.children && item.children.length > 0" class="db-nav-group" [class.db-nav-group--open]="isSubmenuOpen(item.id)">
+                  <button type="button" class="db-nav-item db-nav-item--group" (click)="toggleSubmenu(item.id)" [attr.aria-expanded]="isSubmenuOpen(item.id)">
+                    <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
+                    <span class="db-nav-label">{{ item.label }}</span>
+                    <span class="db-nav-badge" *ngIf="item.children.length > 0">{{ item.children.length }}</span>
+                    <span class="db-nav-chev" aria-hidden="true">›</span>
+                  </button>
+                  <ul class="db-nav-sub" *ngIf="isSubmenuOpen(item.id)">
+                    <li *ngFor="let child of visibleChildren(item)">
+                      <a *ngIf="child.route" [routerLink]="child.route" [queryParams]="child.queryParams || null" routerLinkActive="db-nav-sub-item--active" [routerLinkActiveOptions]="{ exact: !!child.queryParams }" class="db-nav-sub-item" (click)="closeSidebar()">
+                        <span class="db-nav-sub-ico" aria-hidden="true">{{ child.icon || '•' }}</span>
+                        <span class="db-nav-sub-label">{{ child.label }}</span>
+                      </a>
+                      <button *ngIf="!child.route && child.action" type="button" class="db-nav-sub-item db-nav-sub-item--btn" (click)="runNavAction(child.action)">
+                        <span class="db-nav-sub-ico" aria-hidden="true">{{ child.icon || '•' }}</span>
+                        <span class="db-nav-sub-label">{{ child.label }}</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+
+              </ng-container>
+            </ng-container>
+          </div>
         </div>
       </ng-container>
 

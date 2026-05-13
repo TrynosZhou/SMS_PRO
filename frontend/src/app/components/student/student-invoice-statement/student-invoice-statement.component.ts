@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { StudentService } from '../../../services/student.service';
 import { FinanceService } from '../../../services/finance.service';
-import { SettingsService } from '../../../services/settings.service';
+import { CurrencyService } from '../../../services/currency.service';
 
 @Component({
   selector: 'app-student-invoice-statement',
@@ -19,14 +19,14 @@ export class StudentInvoiceStatementComponent implements OnInit {
   error = '';
   studentName = '';
   studentNumber = '';
-  /** School currency — default $ (overridden by settings when loaded) */
-  currencySymbol = '$';
+  /** School currency — default $ (overridden by CurrencyService once settings load) */
+  currencySymbol = CurrencyService.DEFAULT_SYMBOL;
 
   constructor(
     private authService: AuthService,
     private studentService: StudentService,
     private financeService: FinanceService,
-    private settingsService: SettingsService,
+    private currencyService: CurrencyService,
     private router: Router
   ) {
     const user = this.authService.getCurrentUser();
@@ -44,20 +44,8 @@ export class StudentInvoiceStatementComponent implements OnInit {
       return;
     }
 
-    this.loadSettings();
+    this.currencyService.symbol$.subscribe(s => (this.currencySymbol = s));
     this.loadInvoiceBalance();
-  }
-
-  loadSettings(): void {
-    this.settingsService.getSettings().subscribe({
-      next: (data: any) => {
-        const row = Array.isArray(data) && data.length ? data[0] : data;
-        this.currencySymbol = (row?.currencySymbol && String(row.currencySymbol).trim()) || '$';
-      },
-      error: () => {
-        this.currencySymbol = '$';
-      }
-    });
   }
 
   loadInvoiceBalance(): void {

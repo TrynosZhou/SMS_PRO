@@ -1,0 +1,280 @@
+<!-- Purple top banner -->
+<div class="acd-top-banner">
+  <span class="acd-top-banner-ico" aria-hidden="true">☰</span>
+  <span class="acd-top-banner-title">Manage Departments</span>
+  <span class="acd-top-banner-sub">Create, edit, and manage academic departments for your school</span>
+</div>
+
+<!-- Blue directory sub-bar -->
+<div class="acd-dir-bar">
+  <div class="acd-dir-left">
+    <span class="acd-dir-ico" aria-hidden="true">🏛️</span>
+    <div>
+      <div class="acd-dir-title">Departments Directory</div>
+      <div class="acd-dir-count">Total: {{ departments.length }} department{{ departments.length === 1 ? '' : 's' }}</div>
+    </div>
+  </div>
+  <button class="acd-add-btn" (click)="openAddModal()" title="Add Department" aria-label="Add Department">
+    <span class="acd-add-plus">+</span> Add Department
+  </button>
+</div>
+
+<!-- Search -->
+<div class="acd-search-section">
+  <div class="acd-search-wrap">
+    <span class="acd-search-icon" aria-hidden="true">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </span>
+    <input
+      class="acd-search"
+      type="text"
+      placeholder="Search departments..."
+      [(ngModel)]="searchQuery"
+      (input)="applyFilter()"
+    />
+  </div>
+  <p class="acd-search-hint">Type to filter departments — click a row to assign subjects</p>
+</div>
+
+<!-- Table headers -->
+<div class="acd-table-headers">
+  <div class="acd-th acd-th-name">
+    <span class="acd-th-ico">🏛️</span> DEPARTMENT NAME
+  </div>
+  <div class="acd-th acd-th-subjects">
+    <span class="acd-th-ico">📘</span> SUBJECTS
+  </div>
+  <div class="acd-th acd-th-status">
+    <span class="acd-th-ico">●</span> STATUS
+  </div>
+  <div class="acd-th acd-th-actions">
+    <span class="acd-th-ico">⚙️</span> ACTIONS
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="acd-loading" *ngIf="loading">
+  <div class="acd-spinner"></div>
+  <span>Loading departments…</span>
+</div>
+
+<!-- Rows -->
+<div class="acd-rows" *ngIf="!loading">
+  <div
+    class="acd-row acd-row-clickable"
+    *ngFor="let d of filteredDepartments; trackBy: trackById"
+    (click)="openAssignModal(d)"
+    role="button"
+    tabindex="0"
+    (keydown.enter)="openAssignModal(d)"
+    title="Click to assign subjects"
+  >
+    <div class="acd-cell acd-cell-name">
+      <span class="acd-name-badge">{{ d.name }}</span>
+    </div>
+    <div class="acd-cell acd-cell-subjects">
+      <ng-container *ngIf="(d.subjects?.length || 0) > 0; else noSubs">
+        <span class="acd-subj-chip" *ngFor="let s of d.subjects">{{ s.name }}</span>
+      </ng-container>
+      <ng-template #noSubs>
+        <span class="acd-subj-empty">No subjects assigned — click to add</span>
+      </ng-template>
+    </div>
+    <div class="acd-cell acd-cell-status">
+      <span class="acd-status-pill" [class.acd-status-on]="d.isActive !== false" [class.acd-status-off]="d.isActive === false">
+        {{ d.isActive === false ? 'Inactive' : 'Active' }}
+      </span>
+    </div>
+    <div class="acd-cell acd-cell-actions" (click)="$event.stopPropagation()">
+      <button class="acd-action-assign" (click)="openAssignModal(d)" title="Assign subjects">📘</button>
+      <button class="acd-action-edit" (click)="openEditModal(d, $event)" title="Edit department">✏️</button>
+      <button class="acd-action-del"  (click)="deleteDepartment(d.id, d.name, $event)" title="Delete department">🗑️</button>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="acd-empty" *ngIf="filteredDepartments.length === 0">
+    <div class="acd-empty-ico" aria-hidden="true">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#b0bec5" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+    </div>
+    <h3 class="acd-empty-title">No departments found</h3>
+    <p class="acd-empty-desc">
+      {{ searchQuery ? 'No departments match your search.' : 'No departments have been added yet. Click + Add Department to create one.' }}
+    </p>
+  </div>
+</div>
+
+<!-- ── Add Department Modal ─────────────────────────── -->
+<div class="acd-modal-backdrop" *ngIf="showAddModal" (click)="closeAddModal()"></div>
+<div class="acd-modal" *ngIf="showAddModal" role="dialog" aria-modal="true" aria-labelledby="dep-add-title">
+
+  <div class="acd-modal-header">
+    <span class="acd-modal-header-ico">+</span>
+    <div>
+      <h2 id="dep-add-title" class="acd-modal-title">Add New Department</h2>
+      <p class="acd-modal-subtitle">Enter department details to add it to the directory</p>
+    </div>
+  </div>
+
+  <div class="acd-modal-body">
+    <div class="acd-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+    <div class="acd-form-section">
+      <div class="acd-section-header">
+        <span class="acd-section-ico">🏛️</span>
+        <h3 class="acd-section-title">Department Information</h3>
+      </div>
+      <hr class="acd-divider" />
+
+      <div class="acd-field" [class.acd-field-error]="submitted && !newDepartment.name">
+        <label class="acd-label">Department Name *</label>
+        <input
+          class="acd-input"
+          type="text"
+          placeholder="e.g. Science"
+          [(ngModel)]="newDepartment.name"
+          (keyup.enter)="saveDepartment()"
+          autofocus
+        />
+        <span class="acd-hint acd-hint-err" *ngIf="submitted && !newDepartment.name">Department name is required</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="acd-modal-footer">
+    <button class="acd-btn-cancel" (click)="closeAddModal()"><span>✕</span> Cancel</button>
+    <button class="acd-btn-save" (click)="saveDepartment()" [disabled]="submitting">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      {{ submitting ? 'Saving…' : 'Add Department' }}
+    </button>
+  </div>
+</div>
+
+<!-- ── Edit Department Modal ────────────────────────── -->
+<div class="acd-modal-backdrop" *ngIf="showEditModal" (click)="closeEditModal()"></div>
+<div class="acd-modal" *ngIf="showEditModal" role="dialog" aria-modal="true" aria-labelledby="dep-edit-title">
+
+  <div class="acd-modal-header acd-modal-header-edit">
+    <span class="acd-modal-header-ico acd-modal-header-ico-edit">✏️</span>
+    <div>
+      <h2 id="dep-edit-title" class="acd-modal-title">Edit Department</h2>
+      <p class="acd-modal-subtitle">Update the details for this department</p>
+    </div>
+  </div>
+
+  <div class="acd-modal-body">
+    <div class="acd-error" *ngIf="editErrorMsg">{{ editErrorMsg }}</div>
+    <div class="acd-form-section">
+      <div class="acd-section-header">
+        <span class="acd-section-ico">🏛️</span>
+        <h3 class="acd-section-title">Department Information</h3>
+      </div>
+      <hr class="acd-divider" />
+
+      <div class="acd-field" [class.acd-field-error]="editSubmitted && !editDepartment.name">
+        <label class="acd-label">Department Name *</label>
+        <input class="acd-input" type="text" placeholder="e.g. Science" [(ngModel)]="editDepartment.name" />
+        <span class="acd-hint acd-hint-err" *ngIf="editSubmitted && !editDepartment.name">Department name is required</span>
+      </div>
+
+      <div class="acd-field acd-field-toggle">
+        <label class="acd-toggle">
+          <input type="checkbox" [(ngModel)]="editDepartment.isActive" />
+          <span class="acd-toggle-slider"></span>
+          <span class="acd-toggle-label">{{ editDepartment.isActive ? 'Active' : 'Inactive' }}</span>
+        </label>
+        <span class="acd-hint">Inactive departments are hidden from selection lists</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="acd-modal-footer">
+    <button class="acd-btn-cancel" (click)="closeEditModal()"><span>✕</span> Cancel</button>
+    <button class="acd-btn-update" (click)="updateDepartment()" [disabled]="editSubmitting">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      {{ editSubmitting ? 'Saving…' : 'Save Changes' }}
+    </button>
+  </div>
+</div>
+
+<!-- ── Assign Subjects Modal ────────────────────────── -->
+<div class="acd-modal-backdrop" *ngIf="showAssignModal" (click)="closeAssignModal()"></div>
+<div class="acd-modal acd-modal-wide" *ngIf="showAssignModal" role="dialog" aria-modal="true" aria-labelledby="dep-assign-title">
+
+  <div class="acd-modal-header acd-modal-header-assign">
+    <span class="acd-modal-header-ico acd-modal-header-ico-assign">📘</span>
+    <div>
+      <h2 id="dep-assign-title" class="acd-modal-title">
+        Assign Subjects — {{ assigningDept?.name }}
+      </h2>
+      <p class="acd-modal-subtitle">
+        Tick the subjects that belong to this department. A subject can only belong to one department; selecting it here will move it from any other department.
+      </p>
+    </div>
+  </div>
+
+  <div class="acd-modal-body acd-assign-body">
+    <div class="acd-error" *ngIf="assignErrorMsg">{{ assignErrorMsg }}</div>
+
+    <div class="acd-assign-toolbar">
+      <div class="acd-search-wrap acd-assign-search">
+        <span class="acd-search-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input
+          class="acd-search"
+          type="text"
+          placeholder="Search subjects..."
+          [(ngModel)]="assignSubjectSearch"
+        />
+      </div>
+      <div class="acd-assign-summary">
+        {{ selectedAssignCount() }} of {{ allSubjects.length }} subject{{ allSubjects.length === 1 ? '' : 's' }} selected
+      </div>
+    </div>
+
+    <div class="acd-assign-list" *ngIf="allSubjects.length > 0; else noSubjects">
+      <label
+        class="acd-assign-item"
+        *ngFor="let s of filteredAssignSubjects; trackBy: trackById"
+        [class.acd-assign-item-checked]="isSubjectChecked(s.id)"
+      >
+        <input
+          type="checkbox"
+          [checked]="isSubjectChecked(s.id)"
+          (change)="toggleAssignSubject(s.id, $any($event.target).checked)"
+        />
+        <span class="acd-assign-name">{{ s.name }}</span>
+        <span class="acd-assign-code" *ngIf="s.code">{{ s.code }}</span>
+        <span class="acd-assign-current" *ngIf="otherDepartmentNameFor(s) as other">
+          Currently in: {{ other }}
+        </span>
+      </label>
+
+      <div class="acd-assign-empty" *ngIf="filteredAssignSubjects.length === 0">
+        No subjects match "{{ assignSubjectSearch }}".
+      </div>
+    </div>
+
+    <ng-template #noSubjects>
+      <div class="acd-assign-empty">
+        No subjects exist yet. Add subjects from the <strong>Subjects</strong> tab first, then come back here to assign them.
+      </div>
+    </ng-template>
+  </div>
+
+  <div class="acd-modal-footer">
+    <button class="acd-btn-cancel" (click)="closeAssignModal()"><span>✕</span> Cancel</button>
+    <button class="acd-btn-save" (click)="saveAssignments()" [disabled]="assignSubmitting || allSubjects.length === 0">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      {{ assignSubmitting ? 'Saving…' : 'Save Subjects' }}
+    </button>
+  </div>
+</div>

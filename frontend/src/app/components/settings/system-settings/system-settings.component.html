@@ -454,3 +454,69 @@
     </button>
   </div>
 </div>
+
+<!-- ════════════════════════════════════════════════
+     STUDENT ID PREFIX TAB
+════════════════════════════════════════════════ -->
+<div class="ss-body" *ngIf="!loading && activeTab === 'student-id'">
+  <div class="ss-section-header">
+    <span class="ss-section-ico" aria-hidden="true">🆔</span>
+    <div>
+      <h2 class="ss-section-title">Student ID Prefix</h2>
+      <p class="ss-section-sub">Choose the 3-letter prefix that begins every Student ID issued by the system</p>
+    </div>
+  </div>
+
+  <div class="ss-card">
+    <p class="ss-card-hint" style="margin-top: 0;">
+      Every new student is assigned a Student ID with the format
+      <strong>PREFIX</strong><strong>###</strong><strong>YYYY</strong> —
+      where <strong>PREFIX</strong> is the value you set here,
+      <strong>###</strong> is a unique 3-digit number, and
+      <strong>YYYY</strong> is the registration year.
+    </p>
+
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label class="ss-lbl">Prefix (3 letters)</label>
+        <input
+          class="ss-input"
+          type="text"
+          maxlength="3"
+          placeholder="e.g. SCH"
+          [(ngModel)]="studentIdPrefixInput"
+          (ngModelChange)="onStudentIdPrefixInput()"
+          style="text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700;"
+        />
+        <span class="ss-hint">Letters A–Z only. Will be padded with "X" or trimmed to exactly 3 characters.</span>
+      </div>
+      <div class="ss-field">
+        <label class="ss-lbl">Preview</label>
+        <input
+          class="ss-input"
+          type="text"
+          [value]="studentIdPreview"
+          readonly
+          style="background:#f1f5f9; font-family: monospace; font-weight: 700; letter-spacing: 0.05em;"
+        />
+        <span class="ss-hint">Example of an ID a newly registered student will get this year.</span>
+      </div>
+    </div>
+
+    <div
+      class="ss-card-test"
+      *ngIf="studentIdPrefixInput !== savedStudentIdPrefix"
+      style="margin-top: 1rem; padding: 0.75rem 1rem; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; color:#92400e; font-size:0.85rem;"
+    >
+      ⚠ Saving this change will <strong>renumber every existing Student ID</strong> to use the new prefix
+      (the digit and year portions are preserved). Make sure parents and teachers are aware before saving.
+    </div>
+  </div>
+
+  <div class="ss-actions">
+    <button class="ss-save-btn" (click)="save()" [disabled]="saving">
+      <span *ngIf="!saving">💾 Save Student ID Prefix</span>
+      <span *ngIf="saving">Saving…</span>
+    </button>
+  </div>
+</div>
