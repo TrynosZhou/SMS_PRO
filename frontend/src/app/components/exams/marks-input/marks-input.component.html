@@ -78,7 +78,7 @@
             name="subject"
           >
             <option value="">Choose Subject*</option>
-            <option *ngFor="let s of subjects" [value]="s.id">{{ s.name }}</option>
+            <option *ngFor="let s of subjects" [value]="s.id">{{ subjectDisplayLabel(s) }}</option>
           </select>
         </div>
 

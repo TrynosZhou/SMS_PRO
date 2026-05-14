@@ -1,12 +1,10 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { TeacherService } from '../../../services/teacher.service';
 import { SettingsService } from '../../../services/settings.service';
 import { ModuleAccessService } from '../../../services/module-access.service';
 import { ClassService } from '../../../services/class.service';
-import { EtaskService } from '../../../services/etask.service';
 
 @Component({
   selector: 'app-teacher-dashboard',
@@ -36,18 +34,12 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
   clockDate = '';
   private clockIntervalId: ReturnType<typeof setInterval> | null = null;
 
-  /** E-learning metrics (when record book / e-learning is enabled) */
-  elearningLoading = false;
-  tasksCreatedCount = 0;
-  submissionsReceivedCount = 0;
-
   constructor(
     private authService: AuthService,
     private teacherService: TeacherService,
     private settingsService: SettingsService,
     private moduleAccessService: ModuleAccessService,
     private classService: ClassService,
-    private etaskService: EtaskService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {
@@ -181,8 +173,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
       { key: 'exams', name: 'Exams', route: '/exams', icon: '📝', description: 'Marks capturing and exams' },
       { key: 'reportCards', name: 'Report Cards', route: '/reports', icon: '📊', description: 'View and generate report cards' },
       { key: 'rankings', name: 'Rankings', route: '/ranking', icon: '🏆', description: 'View rankings' },
-      { key: 'recordBook', name: 'Record Book', route: '/teacher/elearning-manage/record-book', icon: '📖', description: 'Enter and view marks' },
-      { key: 'etask', name: 'Create Task', route: '/teacher/elearning-manage/tasks', icon: '✏️', description: 'E-learning tasks for your classes' },
+      { key: 'recordBook', name: 'Record Book', route: '/teacher/record-book', icon: '📖', description: 'Enter and view marks' },
       { key: 'inventory', name: 'Inventory Manager', route: '/teacher/inventory_manage', icon: '📦', description: 'Issue textbooks and class furniture' },
       { key: 'attendance', name: 'Attendance', route: '/attendance/mark', icon: '✅', description: 'Mark register & attendance' },
       { key: 'finance', name: 'Finance', route: '/invoices', icon: '💰', description: 'View financial information' },
@@ -190,34 +181,8 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
     ];
 
     this.availableModules = allModules.filter((module) => {
-      if (module.key === 'etask' && !this.canAccessModule('recordBook')) {
-        return false;
-      }
       const moduleAccess = teacherModules as { [key: string]: boolean | undefined };
       return moduleAccess[module.key] !== false;
-    });
-  }
-
-  /** Loads e-task and submission counts for the overview strip. */
-  loadElearningStats(): void {
-    if (!this.canAccessModule('recordBook')) {
-      return;
-    }
-    this.elearningLoading = true;
-    forkJoin({
-      tasks: this.etaskService.listTeacherTasks(),
-      subs: this.etaskService.listTeacherSubmissions()
-    }).subscribe({
-      next: ({ tasks, subs }) => {
-        this.tasksCreatedCount = Array.isArray(tasks) ? tasks.length : 0;
-        this.submissionsReceivedCount = Array.isArray(subs) ? subs.length : 0;
-        this.elearningLoading = false;
-      },
-      error: () => {
-        this.tasksCreatedCount = 0;
-        this.submissionsReceivedCount = 0;
-        this.elearningLoading = false;
-      }
     });
   }
 
@@ -275,7 +240,6 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
         } else {
           this.teacherClasses = teacher.classes || [];
           this.loading = false;
-          this.loadElearningStats();
         }
 
         this.cdr.detectChanges();
@@ -332,14 +296,12 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
         // Only use classes from the dedicated endpoint (these are from junction table)
         this.teacherClasses = this.classService.sortClasses(classes);
         this.loading = false;
-        this.loadElearningStats();
       },
       error: (err: any) => {
         console.error('Error loading teacher classes:', err);
         const fallbackClasses = this.teacher?.classes || [];
         this.teacherClasses = this.classService.sortClasses(fallbackClasses);
         this.loading = false;
-        this.loadElearningStats();
       }
     });
   }
@@ -353,7 +315,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
       return;
     }
     // Navigate to record book with class ID
-    this.router.navigate(['/teacher/elearning-manage/record-book'], {
+    this.router.navigate(['/teacher/record-book'], {
       queryParams: { classId: classId }
     });
   }

@@ -252,7 +252,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
             { label: 'Subjects', icon: '📚', route: '/subjects' },
             { label: 'Marks Input', icon: '📝', route: '/marks-input' },
             { label: 'Marks Progress', icon: '📈', route: '/marks-progress' },
-            { label: 'Marks Diagnostics', icon: '📊', route: '/mark-diagnostic' }
+            { label: 'Marks Diagnostics', icon: '📊', route: '/mark-diagnostic' },
+            { label: 'Continuous Assessment', icon: '📋', route: '/marks/continuous' }
           ]
         },
         {
@@ -339,7 +340,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
             { label: 'DH Services', icon: '🛏️', route: '/reports/dh-services' }
           ]
         },
-        { id: 'elearning', label: 'E-Learning', icon: '💻', route: '/elearning' }
       );
 
       if (this.isInventoryStaff()) {
@@ -361,12 +361,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
           id: 'system-administration', label: 'System Administration', icon: '🛠️',
           children: [
             { label: 'User Management', icon: '👥', route: '/user-management' },
-            { label: 'Role & Permissions', icon: '🔐', route: '/roles-permissions' },
+            { label: 'Role & Permissions', icon: '🔐', route: '/system/roles' },
             { label: 'Academic Settings', icon: '🎓', route: '/academic-settings' },
             { label: 'System Settings', icon: '⚙️', route: '/system-settings' },
             { label: 'Audit Logs', icon: '📜', route: '/audit-logs' },
             { label: 'Analytics & Reports', icon: '📊', route: '/analytics-reports' },
-            { label: 'Integrations', icon: '🔗', route: '/integrations' }
+            { label: 'Integrations', icon: '🔗', route: '/system/integrations' }
           ]
         }
       );
@@ -495,8 +495,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       sections.push({ id: 'sec-finance', title: 'Finance', icon: '💰', items: finance });
     }
 
-    // OPERATIONS — Timetable, communication, misc reports, e-learning, inventory
-    const operations = take(['timetable', 'communication', 'reports', 'elearning', 'inventory', 'parent-comm', 'parent-inbox', 'parent-link']);
+    // OPERATIONS — Timetable, communication, misc reports, inventory
+    const operations = take(['timetable', 'communication', 'reports', 'inventory', 'parent-comm', 'parent-inbox', 'parent-link']);
     if (operations.length) {
       sections.push({ id: 'sec-operations', title: 'Operations', icon: '🧰', items: operations });
     }
@@ -1367,7 +1367,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         { label: 'Attendance Reports', icon: '📋', route: '/attendance-reports', group: 'Reports' },
         { label: 'Reports Hub', icon: '📊', route: '/reports/manage', group: 'Reports' },
         { label: 'Timetable', icon: '📅', route: '/timetable/manage', group: 'Modules' },
-        { label: 'E-learning', icon: '💻', route: '/elearning', group: 'Modules' },
         { label: 'Messages', icon: '💬', route: '/communication_manage', group: 'Modules' },
         { label: 'Settings', icon: '⚙️', route: '/settings', group: 'Modules' },
         { label: 'Academic Settings', icon: '🎓', route: '/academic-settings', group: 'Modules' },

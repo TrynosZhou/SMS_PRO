@@ -14,7 +14,6 @@ import { AppDataSource } from '../src/config/database';
 import { Class } from '../src/entities/Class';
 import { Exam } from '../src/entities/Exam';
 import { Marks } from '../src/entities/Marks';
-import { ETask } from '../src/entities/ETask';
 import { TimetableSlot } from '../src/entities/TimetableSlot';
 import { Attendance } from '../src/entities/Attendance';
 import { RecordBook } from '../src/entities/RecordBook';
@@ -88,7 +87,6 @@ async function main(): Promise<void> {
       await em.getRepository(Marks).delete({ examId: In(examIds) });
     }
     await examRepo.delete({ classId: In(deleteIds) });
-    await em.getRepository(ETask).delete({ classId: In(deleteIds) });
     await em.getRepository(TimetableSlot).delete({ classId: In(deleteIds) });
     await em.getRepository(Attendance).delete({ classId: In(deleteIds) });
     await em.getRepository(RecordBook).delete({ classId: In(deleteIds) });

@@ -43,10 +43,6 @@
               <span class="td-mini-value">{{ loading ? '—' : subjectCount }}</span>
               <span class="td-mini-label">Subjects</span>
             </div>
-            <div class="td-mini-stat" *ngIf="canAccessModule('recordBook')">
-              <span class="td-mini-value">{{ elearningLoading ? '…' : tasksCreatedCount }}</span>
-              <span class="td-mini-label">Tasks</span>
-            </div>
           </div>
         </div>
       </div>
@@ -109,29 +105,6 @@
           <div class="stat-trend"><span class="trend-icon">🎯</span></div>
         </div>
 
-        <div class="stat-card modern-card td-stat-card td-stat-elearn" *ngIf="canAccessModule('recordBook')">
-          <div class="stat-icon-wrapper">
-            <div class="stat-icon modern-icon">✏️</div>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value animated-value">{{ elearningLoading ? '…' : tasksCreatedCount }}</div>
-            <div class="stat-label">E-tasks posted</div>
-            <div class="stat-sublabel"><span class="sublabel-item">Assignments &amp; tests you created</span></div>
-          </div>
-          <div class="stat-trend"><span class="trend-icon">💻</span></div>
-        </div>
-
-        <div class="stat-card modern-card td-stat-card td-stat-elearn" *ngIf="canAccessModule('recordBook')">
-          <div class="stat-icon-wrapper">
-            <div class="stat-icon modern-icon">📥</div>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value animated-value">{{ elearningLoading ? '…' : submissionsReceivedCount }}</div>
-            <div class="stat-label">Submissions in</div>
-            <div class="stat-sublabel"><span class="sublabel-item">Student work uploaded</span></div>
-          </div>
-          <div class="stat-trend"><span class="trend-icon">📎</span></div>
-        </div>
       </div>
     </div>
 
@@ -143,23 +116,11 @@
         <section class="td-featured" aria-labelledby="td-featured-title" *ngIf="!loading">
           <h2 id="td-featured-title" class="td-section-title">Start here</h2>
           <div class="td-featured-grid">
-            <a routerLink="/teacher/elearning-manage/record-book" class="td-feature-card td-fc-record" *ngIf="canAccessModule('recordBook')">
+            <a routerLink="/teacher/record-book" class="td-feature-card td-fc-record" *ngIf="canAccessModule('recordBook')">
               <span class="td-fc-icon">📘</span>
               <span class="td-fc-title">Record book</span>
               <span class="td-fc-desc">Marks &amp; comments for your classes</span>
               <span class="td-fc-go">Open →</span>
-            </a>
-            <a routerLink="/teacher/elearning-manage/tasks" class="td-feature-card td-fc-task" *ngIf="canAccessModule('recordBook')">
-              <span class="td-fc-icon">✏️</span>
-              <span class="td-fc-title">E-learning tasks</span>
-              <span class="td-fc-desc">Post assignments &amp; share materials</span>
-              <span class="td-fc-go">Create →</span>
-            </a>
-            <a routerLink="/teacher/elearning-manage/submissions" class="td-feature-card td-fc-sub" *ngIf="canAccessModule('recordBook')">
-              <span class="td-fc-icon">📥</span>
-              <span class="td-fc-title">Submissions</span>
-              <span class="td-fc-desc">Review student uploads</span>
-              <span class="td-fc-go">Review →</span>
             </a>
             <a routerLink="/mark-register" class="td-feature-card td-fc-att" *ngIf="canAccessModule('attendance')">
               <span class="td-fc-icon">✅</span>
@@ -173,7 +134,7 @@
               <span class="td-fc-desc">Capture and review assessments</span>
               <span class="td-fc-go">Go →</span>
             </a>
-            <a routerLink="/teacher/elearning-manage/my-classes" class="td-feature-card td-fc-class">
+            <a routerLink="/teacher/my-classes" class="td-feature-card td-fc-class">
               <span class="td-fc-icon">👥</span>
               <span class="td-fc-title">My classes</span>
               <span class="td-fc-desc">Rosters and class overview</span>
@@ -193,7 +154,7 @@
             </p>
             <ul class="teacher-feature-list">
               <li *ngIf="canAccessModule('exams')">Enter and review marks for assessments you’re involved in.</li>
-              <li *ngIf="canAccessModule('recordBook')">Use the <strong>Record Book</strong>, <strong>Create Task</strong>, and <strong>Submissions</strong> under E-learning Services.</li>
+              <li *ngIf="canAccessModule('recordBook')">Use the <strong>Record Book</strong> for marks and ongoing class records.</li>
               <li *ngIf="canAccessModule('attendance')">Take attendance and view attendance reports for your groups.</li>
               <li *ngIf="canAccessModule('reportCards')">View or generate report cards where permitted.</li>
               <li *ngIf="canAccessModule('rankings')">Review rankings for your subjects or classes.</li>
@@ -207,23 +168,17 @@
             </div>
             <div class="td-qa-groups">
               <div class="td-qa-group" *ngIf="canAccessModule('recordBook')">
-                <h3 class="td-qa-heading">E-learning</h3>
+                <h3 class="td-qa-heading">Record book</h3>
                 <div class="quick-actions modern-actions td-qa-grid">
-                  <a routerLink="/teacher/elearning-manage/record-book" class="action-btn modern-action-btn primary-action">
+                  <a routerLink="/teacher/record-book" class="action-btn modern-action-btn primary-action">
                     <span class="action-icon">📘</span><span class="action-text">Record Book</span><span class="action-arrow">→</span>
-                  </a>
-                  <a routerLink="/teacher/elearning-manage/tasks" class="action-btn modern-action-btn elearning-quick-action">
-                    <span class="action-icon">✏️</span><span class="action-text">Create Task</span><span class="action-arrow">→</span>
-                  </a>
-                  <a routerLink="/teacher/elearning-manage/submissions" class="action-btn modern-action-btn elearning-quick-action">
-                    <span class="action-icon">📥</span><span class="action-text">Submissions</span><span class="action-arrow">→</span>
                   </a>
                 </div>
               </div>
               <div class="td-qa-group">
                 <h3 class="td-qa-heading">Classes &amp; attendance</h3>
                 <div class="quick-actions modern-actions td-qa-grid">
-                  <a routerLink="/teacher/elearning-manage/my-classes" class="action-btn modern-action-btn info-action">
+                  <a routerLink="/teacher/my-classes" class="action-btn modern-action-btn info-action">
                     <span class="action-icon">👥</span><span class="action-text">My Classes</span><span class="action-arrow">→</span>
                   </a>
                   <a routerLink="/mark-register" class="action-btn modern-action-btn success-action" *ngIf="canAccessModule('attendance')">
@@ -315,7 +270,7 @@
       <aside class="td-aside" *ngIf="!loading" aria-label="Tips and ideas">
         <div class="td-widget td-widget-tip">
           <h3 class="td-widget-title"><span aria-hidden="true">💡</span> Teaching tip</h3>
-          <p class="td-widget-body">Batch similar tasks: set up e-learning assignments for the week, then review submissions in one go from <strong>Submissions</strong>.</p>
+          <p class="td-widget-body">Plan assessment batches for the week in the record book and marks screens so reporting stays consistent.</p>
         </div>
         <div class="td-widget td-widget-shortcuts">
           <h3 class="td-widget-title"><span aria-hidden="true">⌨️</span> Sidebar</h3>

@@ -1,0 +1,188 @@
+<div class="mi-page">
+  <div class="mi-frame">
+    <div class="mi-banner">
+      <h1 class="mi-banner-title">Continuous Assessment Entry</h1>
+    </div>
+
+    <div class="mi-alert mi-alert-error" *ngIf="error">
+      <span class="mi-alert-icon">!</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <div class="mi-card mi-filters-card ca-filters-card">
+      <div class="ca-filter-rows">
+        <div class="ca-row ca-row--three">
+          <div class="mi-field">
+            <label class="mi-field-label" for="ca-class">Select Class*</label>
+            <select
+              id="ca-class"
+              class="mi-input"
+              [(ngModel)]="selectedClassId"
+              name="caClass"
+            >
+              <option value="">Select Class*</option>
+              <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+            </select>
+          </div>
+          <div class="mi-field">
+            <label class="mi-field-label" for="ca-topic">Topic / Skill*</label>
+            <input
+              id="ca-topic"
+              type="text"
+              class="mi-input ca-input-no-arrow"
+              [(ngModel)]="topicSkill"
+              name="caTopic"
+              placeholder="Topic / Skill*"
+              autocomplete="off"
+            />
+          </div>
+          <div class="mi-field">
+            <label class="mi-field-label" for="ca-date">Date*</label>
+            <input
+              id="ca-date"
+              type="date"
+              class="mi-input ca-input-no-arrow"
+              [(ngModel)]="assessmentDate"
+              name="caDate"
+            />
+          </div>
+        </div>
+
+        <div class="ca-row ca-row--actions">
+          <div class="mi-field">
+            <label class="mi-field-label" for="ca-type">Assessment Type</label>
+            <select
+              id="ca-type"
+              class="mi-input"
+              [(ngModel)]="selectedAssessmentType"
+              name="caAssessmentType"
+            >
+              <option *ngFor="let t of assessmentTypes" [value]="t.value">{{ t.label }}</option>
+            </select>
+          </div>
+          <div class="mi-field">
+            <label class="mi-field-label" for="ca-outof">Out of (optional)</label>
+            <input
+              id="ca-outof"
+              type="number"
+              class="mi-input ca-input-no-arrow"
+              [(ngModel)]="outOfStr"
+              name="caOutOf"
+              placeholder="Out of (optional)"
+              min="1"
+              step="1"
+            />
+          </div>
+          <button type="button" class="ca-apply-link" (click)="applyOutOfToAllRows()">
+            Apply &apos;Out of&apos; to All Rows
+          </button>
+          <button
+            type="button"
+            class="ca-load-btn"
+            [disabled]="!canLoad || loading"
+            (click)="loadClassList()"
+          >
+            <span *ngIf="!loading">Load Class List</span>
+            <span *ngIf="loading">Loading…</span>
+          </button>
+        </div>
+      </div>
+
+      <p class="ca-hint" *ngIf="!hasLoadedRoster && !loading">
+        Select a class, topic, and date, then click &apos;Load Class List&apos; to start recording marks.
+      </p>
+
+      <div class="ca-loading-row" *ngIf="loading && !hasLoadedRoster">
+        <div class="mi-spinner"></div>
+        <span>Loading class roster…</span>
+      </div>
+    </div>
+
+    <!-- Roster table (after load) -->
+    <div class="mi-card mi-table-card" *ngIf="hasLoadedRoster">
+      <div class="mi-table-head">
+        <div class="mi-table-info">
+          <h3 class="mi-table-title">
+            {{ getSelectedClassName() }} · {{ topicSkill }}
+          </h3>
+          <p class="mi-table-sub">
+            {{ selectedAssessmentLabel }} · {{ assessmentDate }}
+            <span *ngIf="maxScore"> · Out of {{ maxScore }}</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="mi-loading" *ngIf="loading">
+        <div class="mi-spinner"></div>
+        <div>Loading class roster…</div>
+      </div>
+
+      <div class="mi-empty" *ngIf="!loading && students.length === 0">
+        <div class="mi-empty-icon">🗒️</div>
+        <div class="mi-empty-title">No students in this class</div>
+        <div class="mi-empty-sub">Enrol students to record continuous assessment marks.</div>
+      </div>
+
+      <div class="mi-table-wrap" *ngIf="!loading && students.length > 0">
+        <table class="mi-table">
+          <thead>
+            <tr>
+              <th class="mi-th-num">#</th>
+              <th>Student #</th>
+              <th>Last name</th>
+              <th>First name</th>
+              <th class="mi-th-score">Score / {{ maxScore }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let s of students; let i = index; trackBy: trackByStudent"
+              [class.mi-row--dirty]="marks[s.id]?.dirty"
+            >
+              <td>{{ i + 1 }}</td>
+              <td>{{ s.studentNumber }}</td>
+              <td class="mi-cell-name">{{ s.lastName }}</td>
+              <td class="mi-cell-name">{{ s.firstName }}</td>
+              <td>
+                <div class="mi-score-cell">
+                  <input
+                    type="number"
+                    class="mi-score-input"
+                    [value]="marks[s.id]?.score ?? ''"
+                    (input)="onScoreChange(s.id, $any($event.target).value)"
+                    [min]="0"
+                    [max]="maxScore"
+                    step="1"
+                    placeholder="–"
+                  />
+                  <span
+                    class="mi-row-saved"
+                    *ngIf="isRowSaved(s.id)"
+                    title="Auto-saved"
+                    aria-label="Auto-saved"
+                  >&#10004;&#10004;</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mi-table-foot" *ngIf="!loading && students.length > 0">
+        <span class="mi-save-state" *ngIf="autoSaving">
+          <span class="mi-mini-spinner mi-mini-spinner--inline"></span> Auto-saving…
+        </span>
+        <span class="mi-save-state" *ngIf="!autoSaving && hasUnsaved">
+          <span class="mi-dot mi-dot--unsaved"></span> Unsaved changes
+        </span>
+        <span class="mi-save-state mi-save-state--saved" *ngIf="!autoSaving && !hasUnsaved && lastAutoSavedAt">
+          <span class="mi-row-saved mi-row-saved--inline" aria-hidden="true">&#10004;&#10004;</span>
+          Auto-saved locally
+          <span class="mi-saved-time"> · {{ lastAutoSavedAt | date:'shortTime' }}</span>
+        </span>
+        <span class="mi-foot-spacer"></span>
+        <span class="ca-foot-note">Stored in this browser.</span>
+      </div>
+    </div>
+  </div>
+</div>

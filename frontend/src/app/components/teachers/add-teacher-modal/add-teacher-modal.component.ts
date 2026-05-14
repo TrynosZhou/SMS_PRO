@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { AddTeacherModalService } from '../../../services/add-teacher-modal.service';
 import { TeacherService } from '../../../services/teacher.service';
 import { DepartmentsService } from '../../../services/departments.service';
+import { AuthService } from '../../../services/auth.service';
 
 interface NewTeacherDraft {
   title: string;
@@ -45,15 +46,17 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
   constructor(
     private modalService: AddTeacherModalService,
     private teacherService: TeacherService,
-    private departmentsService: DepartmentsService
+    private departmentsService: DepartmentsService,
+    private authService: AuthService
   ) {
     const today = new Date();
     this.maxDob = today.toISOString().split('T')[0];
   }
 
   ngOnInit(): void {
-    this.loadDepartments();
-    this.sub = this.modalService.visible$.subscribe(open => {
+    // Do not load departments here: this modal is on app shell and runs before login.
+    // Departments load when the modal opens (see visible$ subscription).
+    this.sub = this.modalService.visible$.subscribe((open) => {
       if (open) {
         this.draft = this.buildEmptyDraft();
         this.submitted = false;
@@ -69,6 +72,11 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
   }
 
   private loadDepartments(): void {
+    if (!this.authService.isAuthenticated()) {
+      this.departments = [];
+      this.loadingDepartments = false;
+      return;
+    }
     this.loadingDepartments = true;
     this.departmentsService.list().subscribe({
       next: (rows: any) => {

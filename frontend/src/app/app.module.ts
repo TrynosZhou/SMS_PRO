@@ -56,9 +56,7 @@ import { LinkStudentsComponent } from './components/parent/link-students/link-st
 import { ManageAccountComponent } from './components/teachers/manage-account/manage-account.component';
 import { ManageAccountsComponent } from './components/admin/manage-accounts/manage-accounts.component';
 import { ClassPromotionComponent } from './components/admin/class-promotion/class-promotion.component';
-import { ElearningComponent } from './components/elearning/elearning.component';
 import { ParentManagementComponent } from './components/admin/parent-management/parent-management.component';
-import { BulkMessageComponent } from './components/dashboard/bulk-message/bulk-message.component';
 import { ParentInboxComponent } from './components/parent/parent-inbox/parent-inbox.component';
 import { MarkAttendanceComponent } from './components/attendance/mark-attendance/mark-attendance.component';
 import { AttendanceReportsComponent } from './components/attendance/attendance-reports/attendance-reports.component';
@@ -66,14 +64,6 @@ import { RecordBookComponent } from './components/teacher/record-book/record-boo
 import { MyClassesComponent } from './components/teacher/my-classes/my-classes.component';
 import { TeacherRecordBookComponent } from './components/admin/teacher-record-book/teacher-record-book.component';
 import { TeacherDashboardComponent } from './components/teacher/teacher-dashboard/teacher-dashboard.component';
-import { EtaskComponent } from './components/teacher/etask/etask.component';
-import { EtaskSubmissionsComponent } from './components/teacher/etask-submissions/etask-submissions.component';
-import { TeacherElearningManageComponent } from './components/teacher/teacher-elearning-manage/teacher-elearning-manage.component';
-import { TeacherElearningLegacyRedirectComponent } from './components/teacher/teacher-elearning-manage/teacher-elearning-legacy-redirect.component';
-import { StudentElearningShellComponent } from './components/student/student-elearning-shell/student-elearning-shell.component';
-import { StudentElearnHubComponent } from './components/student/student-elearn/student-elearn-hub/student-elearn-hub.component';
-import { StudentElearnViewTasksComponent } from './components/student/student-elearn/student-elearn-view-tasks/student-elearn-view-tasks.component';
-import { StudentElearnSubmitTaskComponent } from './components/student/student-elearn/student-elearn-submit-task/student-elearn-submit-task.component';
 import { RecordPaymentComponent } from './components/finance/record-payment/record-payment.component';
 import { OutstandingBalanceComponent } from './components/finance/outstanding-balance/outstanding-balance.component';
 import { BalanceEnquiryComponent } from './components/finance/balance-enquiry/balance-enquiry.component';
@@ -123,6 +113,7 @@ import { AcademicReportReleasesComponent } from './components/academic/academic-
 import { AcademicGradingComponent } from './components/academic/academic-grading/academic-grading.component';
 import { SystemSettingsComponent } from './components/settings/system-settings/system-settings.component';
 import { RolesPermissionsComponent } from './components/settings/roles-permissions/roles-permissions.component';
+import { IntegrationsComponent } from './components/settings/integrations/integrations.component';
 import { FinancialReportsShellComponent } from './components/finance/financial-reports/financial-reports-shell.component';
 import { FinancialReportsSectionComponent } from './components/finance/financial-reports/financial-reports-section.component';
 import { ManageStudentsComponent } from './components/registration/manage-students/manage-students.component';
@@ -134,6 +125,8 @@ import { ClassListsViewComponent } from './components/enrolment/class-lists-view
 import { MarkRegisterComponent } from './components/attendance/mark-register/mark-register.component';
 import { AttendanceReportsViewComponent } from './components/attendance/attendance-reports-view/attendance-reports-view.component';
 import { MarksInputComponent } from './components/exams/marks-input/marks-input.component';
+import { MarksOutletComponent } from './components/exams/marks-outlet/marks-outlet.component';
+import { ContinuousAssessmentComponent } from './components/exams/continuous-assessment/continuous-assessment.component';
 
 @NgModule({
   declarations: [
@@ -188,9 +181,7 @@ import { MarksInputComponent } from './components/exams/marks-input/marks-input.
     ManageAccountComponent,
     ManageAccountsComponent,
     ClassPromotionComponent,
-    ElearningComponent,
     ParentManagementComponent,
-    BulkMessageComponent,
     ParentInboxComponent,
     MarkAttendanceComponent,
     AttendanceReportsComponent,
@@ -198,14 +189,6 @@ import { MarksInputComponent } from './components/exams/marks-input/marks-input.
     MyClassesComponent,
     TeacherRecordBookComponent,
     TeacherDashboardComponent,
-    EtaskComponent,
-    EtaskSubmissionsComponent,
-    TeacherElearningManageComponent,
-    TeacherElearningLegacyRedirectComponent,
-    StudentElearningShellComponent,
-    StudentElearnHubComponent,
-    StudentElearnViewTasksComponent,
-    StudentElearnSubmitTaskComponent,
     RecordPaymentComponent,
     OutstandingBalanceComponent,
     BalanceEnquiryComponent,
@@ -254,6 +237,7 @@ import { MarksInputComponent } from './components/exams/marks-input/marks-input.
     AcademicGradingComponent,
     SystemSettingsComponent,
     RolesPermissionsComponent,
+    IntegrationsComponent,
     FinancialReportsShellComponent,
     FinancialReportsSectionComponent,
     ManageStudentsComponent,
@@ -264,7 +248,9 @@ import { MarksInputComponent } from './components/exams/marks-input/marks-input.
     ClassListsViewComponent,
     MarkRegisterComponent,
     AttendanceReportsViewComponent,
-    MarksInputComponent
+    MarksInputComponent,
+    MarksOutletComponent,
+    ContinuousAssessmentComponent
   ],
   imports: [
     BrowserModule,

@@ -20,6 +20,7 @@ export class ExamsManageComponent {
     const u = this.router.url.split('?')[0];
     return (
       u.startsWith('/marks-input') ||
+      u.startsWith('/marks/continuous') ||
       u.includes('/exams/manage/marks-capturing') ||
       u.includes('/exams/manage/new') ||
       /\/exams\/manage\/[^/]+\/marks$/.test(u)

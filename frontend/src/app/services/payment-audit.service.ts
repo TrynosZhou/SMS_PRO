@@ -17,6 +17,10 @@ export class PaymentAuditService {
     search?: string;
     paymentMethod?: string;
     anomalyOnly?: boolean;
+    action?: string;
+    entityType?: string;
+    entityId?: string;
+    performedBy?: string;
     page?: number;
     limit?: number;
     sortBy?: string;

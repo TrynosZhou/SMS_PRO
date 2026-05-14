@@ -23,8 +23,6 @@ import { StudentFeeExemption } from '../entities/StudentFeeExemption';
 import { TimetableConfig } from '../entities/TimetableConfig';
 import { TimetableSlot } from '../entities/TimetableSlot';
 import { TimetableVersion } from '../entities/TimetableVersion';
-import { ETask } from '../entities/ETask';
-import { ETaskSubmission } from '../entities/ETaskSubmission';
 import { InventorySettings } from '../entities/InventorySettings';
 import { TextbookCatalog } from '../entities/TextbookCatalog';
 import { TextbookCopy } from '../entities/TextbookCopy';
@@ -75,8 +73,6 @@ const entities = [
   TimetableConfig,
   TimetableSlot,
   TimetableVersion,
-  ETask,
-  ETaskSubmission,
   InventorySettings,
   TextbookCatalog,
   TextbookCopy,

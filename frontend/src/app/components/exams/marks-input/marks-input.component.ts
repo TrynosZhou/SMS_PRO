@@ -178,7 +178,11 @@ export class MarksInputComponent implements OnInit, OnDestroy {
         const list = Array.isArray(data) ? data : data?.data || [];
         this.subjects = list
           .filter((s: any) => s.isActive !== false)
-          .map((s: any) => ({ id: s.id, name: s.name, code: s.code }));
+          .map((s: any) => ({
+            id: s.id,
+            name: s.name ?? '',
+            code: String(s.code ?? s.subjectCode ?? '').trim()
+          }));
         this.loadingSubjects = false;
       },
       error: () => {
@@ -201,8 +205,17 @@ export class MarksInputComponent implements OnInit, OnDestroy {
     return this.classes.find((c) => c.id === this.selectedClassId)?.name || '';
   }
 
+  /** Subject line for dropdown and roster heading: code + name when both exist. */
+  subjectDisplayLabel(s: SubjectRow): string {
+    const code = (s.code || '').trim();
+    const name = (s.name || '').trim();
+    if (code && name) return `${code} — ${name}`;
+    return name || code || '—';
+  }
+
   getSelectedSubjectName(): string {
-    return this.subjects.find((s) => s.id === this.selectedSubjectId)?.name || '';
+    const s = this.subjects.find((x) => x.id === this.selectedSubjectId);
+    return s ? this.subjectDisplayLabel(s) : '';
   }
 
   getSelectedExamTypeLabel(): string {

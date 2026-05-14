@@ -458,10 +458,6 @@
             <button class="db-mod-fav" type="button" (click)="toggleFavorite('/settings', $event)" [class.db-mod-fav--on]="isFavorite('/settings')" aria-label="Pin">★</button>
             <span class="db-mod-ico">⚙️</span><span class="db-mod-lbl">Settings</span>
           </a>
-          <a routerLink="/elearning" class="db-mod-tile" style="--mc:#7c3aed" [class.db-mod-tile--fav]="isFavorite('/elearning')">
-            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/elearning', $event)" [class.db-mod-fav--on]="isFavorite('/elearning')" aria-label="Pin">★</button>
-            <span class="db-mod-ico">💻</span><span class="db-mod-lbl">E-Learning</span>
-          </a>
           <a routerLink="/academic-settings" class="db-mod-tile" style="--mc:#8b5cf6" [class.db-mod-tile--fav]="isFavorite('/academic-settings')">
             <button class="db-mod-fav" type="button" (click)="toggleFavorite('/academic-settings', $event)" [class.db-mod-fav--on]="isFavorite('/academic-settings')" aria-label="Pin">★</button>
             <span class="db-mod-ico">🎓</span><span class="db-mod-lbl">Academic Settings</span>
@@ -611,15 +607,10 @@
               <span class="action-text">Parent Management</span>
               <span class="action-arrow">→</span>
             </a>
-            <div class="quick-actions-adjacent-pair">
-              <a routerLink="/admin/class-promotion" class="action-btn modern-action-btn warning-action adjacent-action-btn">
+            <div class="quick-actions modern-actions">
+              <a routerLink="/admin/class-promotion" class="action-btn modern-action-btn warning-action">
                 <span class="action-icon">⬆️</span>
                 <span class="action-text">Class Promotion</span>
-                <span class="action-arrow">→</span>
-              </a>
-              <a routerLink="/elearning" class="action-btn modern-action-btn elearning-quick-action adjacent-action-btn">
-                <span class="action-icon">💻</span>
-                <span class="action-text">E-learning</span>
                 <span class="action-arrow">→</span>
               </a>
             </div>

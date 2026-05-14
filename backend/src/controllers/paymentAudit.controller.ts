@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
 import { authorize, authenticate, AuthRequest } from '../middleware/auth';
 import { UserRole } from '../entities/User';
-import { PaymentAuditLog, PaymentAuditEventType } from '../entities/PaymentAuditLog';
+import { PaymentAuditLog } from '../entities/PaymentAuditLog';
 import { parsePaginationParams, buildPaginationResponse } from '../utils/pagination';
 import { ensurePaymentAuditLogTable } from '../utils/ensurePaymentAuditLogTable';
 
@@ -29,6 +29,10 @@ export const getPaymentAuditLogs = [
         req.query.anomaly === 'true' ||
         req.query.anomaly === '1';
       const search = typeof req.query.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+      const actionRaw = typeof req.query.action === 'string' ? req.query.action.trim().toLowerCase() : '';
+      const entityTypeRaw = typeof req.query.entityType === 'string' ? req.query.entityType.trim().toLowerCase() : '';
+      const entityIdRaw = typeof req.query.entityId === 'string' ? req.query.entityId.trim() : '';
+      const performedByRaw = typeof req.query.performedBy === 'string' ? req.query.performedBy.trim() : '';
 
       const sortByRaw = typeof req.query.sortBy === 'string' ? req.query.sortBy : 'eventAt';
       const sortDirRaw = typeof req.query.sortDir === 'string' ? req.query.sortDir : 'DESC';
@@ -45,7 +49,8 @@ export const getPaymentAuditLogs = [
         amountPaid: 'log.amountPaid',
         paymentMethod: 'log.paymentMethod',
         referenceNumber: 'log.referenceNumber',
-        anomaly: 'log.anomaly'
+        anomaly: 'log.anomaly',
+        eventType: 'log.eventType',
       };
 
       const sortBy = allowedSorts[sortByRaw] || 'log.eventAt';
@@ -80,6 +85,34 @@ export const getPaymentAuditLogs = [
           )`,
           { q: `%${search}%` }
         );
+      }
+
+      if (actionRaw === 'create' || actionRaw === 'update' || actionRaw === 'delete') {
+        qb.andWhere('log.eventType = :actionEvt', { actionEvt: actionRaw });
+      }
+
+      if (entityTypeRaw === 'with_invoice') {
+        qb.andWhere('log.invoiceId IS NOT NULL');
+      } else if (entityTypeRaw === 'no_invoice') {
+        qb.andWhere('log.invoiceId IS NULL');
+      }
+
+      if (entityIdRaw) {
+        const eid = `%${entityIdRaw}%`;
+        qb.andWhere(
+          `(
+            log.studentId::text ILIKE :eid OR
+            COALESCE(log.paymentId::text, '') ILIKE :eid OR
+            COALESCE(log.referenceNumber, '') ILIKE :eid
+          )`,
+          { eid }
+        );
+      }
+
+      if (performedByRaw) {
+        qb.andWhere('LOWER(log.username) ILIKE :performedBy', {
+          performedBy: `%${performedByRaw.toLowerCase()}%`
+        });
       }
 
       qb.orderBy(sortBy, sortDir);

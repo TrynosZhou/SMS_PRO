@@ -1,0 +1,190 @@
+<div class="int-page">
+  <div class="int-card">
+    <header class="int-header">
+      <div class="int-header-left">
+        <span class="int-header-ico" aria-hidden="true">🔗</span>
+        <div>
+          <h1 class="int-title">Integrations</h1>
+          <p class="int-subtitle">Manage external service integrations</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Summary stats -->
+    <div class="int-stats" role="group" aria-label="Integration summary">
+      <div class="int-stat int-stat--total">
+        <span class="int-stat-num">{{ totalCount }}</span>
+        <span class="int-stat-lbl">Total integrations</span>
+      </div>
+      <div class="int-stat int-stat--active">
+        <span class="int-stat-num">{{ activeCount }}</span>
+        <span class="int-stat-lbl">Active</span>
+      </div>
+      <div class="int-stat int-stat--inactive">
+        <span class="int-stat-num">{{ inactiveCount }}</span>
+        <span class="int-stat-lbl">Inactive</span>
+      </div>
+      <div class="int-stat int-stat--error">
+        <span class="int-stat-num">{{ errorCount }}</span>
+        <span class="int-stat-lbl">Errors</span>
+      </div>
+    </div>
+
+    <div class="int-toolbar">
+      <span class="int-toolbar-spacer"></span>
+      <button type="button" class="int-btn-add" (click)="openAdd()">
+        <span class="int-btn-plus" aria-hidden="true">+</span>
+        Add Integration
+      </button>
+    </div>
+
+    <div class="int-table-wrap">
+      <table class="int-table" *ngIf="integrations.length > 0">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Mode</th>
+            <th>Last Sync</th>
+            <th class="int-th-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of integrations">
+            <td><strong>{{ row.name }}</strong></td>
+            <td>{{ row.type }}</td>
+            <td>
+              <span class="int-badge" [ngClass]="'int-badge--' + row.status">{{ row.status }}</span>
+            </td>
+            <td>{{ row.mode }}</td>
+            <td class="int-cell-muted">{{ lastSyncLabel(row) }}</td>
+            <td class="int-actions">
+              <button type="button" class="int-icon-btn" (click)="deleteRow(row)" title="Remove integration" aria-label="Remove integration">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="int-empty" *ngIf="integrations.length === 0">
+        <div class="int-empty-ico" aria-hidden="true">
+          <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.2" stroke-linecap="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            <line x1="4" y1="4" x2="20" y2="20" stroke="#e2e8f0" stroke-width="1.5" />
+          </svg>
+        </div>
+        <p class="int-empty-title">No integrations yet</p>
+        <p class="int-empty-sub">Add an integration to connect external services to your school.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Add Integration modal ===== -->
+<!-- Layer is portaled to document.body at runtime to escape any overflow/transform ancestor -->
+<div #modalLayer class="int-modal-layer" [class.int-modal-layer--open]="showAddModal">
+  <div class="int-modal-backdrop" (click)="closeAdd()"></div>
+  <div
+    class="int-modal int-modal--wide"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="int-modal-title"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="int-modal-head">
+      <h2 id="int-modal-title" class="int-modal-title">Add Integration</h2>
+      <button type="button" class="int-modal-close" (click)="closeAdd()" aria-label="Close">×</button>
+    </div>
+
+    <div class="int-modal-body" #modalScroll>
+
+      <!-- 1. Integration Type -->
+      <label class="int-field">
+        <span class="int-field-lbl">Integration Type <span class="int-req" aria-hidden="true">*</span></span>
+        <select class="int-input" [(ngModel)]="formType" required>
+          <option *ngFor="let t of typeOptions" [value]="t.value">{{ t.label }}</option>
+        </select>
+      </label>
+
+      <!-- 2. Name -->
+      <label class="int-field">
+        <span class="int-field-lbl">Name <span class="int-req" aria-hidden="true">*</span></span>
+        <input type="text" class="int-input" [(ngModel)]="formName"
+               placeholder="Integration name" maxlength="120" autocomplete="off" />
+      </label>
+
+      <!-- 3. Description -->
+      <label class="int-field">
+        <span class="int-field-lbl">Description</span>
+        <textarea class="int-input int-textarea" [(ngModel)]="formDescription"
+                  rows="3" placeholder="Optional details about this integration"></textarea>
+      </label>
+
+      <!-- 4. Test/Sandbox Mode toggle -->
+      <div class="int-toggle-row">
+        <div class="int-toggle-labels">
+          <span class="int-toggle-title">Test/Sandbox Mode</span>
+          <span class="int-toggle-hint">When on, credentials use your test environment</span>
+        </div>
+        <button
+          type="button"
+          class="int-switch"
+          [class.int-switch--on]="formSandbox"
+          role="switch"
+          [attr.aria-checked]="formSandbox"
+          (click)="formSandbox = !formSandbox"
+        >
+          <span class="int-switch-knob" [class.int-switch-knob--on]="formSandbox"></span>
+        </button>
+      </div>
+
+      <!-- 5. Configuration (always visible, right after the toggle) -->
+      <div class="int-config">
+        <div class="int-config-heading">
+          <span class="int-config-title">Configuration</span>
+          <span class="int-config-chev" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </span>
+        </div>
+        <div class="int-config-panel">
+          <label class="int-field">
+            <span class="int-field-lbl">API Key</span>
+            <input type="password" class="int-input" [(ngModel)]="formApiKey"
+                   placeholder="API Key" autocomplete="off" />
+          </label>
+          <label class="int-field">
+            <span class="int-field-lbl">API Secret</span>
+            <input type="password" class="int-input" [(ngModel)]="formApiSecret"
+                   placeholder="API Secret" autocomplete="off" />
+          </label>
+          <label class="int-field">
+            <span class="int-field-lbl">Base URL</span>
+            <input type="url" class="int-input" [(ngModel)]="formBaseUrl"
+                   placeholder="https://api.example.com" />
+          </label>
+          <label class="int-field">
+            <span class="int-field-lbl">Webhook URL</span>
+            <input type="url" class="int-input" [(ngModel)]="formWebhookUrl"
+                   placeholder="https://yourschool.example.com/webhooks/incoming" />
+          </label>
+        </div>
+      </div>
+
+    </div><!-- /int-modal-body -->
+
+    <div class="int-modal-foot">
+      <button type="button" class="int-btn-text" (click)="closeAdd()">Cancel</button>
+      <button type="button" class="int-btn-create" [disabled]="!canCreate" (click)="saveIntegration()">Create</button>
+    </div>
+  </div>
+</div>

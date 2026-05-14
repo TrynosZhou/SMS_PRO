@@ -11,7 +11,7 @@ interface NavChild {
   label: string;
   route?: string;
   icon?: string;
-  action?: 'bulkMessage' | 'addTeacher';
+  action?: 'addTeacher';
   queryParams?: Record<string, string>;
 }
 
@@ -55,9 +55,6 @@ export class AppComponent implements OnInit {
   openSubmenu: string | null = null;
   /** Top-level navigation items shown in the left sidebar. */
   navItems: NavItem[] = [];
-  /** Bulk-message modal visibility (triggered from sidebar action). */
-  showBulkMessage = false;
-
   constructor(
     public authService: AuthService,
     private settingsService: SettingsService,
@@ -238,20 +235,11 @@ export class AppComponent implements OnInit {
     return this.openSubmenu === id;
   }
 
-  /** Handle clicks on submenu items that map to component actions (e.g. bulk message). */
+  /** Handle clicks on submenu items that map to component actions. */
   runNavAction(action: string | undefined): void {
     if (!action) return;
-    if (action === 'bulkMessage') this.openBulkMessage();
     if (action === 'addTeacher') this.addTeacherModal.open();
     this.closeSidebar();
-  }
-
-  openBulkMessage(): void {
-    this.showBulkMessage = true;
-  }
-
-  closeBulkMessage(): void {
-    this.showBulkMessage = false;
   }
 
   getCurrentUserRole(): string {
@@ -314,7 +302,8 @@ export class AppComponent implements OnInit {
             { label: 'Subjects', icon: '📚', route: '/subjects' },
             { label: 'Marks Input', icon: '📝', route: '/marks-input' },
             { label: 'Marks Progress', icon: '📈', route: '/marks-progress' },
-            { label: 'Marks Diagnostics', icon: '📊', route: '/mark-diagnostic' }
+            { label: 'Marks Diagnostics', icon: '📊', route: '/mark-diagnostic' },
+            { label: 'Continuous Assessment', icon: '📋', route: '/marks/continuous' }
           ]
         },
         {
@@ -390,8 +379,7 @@ export class AppComponent implements OnInit {
           id: 'communication', label: 'Communication', icon: '💬',
           children: [
             { label: 'Send Message', icon: '📤', route: '/communication_manage/send' },
-            { label: 'View Messages', icon: '📥', route: '/communication_manage/view' },
-            { label: 'Bulk Message', icon: '📧', action: 'bulkMessage' }
+            { label: 'View Messages', icon: '📥', route: '/communication_manage/view' }
           ]
         },
         {
@@ -402,7 +390,6 @@ export class AppComponent implements OnInit {
             { label: 'DH Services', icon: '🛏️', route: '/reports/dh-services' }
           ]
         },
-        { id: 'elearning', label: 'E-Learning', icon: '💻', route: '/elearning' }
       );
 
       if (this.isInventoryStaff()) {
@@ -424,12 +411,12 @@ export class AppComponent implements OnInit {
           id: 'system-administration', label: 'System Administration', icon: '🛠️',
           children: [
             { label: 'User Management', icon: '👥', route: '/user-management' },
-            { label: 'Role & Permissions', icon: '🔐', route: '/roles-permissions' },
+            { label: 'Role & Permissions', icon: '🔐', route: '/system/roles' },
             { label: 'Academic Settings', icon: '🎓', route: '/academic-settings' },
             { label: 'System Settings', icon: '⚙️', route: '/system-settings' },
             { label: 'Audit Logs', icon: '📜', route: '/audit-logs' },
             { label: 'Analytics & Reports', icon: '📊', route: '/analytics-reports' },
-            { label: 'Integrations', icon: '🔗', route: '/integrations' }
+            { label: 'Integrations', icon: '🔗', route: '/system/integrations' }
           ]
         }
       );
@@ -480,7 +467,8 @@ export class AppComponent implements OnInit {
       items.push(
         { id: 'teacher-dash', label: 'Teacher Dashboard', icon: '🏠', route: '/teacher/dashboard' },
         { id: 'classes', label: 'Classes', icon: '🏫', route: '/classes/manage' },
-        { id: 'elearning', label: 'E-Learning', icon: '💻', route: '/teacher/elearning-manage' },
+        { id: 'teacher-record', label: 'Record Book', icon: '📖', route: '/teacher/record-book' },
+        { id: 'teacher-my-classes', label: 'My Classes', icon: '👥', route: '/teacher/my-classes' },
         { id: 'inventory', label: 'Inventory', icon: '📦', route: '/teacher/inventory_manage' }
       );
     } else if (this.isInventoryStaff()) {

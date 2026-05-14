@@ -74,7 +74,15 @@ export class RolesPermissionsComponent implements OnInit {
     this.loadRoles();
   }
 
-  setTab(t: 'roles' | 'permissions') { this.activeTab = t; this.clearFeedback(); }
+  setTab(t: 'roles' | 'permissions') {
+    this.activeTab = t;
+    this.clearFeedback();
+    if (t === 'roles') {
+      this.permSearch = '';
+    } else {
+      this.rolePermSearch = '';
+    }
+  }
 
   // ── Data loaders ──────────────────────────────────
   loadPermissions() {

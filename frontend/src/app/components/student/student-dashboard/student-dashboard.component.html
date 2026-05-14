@@ -103,29 +103,16 @@
             <span class="sd-card-go">Open →</span>
           </a>
 
-          <!-- E-learning -->
-          <a *ngIf="!isParentViewer" routerLink="/student/elearning" class="sd-card sd-card-learn">
-            <span class="sd-card-icon" aria-hidden="true">💻</span>
-            <span class="sd-card-title">E-learning Services</span>
-            <span class="sd-card-desc">Assignments, tests, and uploads from teachers.</span>
-            <span class="sd-card-go">Open →</span>
-          </a>
-          <div *ngIf="isParentViewer" class="sd-card sd-card-learn sd-card-disabled" role="note">
-            <span class="sd-card-icon" aria-hidden="true">💻</span>
-            <span class="sd-card-title">E-learning Services</span>
-            <span class="sd-card-desc">Students sign in with their own account to upload work and take tasks.</span>
-          </div>
         </div>
 
         <section class="sd-hint-panel" aria-label="Tips">
           <h3 class="sd-hint-title"><span aria-hidden="true">💡</span> Tips</h3>
           <ul class="sd-hint-list" *ngIf="!isParentViewer">
-            <li>Use <strong>E-learning</strong> to download task attachments and upload your work.</li>
             <li>Report cards and invoices open in the browser — you can print or save as PDF from your device.</li>
           </ul>
           <ul class="sd-hint-list" *ngIf="isParentViewer">
             <li>Use <strong>Report card</strong> above for the selected child; balances and PDFs are under <strong>Parent dashboard</strong>.</li>
-            <li>Your child uses the student login for E-learning uploads and assignments.</li>
+            <li>Your child can sign in with the student account to access their own dashboard and school services.</li>
           </ul>
         </section>
       </div>

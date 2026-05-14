@@ -19,8 +19,6 @@ console.log('[Server] ✓ Routes loaded');
 
 import { syncStoredStudentNumbersWithSettingsPrefix } from './utils/syncStudentNumbersWithSettingsPrefix';
 import { syncStoredTeacherIdsWithSettingsPrefix } from './utils/syncStoredTeacherIdsWithSettingsPrefix';
-import { ensureETaskTable } from './utils/ensureETaskTable';
-import { ensureETaskSubmissionTable } from './utils/ensureETaskSubmissionTable';
 import { ensureTeacherGenderColumn } from './utils/ensureTeacherGenderColumn';
 import { ensureTeacherMaritalStatusColumn } from './utils/ensureTeacherMaritalStatusColumn';
 import { ensureSubjectShortTitleColumn } from './utils/ensureSubjectShortTitleColumn';
@@ -175,18 +173,6 @@ try {
 }
 app.use('/uploads/payrolls', express.static(payrollUploadsPath));
 
-// E-learning task attachments (teachers upload; students download)
-const etaskUploadsPath = path.join(__dirname, '../../uploads/etasks');
-console.log('[Server] Serving static files from:', etaskUploadsPath);
-try {
-  if (!fs.existsSync(etaskUploadsPath)) {
-    fs.mkdirSync(etaskUploadsPath, { recursive: true });
-  }
-} catch (e) {
-  console.warn('[Server] Could not ensure etasks uploads directory exists:', e);
-}
-app.use('/uploads/etasks', express.static(etaskUploadsPath));
-
 // Admin → parent message attachments
 const messageUploadsPath = path.join(__dirname, '../../uploads/messages');
 console.log('[Server] Serving static files from:', messageUploadsPath);
@@ -282,18 +268,6 @@ async function bootstrap() {
     await AppDataSource.initialize();
     console.log('[Server] ✓ Database connected successfully');
     console.log('[Server] DataSource.isInitialized:', AppDataSource.isInitialized);
-
-    try {
-      await ensureETaskTable(AppDataSource);
-    } catch (etErr: any) {
-      console.error('[Server] ensureETaskTable failed (e-learning tasks may not work):', etErr?.message || etErr);
-    }
-
-    try {
-      await ensureETaskSubmissionTable(AppDataSource);
-    } catch (esErr: any) {
-      console.error('[Server] ensureETaskSubmissionTable failed (e-learning submissions may not work):', esErr?.message || esErr);
-    }
 
     try {
       await ensureTeacherGenderColumn(AppDataSource);

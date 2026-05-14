@@ -1,0 +1,130 @@
+/* Layout additions on top of marks-input shared styles */
+
+.ca-filters-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ca-filter-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ca-row {
+  display: grid;
+  gap: 14px;
+  align-items: end;
+}
+
+.ca-row--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ca-row--actions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+  align-items: end;
+}
+
+@media (max-width: 960px) {
+  .ca-row--three {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ca-row--actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ca-apply-link {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .ca-load-btn {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+
+/* Remove select-style chevron from plain text / number / date inputs */
+.ca-input-no-arrow {
+  background-image: none !important;
+  padding-right: 14px !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input.ca-input-no-arrow[type='date'] {
+  min-height: 46px;
+}
+
+.ca-apply-link {
+  border: none;
+  background: none;
+  padding: 10px 0 12px;
+  margin-bottom: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.ca-apply-link:hover {
+  color: #1d4ed8;
+}
+
+.ca-load-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #ffffff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.28);
+  white-space: nowrap;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+
+.ca-load-btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.ca-load-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.ca-loading-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px;
+  color: #5e3bd1;
+  font-weight: 500;
+}
+
+.ca-hint {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.ca-foot-note {
+  font-size: 12px;
+  color: #64748b;
+  flex: 0 1 auto;
+}
