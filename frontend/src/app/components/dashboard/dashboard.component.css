@@ -83,6 +83,12 @@
   flex-shrink: 0;
   border: 2px solid rgba(255, 255, 255, 0.4);
 }
+.db-brand-logo--photo {
+  object-fit: contain;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+}
 .db-brand-name {
   font-size: 1.15rem;
   font-weight: 800;
@@ -923,6 +929,16 @@
 .school-name-container:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.school-logo-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 3px;
 }
 
 .school-icon {

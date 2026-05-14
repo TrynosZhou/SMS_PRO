@@ -7,7 +7,16 @@
         <span></span><span></span><span></span>
       </button>
       <div class="db-brand">
-        <span class="db-brand-logo" aria-hidden="true">🏫</span>
+        <img
+          *ngIf="schoolLogo"
+          class="db-brand-logo db-brand-logo--photo"
+          [src]="getSchoolLogoSrc()"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          (error)="onDashboardLogoError()"
+        />
+        <span *ngIf="!schoolLogo" class="db-brand-logo" aria-hidden="true">🏫</span>
         <span class="db-brand-name">{{ schoolName || 'School Management' }}</span>
       </div>
     </div>
@@ -201,7 +210,16 @@
       </div>
       <div class="db-hero-aside" *ngIf="displayedHeadline">
         <div class="school-name-container db-school-banner">
-          <span class="school-icon" aria-hidden="true">🏫</span>
+          <img
+            *ngIf="schoolLogo"
+            class="school-logo-img"
+            [src]="getSchoolLogoSrc()"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            (error)="onDashboardLogoError()"
+          />
+          <span *ngIf="!schoolLogo" class="school-icon" aria-hidden="true">🏫</span>
           <span class="school-banner-slide">{{ displayedHeadline }}</span>
         </div>
       </div>

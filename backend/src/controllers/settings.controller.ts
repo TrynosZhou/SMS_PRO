@@ -23,6 +23,12 @@ import {
   legacyThresholdsAndLabelsFromBands,
   sanitizeGradeBandsPayload,
 } from '../utils/gradeBandsResolve';
+import { absoluteSchoolLogoClientUrl, canonicalSchoolLogoStorageValue } from '../utils/schoolLogoUrl';
+
+function attachSchoolLogosForClient(payload: Record<string, any>, req: Request) {
+  payload.schoolLogo = absoluteSchoolLogoClientUrl(payload.schoolLogo ?? null, req);
+  payload.schoolLogo2 = absoluteSchoolLogoClientUrl(payload.schoolLogo2 ?? null, req);
+}
 
 const DEFAULT_MODULE_ACCESS: Settings['moduleAccess'] = {
   teachers: {
@@ -210,6 +216,8 @@ export const getSettings = async (req: AuthRequest, res: Response) => {
     // For demo users, always return "Demo School" as school name/code
     const isDemo = req.user?.isDemo === true || req.user?.email === 'demo@school.com' || req.user?.username === 'demo@school.com';
     
+    attachSchoolLogosForClient(responsePayload, req);
+
     if (isDemo) {
       responsePayload.schoolName = 'Demo School';
       responsePayload.schoolCode = 'demo';
@@ -227,7 +235,7 @@ export const getSettings = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getPublicSplashSettings = async (_req: Request, res: Response) => {
+export const getPublicSplashSettings = async (req: Request, res: Response) => {
   try {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();
@@ -253,8 +261,8 @@ export const getPublicSplashSettings = async (_req: Request, res: Response) => {
 
     res.json({
       schoolName: settings.schoolName || 'School Management System',
-      schoolLogo: settings.schoolLogo !== null && settings.schoolLogo !== undefined ? settings.schoolLogo : null,
-      schoolLogo2: settings.schoolLogo2 !== null && settings.schoolLogo2 !== undefined ? settings.schoolLogo2 : null,
+      schoolLogo: absoluteSchoolLogoClientUrl(settings.schoolLogo ?? null, req),
+      schoolLogo2: absoluteSchoolLogoClientUrl(settings.schoolLogo2 ?? null, req),
       schoolMotto: settings.schoolMotto || null
     });
   } catch (error: any) {
@@ -406,10 +414,10 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
       settings.gradePoints = { ...DEFAULT_GRADE_POINTS };
     }
     if (schoolLogo !== undefined) {
-      settings.schoolLogo = schoolLogo;
+      settings.schoolLogo = canonicalSchoolLogoStorageValue(schoolLogo);
     }
     if (schoolLogo2 !== undefined) {
-      settings.schoolLogo2 = schoolLogo2;
+      settings.schoolLogo2 = canonicalSchoolLogoStorageValue(schoolLogo2);
     }
     // Update school name if provided
     if (schoolName !== undefined && schoolName !== null) {
@@ -501,7 +509,8 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const responseSettings = { ...settings };
+    const responseSettings: any = { ...settings };
+    attachSchoolLogosForClient(responseSettings, req);
 
     res.json({ 
       message: 'Settings updated successfully', 

@@ -80,7 +80,7 @@
 
     <!-- Logo preview -->
     <div class="ss-logo-preview" *ngIf="schoolInfo.schoolLogo">
-      <img [src]="schoolInfo.schoolLogo" alt="School logo preview" class="ss-logo-img"
+      <img [src]="schoolLogoPreviewSrc()" alt="School logo preview" class="ss-logo-img"
            onerror="this.style.display='none'" />
     </div>
   </div>

@@ -10,6 +10,7 @@ import { FinanceService } from '../../services/finance.service';
 import { SubjectService } from '../../services/subject.service';
 import { ModuleAccessService } from '../../services/module-access.service';
 import { AddTeacherModalService } from '../../services/add-teacher-modal.service';
+import { resolveSchoolLogoSrc } from '../../utils/school-logo.util';
 
 interface CommandItem {
   label: string;
@@ -62,6 +63,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   user: any;
   moduleAccess: any = null;
   schoolName: string = '';
+  /** School logo URL or data URL from Settings (system-settings); shown in header/banner when set. */
+  schoolLogo = '';
   /** Single banner line: alternates school name and each non-empty motto (never both at once). */
   displayedHeadline: string = '';
   private headlineRotateInterval: any;
@@ -825,6 +828,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         } else {
           this.schoolName = row?.schoolName || '';
         }
+        this.schoolLogo = String(row?.schoolLogo || '').trim();
         this.academicYear = row?.academicYear || '';
         this.currentTerm = row?.currentTerm || '';
         this.moduleAccess = row?.moduleAccess || {};
@@ -839,6 +843,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         console.error('Error loading settings:', err);
         this.schoolName = '';
+        this.schoolLogo = '';
         this.academicYear = '';
         this.currentTerm = '';
         this.startHeadlineRotation({});
@@ -846,6 +851,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.moduleAccess = this.moduleAccessService.getModuleAccess();
       }
     });
+  }
+
+  /** If the logo URL fails to load, fall back to the default school icon until settings reload. */
+  onDashboardLogoError(): void {
+    this.schoolLogo = '';
+  }
+
+  /** Resolves relative `/uploads/...` and legacy Windows paths against the API origin. */
+  getSchoolLogoSrc(): string {
+    return resolveSchoolLogoSrc(this.schoolLogo);
   }
 
 

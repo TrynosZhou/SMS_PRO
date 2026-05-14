@@ -95,6 +95,7 @@ const allowedOrigins = Array.from(
     [
       'https://sms-apua.vercel.app',
       'http://localhost:4200',
+      'http://localhost:4201',
       'http://localhost:3000',
       ...(process.env.FRONTEND_URL ? [normalizeOriginUrl(process.env.FRONTEND_URL)] : []),
       ...corsExtraFromEnv,
@@ -155,35 +156,20 @@ app.use('/api/auth', (req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve uploaded student photos
-// Use absolute path to ensure it works regardless of where the server is started from
-const uploadsPath = path.join(__dirname, '../../uploads/students');
-console.log('[Server] Serving static files from:', uploadsPath);
-app.use('/uploads/students', express.static(uploadsPath));
-
-// Serve generated payroll PDFs
-const payrollUploadsPath = path.join(__dirname, '../../uploads/payrolls');
-console.log('[Server] Serving static files from:', payrollUploadsPath);
-try {
-  if (!fs.existsSync(payrollUploadsPath)) {
-    fs.mkdirSync(payrollUploadsPath, { recursive: true });
+// All repo uploads (students/, payrolls/, messages/, logos at repo root, etc.)
+const uploadsRoot = path.join(__dirname, '../../uploads');
+console.log('[Server] Serving /uploads from:', uploadsRoot);
+for (const sub of ['students', 'payrolls', 'messages']) {
+  try {
+    const p = path.join(uploadsRoot, sub);
+    if (!fs.existsSync(p)) {
+      fs.mkdirSync(p, { recursive: true });
+    }
+  } catch (e) {
+    console.warn('[Server] Could not ensure uploads subdirectory exists:', sub, e);
   }
-} catch (e) {
-  console.warn('[Server] Could not ensure payroll uploads directory exists:', e);
 }
-app.use('/uploads/payrolls', express.static(payrollUploadsPath));
-
-// Admin → parent message attachments
-const messageUploadsPath = path.join(__dirname, '../../uploads/messages');
-console.log('[Server] Serving static files from:', messageUploadsPath);
-try {
-  if (!fs.existsSync(messageUploadsPath)) {
-    fs.mkdirSync(messageUploadsPath, { recursive: true });
-  }
-} catch (e) {
-  console.warn('[Server] Could not ensure messages uploads directory exists:', e);
-}
-app.use('/uploads/messages', express.static(messageUploadsPath));
+app.use('/uploads', express.static(uploadsRoot));
 
 // =================== ROUTES ===================
 app.use('/api', routes);

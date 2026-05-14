@@ -3,6 +3,7 @@ import { SettingsService } from '../../../services/settings.service';
 import { CurrencyService } from '../../../services/currency.service';
 import { PromotionRuleService } from '../../../services/promotion-rule.service';
 import { ClassService } from '../../../services/class.service';
+import { resolveSchoolLogoSrc } from '../../../utils/school-logo.util';
 
 type TabId =
   | 'school-info'
@@ -143,6 +144,11 @@ export class SystemSettingsComponent implements OnInit {
   ) {}
 
   ngOnInit() { this.loadSettings(); }
+
+  /** Preview image src (handles `/uploads/...` and disk paths); input field stays raw. */
+  schoolLogoPreviewSrc(): string {
+    return resolveSchoolLogoSrc(this.schoolInfo.schoolLogo);
+  }
 
   setTab(id: TabId) {
     this.activeTab = id;
