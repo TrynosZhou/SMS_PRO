@@ -343,7 +343,7 @@ export class StudentFormComponent implements OnInit {
   }
 
   goToStudentsList(): void {
-    if (!this.isEdit && this.router.url.split('?')[0].includes('/students/manage/add-new')) {
+    if (!this.isEdit && this.router.url.split('?')[0].includes('/students/add-new')) {
       void this.router.navigate(['/students']);
       return;
     }

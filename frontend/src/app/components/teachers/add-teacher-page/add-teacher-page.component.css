@@ -1,4 +1,4 @@
-/* Full-page “Teacher form” — numbered sections, 3-column grid, floating badge labels */
+/* Full-page teacher registration — numbered sections, 3-column grid, floating badge labels */
 
 .tf-page {
   min-height: calc(100vh - 48px);
@@ -11,10 +11,10 @@
   max-width: 1180px;
   margin: 0 auto;
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 6px solid #2563eb;
   border-radius: 14px;
   padding: 1.75rem 1.75rem 1.5rem;
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.12);
 }
 
 .tf-header {

@@ -17,7 +17,7 @@ export class AddTeacherModalService {
   constructor(private router: Router) {}
 
   open(): void {
-    void this.router.navigate(['/teachers/manage/add-new']);
+    void this.router.navigate(['/teachers/add-new']);
   }
 
   close(): void {

@@ -104,7 +104,7 @@ export class AddTeacherPageComponent implements OnInit {
 
   cancel(): void {
     if (this.saving) return;
-    void this.router.navigate(['/teachers/manage/record-book']);
+    void this.router.navigate(['/teachers']);
   }
 
   setGender(gender: 'Male' | 'Female'): void {

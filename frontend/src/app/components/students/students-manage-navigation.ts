@@ -10,7 +10,7 @@ export function studentsManageNav(router: Router) {
   const m = isInStudentsManageShell(router);
   return {
     list: '/students',
-    addNew: m ? '/students/manage/add-new' : '/students/new',
+    addNew: m ? '/students/add-new' : '/students/new',
     enroll: m ? '/students/manage/enroll' : '/enrollments/new',
     unenrolled: m ? '/students/manage/unenrolled' : '/enrollments/unenrolled',
     editSegments: (id: string) =>

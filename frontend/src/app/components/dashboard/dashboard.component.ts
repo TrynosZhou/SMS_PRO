@@ -1373,7 +1373,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.isAdmin()) {
       items.push(
         { label: 'Students', icon: '👥', route: '/students', group: 'Modules', keywords: 'pupil learner' },
-        { label: 'Add Student', icon: '➕', route: '/students/manage/add-new', group: 'Actions' },
+        { label: 'Add Student', icon: '➕', route: '/students/add-new', group: 'Actions' },
         { label: 'Teachers', icon: '👨‍🏫', route: '/teachers/manage', group: 'Modules' },
         { label: 'Add Teacher', icon: '➕', action: () => this.addTeacherModal.open(), group: 'Actions' },
         { label: 'Classes', icon: '🏫', route: '/classes/manage', group: 'Modules' },

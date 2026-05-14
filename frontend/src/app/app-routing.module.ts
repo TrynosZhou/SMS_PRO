@@ -181,13 +181,17 @@ const routes: Routes = [
   },
   { path: 'admin/teacher-record-book', component: TeacherRecordBookComponent, canActivate: [AuthGuard] },
   {
+    path: 'students/manage/add-new',
+    redirectTo: '/students/add-new',
+    pathMatch: 'full',
+  },
+  {
     path: 'students/manage',
     component: StudentsManageComponent,
     canActivate: [AuthGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: '/students' },
       { path: 'students', pathMatch: 'full', redirectTo: '/students' },
-      { path: 'add-new', component: StudentFormComponent, canActivate: [AuthGuard] },
       { path: 'enroll', component: EnrollStudentComponent, canActivate: [AuthGuard] },
       { path: 'unenrolled', component: UnenrolledStudentsComponent, canActivate: [AuthGuard] },
       { path: 'transfer', component: TransferFormComponent, canActivate: [AuthGuard] },
@@ -198,14 +202,19 @@ const routes: Routes = [
   { path: 'students_manage', redirectTo: 'students/manage', pathMatch: 'full' },
   { path: 'students', component: ManageStudentsComponent, canActivate: [AuthGuard] },
   { path: 'students/new', component: StudentFormComponent, canActivate: [AuthGuard] },
+  { path: 'students/add-new', component: StudentFormComponent, canActivate: [AuthGuard] },
   { path: 'students/:id/edit', component: StudentFormComponent, canActivate: [AuthGuard] },
+  {
+    path: 'teachers/manage/add-new',
+    redirectTo: '/teachers/add-new',
+    pathMatch: 'full',
+  },
   {
     path: 'teachers/manage',
     component: TeachersManageComponent,
     canActivate: [AuthGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'record-book' },
-      { path: 'add-new', component: AddTeacherPageComponent, canActivate: [AuthGuard] },
       { path: 'teachers', pathMatch: 'full', redirectTo: '/teachers' },
       { path: 'assign-classes', pathMatch: 'full', redirectTo: '/assign-classes' },
       {
@@ -221,6 +230,7 @@ const routes: Routes = [
   },
   { path: 'teacher_manage', redirectTo: 'teachers/manage', pathMatch: 'full' },
   { path: 'teachers', component: ManageTeachersComponent, canActivate: [AuthGuard] },
+  { path: 'teachers/add-new', component: AddTeacherPageComponent, canActivate: [AuthGuard] },
   { path: 'teachers/new', pathMatch: 'full', redirectTo: '/teachers' },
   { path: 'teachers/:id/edit', component: TeacherFormComponent, canActivate: [AuthGuard] },
   { path: 'teachers/assign-classes', pathMatch: 'full', redirectTo: '/assign-classes' },

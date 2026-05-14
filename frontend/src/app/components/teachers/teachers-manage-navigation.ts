@@ -11,8 +11,8 @@ export function teachersManageNav(router: Router) {
   return {
     /** Teacher directory / uploads: single page at `/teachers` (Manage Teachers). */
     list: '/teachers',
-    /** Full-page add teacher: `/teachers/manage/add-new`. */
-    addNew: '/teachers/manage/add-new',
+    /** Full-page add teacher: `/teachers/add-new`. */
+    addNew: '/teachers/add-new',
     assignClasses: '/assign-classes',
     allocateClass: '/allocate_class',
     recordBook: m ? '/teachers/manage/record-book' : '/admin/teacher-record-book',

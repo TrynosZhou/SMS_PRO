@@ -52,6 +52,6 @@ export class StudentsManageComponent {
   /** Hide shell header and tabs on full-page add-student flow. */
   showManageTabs(): boolean {
     const p = this.router.url.split('?')[0].replace(/\/+$/, '');
-    return !p.endsWith('/students/manage/add-new');
+    return !p.endsWith('/students/add-new');
   }
 }
