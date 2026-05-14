@@ -1038,42 +1038,95 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return parts.join(' ').trim();
   }
 
+  /** Build a display name from given / family name parts (no email). */
+  private joinPersonName(
+    first?: string | null,
+    last?: string | null,
+    order: 'firstLast' | 'lastFirst' = 'firstLast'
+  ): string {
+    const f = first != null && String(first).trim() ? String(first).trim() : '';
+    const l = last != null && String(last).trim() ? String(last).trim() : '';
+    if (order === 'lastFirst') {
+      return [l, f].filter(Boolean).join(' ').trim();
+    }
+    return [f, l].filter(Boolean).join(' ').trim();
+  }
+
+  private looksLikeEmail(s: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((s || '').trim());
+  }
+
+  /** When no person profile name exists, prefer a non-email username, then a role label — not email. */
+  private staffDisplayFallback(user: any): string {
+    const un = (user.username || '').trim();
+    if (un && !this.looksLikeEmail(un)) {
+      return un;
+    }
+    const role = String(user.role || '').toLowerCase();
+    const labels: Record<string, string> = {
+      superadmin: 'Super administrator',
+      admin: 'Administrator',
+      accountant: 'Accountant',
+      librarian: 'Librarian',
+      inventory_clerk: 'Inventory clerk',
+      demo_user: 'Demo user',
+      hod: 'Head of department',
+    };
+    return labels[role] || 'Staff';
+  }
+
   getDisplayName(): string {
     const user = this.authService.getCurrentUser();
     if (!user) {
       return 'User';
     }
 
-    // For teachers, prioritize teacher fullName from login response
-    if (user.role === 'teacher') {
-      // First check if we have a cached teacher name
+    // Teachers / HOD — same profile shape as login / teacher portal
+    if (user.role === 'teacher' || user.role === 'hod') {
       if (this.teacherName && this.teacherName !== 'Teacher' && this.teacherName.trim()) {
         return this.teacherName;
       }
-      
-      // Then check user.teacher object from login response (most reliable)
+
       if (user.teacher) {
-        // Prioritize fullName from login response
-        if (user.teacher.fullName && 
-            user.teacher.fullName.trim() && 
-            user.teacher.fullName !== 'Teacher' && 
-            user.teacher.fullName !== 'Account Teacher') {
+        if (
+          user.teacher.fullName &&
+          user.teacher.fullName.trim() &&
+          user.teacher.fullName !== 'Teacher' &&
+          user.teacher.fullName !== 'Account Teacher'
+        ) {
           return user.teacher.fullName.trim();
         }
-        
-        // Fallback to extracting from firstName/lastName
+
         const extractedName = this.extractTeacherName(user.teacher);
         if (extractedName && extractedName !== 'Teacher' && extractedName.trim()) {
           return extractedName;
         }
       }
-      
-      // If teacher name is still not available, return generic 'Teacher' instead of username
+
       return 'Teacher';
     }
 
-    // For other roles, return email or username
-    return user.email || user.username || 'User';
+    if (user.role === 'student' && user.student) {
+      const n = this.joinPersonName(user.student.firstName, user.student.lastName, 'firstLast');
+      if (n) {
+        return n;
+      }
+    }
+
+    if (user.role === 'parent' && user.parent) {
+      const n = this.joinPersonName(user.parent.firstName, user.parent.lastName, 'firstLast');
+      if (n) {
+        return n;
+      }
+    }
+
+    const anyUser = user as any;
+    const direct = this.joinPersonName(anyUser.firstName, anyUser.lastName, 'firstLast');
+    if (direct) {
+      return direct;
+    }
+
+    return this.staffDisplayFallback(user);
   }
 
   // ── Greeting & live clock helpers ─────────────────────────────────────
