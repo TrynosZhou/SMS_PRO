@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostBinding, Input, OnInit, Output } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { StudentService } from '../../../services/student.service';
 import { SettingsService } from '../../../services/settings.service';
@@ -13,14 +13,6 @@ import { studentsManageNav } from '../students-manage-navigation';
   styleUrls: ['./student-form.component.css']
 })
 export class StudentFormComponent implements OnInit {
-  @Input() modalMode = false;
-  @Output() dismissAddModal = new EventEmitter<void>();
-
-  @HostBinding('class.sf-embedded-modal')
-  get embeddedModalHostClass(): boolean {
-    return this.modalMode && !this.isEdit;
-  }
-
   student: any = {
     firstName: '',
     lastName: '',
@@ -351,8 +343,8 @@ export class StudentFormComponent implements OnInit {
   }
 
   goToStudentsList(): void {
-    if (this.modalMode && !this.isEdit) {
-      this.dismissAddModal.emit();
+    if (!this.isEdit && this.router.url.split('?')[0].includes('/students/manage/add-new')) {
+      void this.router.navigate(['/students']);
       return;
     }
     this.router.navigateByUrl(studentsManageNav(this.router).list);

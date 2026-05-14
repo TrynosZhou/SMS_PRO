@@ -1,16 +1,15 @@
 <div class="sm-wrap">
-  <header class="sm-header">
+  <header *ngIf="showManageTabs()" class="sm-header">
     <h1 class="sm-title">Student Manager</h1>
     <p class="sm-sub">Register, list, enroll, and transfer students</p>
   </header>
 
-  <nav class="sm-tabs" aria-label="Student manager sections">
+  <nav *ngIf="showManageTabs()" class="sm-tabs" aria-label="Student manager sections">
     <a
       *ngIf="showAddNewTab()"
-      href="/students/manage/add-new"
-      [class.active]="isAddNewTabActive()"
+      routerLink="/students/manage/add-new"
+      routerLinkActive="active"
       class="sm-tab"
-      (click)="onAddNewTabClick($event)"
     >
       <span class="sm-tab-ico" aria-hidden="true">📝</span>
       Add New
@@ -64,26 +63,5 @@
 
   <div class="sm-outlet">
     <router-outlet></router-outlet>
-  </div>
-
-  <div
-    class="sm-modal-backdrop"
-    *ngIf="showAddStudentModal"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="sm-add-student-title"
-    (click)="onAddModalBackdropClick($event)"
-  >
-    <div class="sm-modal-panel" (click)="$event.stopPropagation()">
-      <button
-        type="button"
-        class="sm-modal-close"
-        (click)="closeAddStudentModal()"
-        aria-label="Close add student dialog"
-      >
-        ×
-      </button>
-      <app-student-form [modalMode]="true" (dismissAddModal)="closeAddStudentModal()"></app-student-form>
-    </div>
   </div>
 </div>

@@ -11,8 +11,8 @@ export function teachersManageNav(router: Router) {
   return {
     /** Teacher directory / uploads: single page at `/teachers` (Manage Teachers). */
     list: '/teachers',
-    /** @deprecated Add Teacher is now an in-app modal; call AddTeacherModalService.open() instead. */
-    addNew: '/teachers',
+    /** Full-page add teacher: `/teachers/manage/add-new`. */
+    addNew: '/teachers/manage/add-new',
     assignClasses: '/assign-classes',
     allocateClass: '/allocate_class',
     recordBook: m ? '/teachers/manage/record-book' : '/admin/teacher-record-book',

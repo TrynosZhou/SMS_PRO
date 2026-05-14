@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { StudentService } from '../../../services/student.service';
 
@@ -7,7 +7,7 @@ import { StudentService } from '../../../services/student.service';
   templateUrl: './manage-students.component.html',
   styleUrls: ['./manage-students.component.css']
 })
-export class ManageStudentsComponent implements OnInit, OnDestroy {
+export class ManageStudentsComponent implements OnInit {
   students: any[] = [];
   filteredStudents: any[] = [];
   loading = false;
@@ -16,9 +16,6 @@ export class ManageStudentsComponent implements OnInit, OnDestroy {
 
   searchQuery = '';
   selectedGender = '';
-
-  // Inline "Add Student" modal — opens when the toolbar button is clicked.
-  showAddStudentModal = false;
 
   pagination = {
     page: 1,
@@ -35,10 +32,6 @@ export class ManageStudentsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadStudents();
-  }
-
-  ngOnDestroy(): void {
-    document.body.classList.remove('ms-modal-open');
   }
 
   loadStudents(): void {
@@ -124,32 +117,6 @@ export class ManageStudentsComponent implements OnInit, OnDestroy {
     this.loadStudents();
   }
 
-  openAddStudentModal(): void {
-    this.showAddStudentModal = true;
-    document.body.classList.add('ms-modal-open');
-  }
-
-  closeAddStudentModal(): void {
-    if (!this.showAddStudentModal) return;
-    this.showAddStudentModal = false;
-    document.body.classList.remove('ms-modal-open');
-    // Refresh so a newly-registered student shows up immediately.
-    this.loadStudents();
-  }
-
-  onAddModalBackdropClick(event: MouseEvent): void {
-    if ((event.target as HTMLElement).classList.contains('ms-modal-backdrop')) {
-      this.closeAddStudentModal();
-    }
-  }
-
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    if (this.showAddStudentModal) {
-      this.closeAddStudentModal();
-    }
-  }
-
   viewStudent(s: any): void {
     if (!s?.id) return;
     this.router.navigate(['/students/manage/edit', s.id]);
@@ -179,6 +146,6 @@ export class ManageStudentsComponent implements OnInit, OnDestroy {
   }
 
   phoneOf(s: any): string {
-    return s?.contactNumber || s?.phoneNumber || s?.parentContact || '—';
+    return s?.contactNumber || s?.phoneNumber || '—';
   }
 }

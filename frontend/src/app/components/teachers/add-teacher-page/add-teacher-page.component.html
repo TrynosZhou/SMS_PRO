@@ -1,0 +1,202 @@
+<div class="tf-page">
+  <div class="tf-shell">
+    <header class="tf-header">
+      <h1 class="tf-title">Teacher Form</h1>
+      <p class="tf-sub">Add a new teacher — all fields marked with * are required.</p>
+      <div class="tf-legend" aria-hidden="true">
+        <span class="tf-leg tf-leg--req">Required *</span>
+        <span class="tf-leg tf-leg--opt">Optional</span>
+      </div>
+    </header>
+
+    <div class="tf-alert" *ngIf="error" role="alert">{{ error }}</div>
+
+    <!-- Section 1 -->
+    <section class="tf-section">
+      <div class="tf-rowhead">
+        <h2 class="tf-rowhead-title">
+          <span class="tf-num">1</span>
+          <span class="tf-rowhead-text">Personal information</span>
+        </h2>
+        <div class="tf-rowhead-line" aria-hidden="true"></div>
+      </div>
+
+      <div class="tf-grid tf-grid-3">
+        <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.title">
+          <span class="tf-badge tf-badge--req">Title *</span>
+          <select class="tf-input" [(ngModel)]="draft.title" name="tfTitle">
+            <option value="" disabled hidden>Select title</option>
+            <option value="Mr">Mr</option>
+            <option value="Mrs">Mrs</option>
+            <option value="Miss">Miss</option>
+            <option value="Ms">Ms</option>
+            <option value="Dr">Dr</option>
+            <option value="Prof">Prof</option>
+          </select>
+          <small class="tf-hint tf-hint--err" *ngIf="submitted && !draft.title">Title is required</small>
+        </div>
+
+        <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.firstName?.trim()">
+          <span class="tf-badge tf-badge--req">First name *</span>
+          <input class="tf-input" type="text" [(ngModel)]="draft.firstName" name="tfFirstName" placeholder=" " />
+          <small class="tf-hint">e.g. John</small>
+        </div>
+
+        <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.lastName?.trim()">
+          <span class="tf-badge tf-badge--req">Surname *</span>
+          <input class="tf-input" type="text" [(ngModel)]="draft.lastName" name="tfLastName" placeholder=" " />
+          <small class="tf-hint">e.g. Smith</small>
+        </div>
+
+        <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.nationalId?.trim()">
+          <span class="tf-badge tf-badge--req">National ID *</span>
+          <input class="tf-input" type="text" [(ngModel)]="draft.nationalId" name="tfNationalId" placeholder=" " />
+          <small class="tf-hint">e.g. 02086982F22</small>
+        </div>
+
+        <div class="tf-field tf-field--req tf-field--date" [class.tf-field--invalid]="submitted && !draft.dateOfBirth">
+          <span class="tf-badge tf-badge--req">Date of birth *</span>
+          <input class="tf-input" type="date" [(ngModel)]="draft.dateOfBirth" name="tfDob" [max]="maxDob" />
+        </div>
+
+        <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.gender">
+          <span class="tf-badge tf-badge--req">Gender *</span>
+          <div class="tf-gender">
+            <button type="button" class="tf-gender-btn" [class.tf-gender-btn--on]="draft.gender === 'Male'" (click)="setGender('Male')">
+              <span aria-hidden="true">♂</span> Male
+            </button>
+            <button type="button" class="tf-gender-btn" [class.tf-gender-btn--on]="draft.gender === 'Female'" (click)="setGender('Female')">
+              <span aria-hidden="true">♀</span> Female
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="tf-section">
+      <div class="tf-rowhead">
+        <h2 class="tf-rowhead-title">
+          <span class="tf-num">2</span>
+          <span class="tf-rowhead-text">Employment information</span>
+        </h2>
+        <div class="tf-rowhead-line" aria-hidden="true"></div>
+      </div>
+
+      <div class="tf-grid tf-grid-3">
+        <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.role">
+          <span class="tf-badge tf-badge--req">Role *</span>
+          <select class="tf-input" [(ngModel)]="draft.role" name="tfRole">
+            <option value="" disabled hidden>Select role</option>
+            <option value="Teacher">Teacher</option>
+            <option value="HOD">Head of Department</option>
+          </select>
+        </div>
+
+        <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.departmentId">
+          <span class="tf-badge tf-badge--req">Department *</span>
+          <select class="tf-input" [(ngModel)]="draft.departmentId" name="tfDepartment">
+            <option value="" disabled hidden>Select department</option>
+            <option *ngFor="let d of departments" [value]="d.id">{{ d.name }}</option>
+          </select>
+          <small class="tf-hint" *ngIf="!loadingDepartments && departments.length">
+            {{ draft.role === 'HOD' ? 'HOD will lead this department.' : 'Department this teacher belongs to.' }}
+          </small>
+          <small class="tf-hint" *ngIf="loadingDepartments">Loading departments…</small>
+          <small class="tf-hint tf-hint--err" *ngIf="!loadingDepartments && !departments.length">
+            No departments found. Add departments under System Administration → Departments first.
+          </small>
+          <small class="tf-hint tf-hint--err" *ngIf="submitted && !draft.departmentId && departments.length">Department is required</small>
+        </div>
+
+        <div class="tf-field tf-field--req tf-field--date" [class.tf-field--invalid]="submitted && !draft.dateOfJoining">
+          <span class="tf-badge tf-badge--req">Date of joining *</span>
+          <input class="tf-input" type="date" [(ngModel)]="draft.dateOfJoining" name="tfDoj" />
+        </div>
+
+        <div class="tf-field tf-field--opt tf-field--date tf-col-span-1">
+          <span class="tf-badge tf-badge--opt">Date of leaving</span>
+          <input class="tf-input" type="date" [(ngModel)]="draft.dateOfLeaving" name="tfDol" />
+          <small class="tf-hint">Leave blank if still employed</small>
+        </div>
+
+        <div class="tf-field tf-field--req tf-col-span-2">
+          <span class="tf-badge tf-badge--req">Employment status *</span>
+          <div class="tf-status">
+            <label class="tf-status-opt" [class.tf-status-opt--on]="draft.isActive">
+              <input type="radio" name="tfStatus" [checked]="draft.isActive" (change)="setActive(true)" />
+              <span class="tf-status-dot"></span>
+              <span>Active</span>
+            </label>
+            <label class="tf-status-opt" [class.tf-status-opt--on]="!draft.isActive">
+              <input type="radio" name="tfStatus" [checked]="!draft.isActive" (change)="setActive(false)" />
+              <span class="tf-status-dot"></span>
+              <span>Inactive</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3 -->
+    <section class="tf-section">
+      <div class="tf-rowhead">
+        <h2 class="tf-rowhead-title">
+          <span class="tf-num">3</span>
+          <span class="tf-rowhead-text">Contact information</span>
+        </h2>
+        <div class="tf-rowhead-line" aria-hidden="true"></div>
+      </div>
+
+      <div class="tf-grid tf-grid-3">
+        <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && (!draft.phoneNumber?.trim() || !phoneRegex.test(draft.phoneNumber.trim()))">
+          <span class="tf-badge tf-badge--req">Cell phone *</span>
+          <input class="tf-input" type="tel" [(ngModel)]="draft.phoneNumber" name="tfPhone" placeholder=" " />
+          <small class="tf-hint">e.g. +263778261057</small>
+        </div>
+
+        <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.email?.trim()">
+          <span class="tf-badge tf-badge--req">Email *</span>
+          <input class="tf-input" type="email" [(ngModel)]="draft.email" name="tfEmail" placeholder=" " />
+          <small class="tf-hint">e.g. john.smith&#64;school.com</small>
+        </div>
+
+        <div class="tf-field tf-field--opt">
+          <span class="tf-badge tf-badge--opt">Address</span>
+          <input class="tf-input" type="text" [(ngModel)]="draft.address" name="tfAddress" placeholder=" " />
+          <small class="tf-hint">Street, city</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4 -->
+    <section class="tf-section">
+      <div class="tf-rowhead">
+        <h2 class="tf-rowhead-title">
+          <span class="tf-num">4</span>
+          <span class="tf-rowhead-text">Qualifications</span>
+        </h2>
+        <div class="tf-rowhead-line" aria-hidden="true"></div>
+        <button type="button" class="tf-add-row" (click)="addQualification()" aria-label="Add qualification row">+ Add</button>
+      </div>
+
+      <div class="tf-qual-list">
+        <div class="tf-field tf-field--opt" *ngFor="let q of draft.qualifications; let i = index; trackBy: trackByIndex">
+          <span class="tf-badge tf-badge--opt">Qualification {{ i + 1 }}</span>
+          <div class="tf-qual-row">
+            <input class="tf-input" type="text" [(ngModel)]="draft.qualifications[i]" [name]="'tfQual_' + i" placeholder=" " />
+            <button type="button" class="tf-qual-del" (click)="removeQualification(i)" aria-label="Remove qualification">🗑</button>
+          </div>
+          <small class="tf-hint">e.g. Bachelor of Education</small>
+        </div>
+      </div>
+    </section>
+
+    <footer class="tf-foot">
+      <button type="button" class="tf-btn tf-btn-cancel" (click)="cancel()" [disabled]="saving">Cancel</button>
+      <button type="button" class="tf-btn tf-btn-submit" (click)="submit()" [disabled]="saving">
+        {{ saving ? 'Adding…' : 'Add teacher' }}
+      </button>
+    </footer>
+  </div>
+</div>

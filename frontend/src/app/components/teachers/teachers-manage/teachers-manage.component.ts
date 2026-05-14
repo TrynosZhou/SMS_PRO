@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { AddTeacherModalService } from '../../../services/add-teacher-modal.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-teachers-manage',
@@ -7,9 +7,11 @@ import { AddTeacherModalService } from '../../../services/add-teacher-modal.serv
   styleUrls: ['./teachers-manage.component.css'],
 })
 export class TeachersManageComponent {
-  constructor(private addTeacherModal: AddTeacherModalService) {}
+  constructor(private readonly router: Router) {}
 
-  openAddTeacher(): void {
-    this.addTeacherModal.open();
+  /** Hide shell header and tabs on full-page add-teacher flow. */
+  showManageTabs(): boolean {
+    const p = this.router.url.split('?')[0].replace(/\/+$/, '');
+    return !p.endsWith('/teachers/manage/add-new');
   }
 }

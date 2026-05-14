@@ -1,18 +1,18 @@
 <div class="sm-wrap">
-  <header class="sm-header">
+  <header *ngIf="showManageTabs()" class="sm-header">
     <h1 class="sm-title">Teacher Manager</h1>
     <p class="sm-sub">Add teachers, assign classes, and use the admin record book</p>
   </header>
 
-  <nav class="sm-tabs" aria-label="Teacher manager sections">
-    <button
-      type="button"
-      (click)="openAddTeacher()"
+  <nav *ngIf="showManageTabs()" class="sm-tabs" aria-label="Teacher manager sections">
+    <a
+      routerLink="/teachers/manage/add-new"
+      routerLinkActive="active"
       class="sm-tab sm-tab--btn"
     >
       <span class="sm-tab-ico" aria-hidden="true">📝</span>
       Add New
-    </button>
+    </a>
     <a
       routerLink="/assign-classes"
       routerLinkActive="active"

@@ -53,10 +53,10 @@
         </select>
       </div>
 
-      <button type="button" class="ms-add-btn" (click)="openAddStudentModal()">
+      <a routerLink="/students/manage/add-new" class="ms-add-btn">
         <span class="ms-add-ico" aria-hidden="true">+</span>
         Add Student
-      </button>
+      </a>
     </div>
 
     <!-- Table -->
@@ -142,31 +142,6 @@
             aria-label="Next page">›</button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Add Student modal — opened by the toolbar Add Student button. -->
-  <div
-    class="ms-modal-backdrop"
-    *ngIf="showAddStudentModal"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="ms-add-student-title"
-    (click)="onAddModalBackdropClick($event)"
-  >
-    <div class="ms-modal-panel" (click)="$event.stopPropagation()">
-      <button
-        type="button"
-        class="ms-modal-close"
-        (click)="closeAddStudentModal()"
-        aria-label="Close add student dialog"
-      >
-        ×
-      </button>
-      <app-student-form
-        [modalMode]="true"
-        (dismissAddModal)="closeAddStudentModal()"
-      ></app-student-form>
     </div>
   </div>
 </div>

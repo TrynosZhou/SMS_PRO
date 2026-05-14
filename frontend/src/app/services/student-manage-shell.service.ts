@@ -1,16 +1,14 @@
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Router } from '@angular/router';
 
 /**
- * Lets deep links and child routes request the Student Manager shell to open the add-student modal.
+ * Navigates to the full-page add-student flow under Student Manager (`/students/manage/add-new`).
  */
 @Injectable({ providedIn: 'root' })
 export class StudentManageShellService {
-  private readonly openAddSubject = new Subject<void>();
-  /** Subscribe in {@link StudentsManageComponent} to toggle the add-student modal. */
-  readonly addStudentModal$ = this.openAddSubject.asObservable();
+  constructor(private readonly router: Router) {}
 
   openAddStudentModal(): void {
-    this.openAddSubject.next();
+    void this.router.navigate(['/students/manage/add-new']);
   }
 }

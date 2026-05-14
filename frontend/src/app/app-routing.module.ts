@@ -6,9 +6,9 @@ import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { StudentFormComponent } from './components/students/student-form/student-form.component';
 import { StudentsManageComponent } from './components/students/students-manage/students-manage.component';
 import { PromoteStudentsComponent } from './components/students/promote-students/promote-students.component';
-import { StudentManageAddNewRedirectComponent } from './components/students/student-manage-add-new-redirect/student-manage-add-new-redirect.component';
 import { TeacherFormComponent } from './components/teachers/teacher-form/teacher-form.component';
 import { TeachersManageComponent } from './components/teachers/teachers-manage/teachers-manage.component';
+import { AddTeacherPageComponent } from './components/teachers/add-teacher-page/add-teacher-page.component';
 import { AssignClassesComponent } from './components/teachers/assign-classes/assign-classes.component';
 import { AllocateClassComponent } from './components/teachers/allocate-class/allocate-class.component';
 import { TeacherSubjectAssignmentComponent } from './components/teachers/teacher-subject-assignment/teacher-subject-assignment.component';
@@ -187,11 +187,7 @@ const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: '/students' },
       { path: 'students', pathMatch: 'full', redirectTo: '/students' },
-      {
-        path: 'add-new',
-        component: StudentManageAddNewRedirectComponent,
-        canActivate: [AuthGuard],
-      },
+      { path: 'add-new', component: StudentFormComponent, canActivate: [AuthGuard] },
       { path: 'enroll', component: EnrollStudentComponent, canActivate: [AuthGuard] },
       { path: 'unenrolled', component: UnenrolledStudentsComponent, canActivate: [AuthGuard] },
       { path: 'transfer', component: TransferFormComponent, canActivate: [AuthGuard] },
@@ -209,7 +205,7 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'record-book' },
-      { path: 'add-new', pathMatch: 'full', redirectTo: '/teachers' },
+      { path: 'add-new', component: AddTeacherPageComponent, canActivate: [AuthGuard] },
       { path: 'teachers', pathMatch: 'full', redirectTo: '/teachers' },
       { path: 'assign-classes', pathMatch: 'full', redirectTo: '/assign-classes' },
       {

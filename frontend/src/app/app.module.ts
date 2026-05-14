@@ -11,8 +11,7 @@ import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { StudentListComponent } from './components/students/student-list/student-list.component';
 import { StudentFormComponent } from './components/students/student-form/student-form.component';
 import { StudentsManageComponent } from './components/students/students-manage/students-manage.component';
-import { StudentManageAddNewRedirectComponent } from './components/students/student-manage-add-new-redirect/student-manage-add-new-redirect.component';
-import { AddTeacherModalComponent } from './components/teachers/add-teacher-modal/add-teacher-modal.component';
+import { AddTeacherPageComponent } from './components/teachers/add-teacher-page/add-teacher-page.component';
 import { TeacherFormComponent } from './components/teachers/teacher-form/teacher-form.component';
 import { AssignClassesComponent } from './components/teachers/assign-classes/assign-classes.component';
 import { AllocateClassComponent } from './components/teachers/allocate-class/allocate-class.component';
@@ -137,8 +136,7 @@ import { ContinuousAssessmentComponent } from './components/exams/continuous-ass
     StudentListComponent,
     StudentFormComponent,
     StudentsManageComponent,
-    StudentManageAddNewRedirectComponent,
-    AddTeacherModalComponent,
+    AddTeacherPageComponent,
     TeacherFormComponent,
     AssignClassesComponent,
     AllocateClassComponent,

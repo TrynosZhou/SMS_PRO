@@ -1,23 +1,23 @@
+import { Router } from '@angular/router';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 
 /**
- * Global controller for the shared "Add New Teacher" modal.
- * Any component can call `open()` to display the modal; the modal
- * component subscribes to the visibility stream and the `created$`
- * signal so the caller can refresh its list after a successful save.
+ * Opens the full-page "Add teacher" flow and notifies subscribers when a teacher is created.
  */
 @Injectable({ providedIn: 'root' })
 export class AddTeacherModalService {
   private readonly visibleSubject = new BehaviorSubject<boolean>(false);
+  /** @deprecated No modal; kept for compatibility if anything still subscribes. */
   readonly visible$: Observable<boolean> = this.visibleSubject.asObservable();
 
   private readonly createdSubject = new Subject<any>();
-  /** Emits the newly-created teacher payload returned by the API. */
   readonly created$: Observable<any> = this.createdSubject.asObservable();
 
+  constructor(private router: Router) {}
+
   open(): void {
-    this.visibleSubject.next(true);
+    void this.router.navigate(['/teachers/manage/add-new']);
   }
 
   close(): void {

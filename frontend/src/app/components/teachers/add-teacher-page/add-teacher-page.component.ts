@@ -1,5 +1,5 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { AddTeacherModalService } from '../../../services/add-teacher-modal.service';
 import { TeacherService } from '../../../services/teacher.service';
 import { DepartmentsService } from '../../../services/departments.service';
@@ -24,12 +24,11 @@ interface NewTeacherDraft {
 }
 
 @Component({
-  selector: 'app-add-teacher-modal',
-  templateUrl: './add-teacher-modal.component.html',
-  styleUrls: ['./add-teacher-modal.component.css']
+  selector: 'app-add-teacher-page',
+  templateUrl: './add-teacher-page.component.html',
+  styleUrls: ['./add-teacher-page.component.css'],
 })
-export class AddTeacherModalComponent implements OnInit, OnDestroy {
-  visible = false;
+export class AddTeacherPageComponent implements OnInit {
   saving = false;
   error = '';
   submitted = false;
@@ -37,13 +36,14 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
   departments: Array<{ id: string; name: string }> = [];
   loadingDepartments = false;
 
-  private readonly phoneRegex = /^\+?\d{9,15}$/;
-  readonly phoneValidationMessage = 'Enter a valid number, e.g. +263771234567 (9–15 digits, optional +).';
-  private sub?: Subscription;
+  readonly phoneRegex = /^\+?\d{9,15}$/;
+  readonly phoneValidationMessage =
+    'Enter a valid number, e.g. +263771234567 (9–15 digits, optional +).';
 
   draft: NewTeacherDraft = this.buildEmptyDraft();
 
   constructor(
+    private router: Router,
     private modalService: AddTeacherModalService,
     private teacherService: TeacherService,
     private departmentsService: DepartmentsService,
@@ -54,21 +54,10 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Do not load departments here: this modal is on app shell and runs before login.
-    // Departments load when the modal opens (see visible$ subscription).
-    this.sub = this.modalService.visible$.subscribe((open) => {
-      if (open) {
-        this.draft = this.buildEmptyDraft();
-        this.submitted = false;
-        this.error = '';
-        this.visible = true;
-        if (!this.departments.length) {
-          this.loadDepartments();
-        }
-      } else {
-        this.visible = false;
-      }
-    });
+    this.draft = this.buildEmptyDraft();
+    this.submitted = false;
+    this.error = '';
+    this.loadDepartments();
   }
 
   private loadDepartments(): void {
@@ -88,12 +77,8 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
       error: () => {
         this.departments = [];
         this.loadingDepartments = false;
-      }
+      },
     });
-  }
-
-  ngOnDestroy(): void {
-    this.sub?.unsubscribe();
   }
 
   private buildEmptyDraft(): NewTeacherDraft {
@@ -113,13 +98,13 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
       phoneNumber: '',
       email: '',
       address: '',
-      qualifications: ['']
+      qualifications: [''],
     };
   }
 
-  close(): void {
+  cancel(): void {
     if (this.saving) return;
-    this.modalService.close();
+    void this.router.navigate(['/teachers/manage/record-book']);
   }
 
   setGender(gender: 'Male' | 'Female'): void {
@@ -155,14 +140,42 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
     this.error = '';
 
     const t = this.draft;
-    if (!t.title) { this.error = 'Title is required.'; return; }
-    if (!t.firstName?.trim()) { this.error = 'First name is required.'; return; }
-    if (!t.lastName?.trim()) { this.error = 'Surname is required.'; return; }
-    if (!t.nationalId?.trim()) { this.error = 'National ID is required.'; return; }
-    if (!t.dateOfBirth) { this.error = 'Date of Birth is required.'; return; }
-    if (!t.role) { this.error = 'Role is required.'; return; }
-    if (!t.departmentId) { this.error = 'Department is required.'; return; }
-    if (!t.dateOfJoining) { this.error = 'Date of Joining is required.'; return; }
+    if (!t.title) {
+      this.error = 'Title is required.';
+      return;
+    }
+    if (!t.firstName?.trim()) {
+      this.error = 'First name is required.';
+      return;
+    }
+    if (!t.lastName?.trim()) {
+      this.error = 'Surname is required.';
+      return;
+    }
+    if (!t.nationalId?.trim()) {
+      this.error = 'National ID is required.';
+      return;
+    }
+    if (!t.dateOfBirth) {
+      this.error = 'Date of Birth is required.';
+      return;
+    }
+    if (!t.gender) {
+      this.error = 'Gender is required.';
+      return;
+    }
+    if (!t.role) {
+      this.error = 'Role is required.';
+      return;
+    }
+    if (!t.departmentId) {
+      this.error = 'Department is required.';
+      return;
+    }
+    if (!t.dateOfJoining) {
+      this.error = 'Date of Joining is required.';
+      return;
+    }
     if (!t.phoneNumber?.trim() || !this.phoneRegex.test(t.phoneNumber.trim())) {
       this.error = this.phoneValidationMessage;
       return;
@@ -172,7 +185,7 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const qualifications = (t.qualifications || []).map(q => q.trim()).filter(Boolean);
+    const qualifications = (t.qualifications || []).map((q) => q.trim()).filter(Boolean);
 
     const payload: any = {
       title: t.title,
@@ -190,7 +203,7 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
       email: t.email.trim(),
       address: t.address?.trim() || undefined,
       qualifications,
-      qualification: qualifications.join('; ')
+      qualification: qualifications.join('; '),
     };
 
     this.saving = true;
@@ -198,12 +211,12 @@ export class AddTeacherModalComponent implements OnInit, OnDestroy {
       next: (resp: any) => {
         this.saving = false;
         this.modalService.emitCreated(resp || payload);
-        this.modalService.close();
+        void this.router.navigate(['/teachers']);
       },
       error: (err: any) => {
         this.saving = false;
         this.error = err?.error?.message || err?.error || 'Failed to add teacher.';
-      }
+      },
     });
   }
 }
