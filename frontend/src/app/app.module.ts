@@ -12,7 +12,6 @@ import { StudentListComponent } from './components/students/student-list/student
 import { StudentFormComponent } from './components/students/student-form/student-form.component';
 import { StudentsManageComponent } from './components/students/students-manage/students-manage.component';
 import { StudentManageAddNewRedirectComponent } from './components/students/student-manage-add-new-redirect/student-manage-add-new-redirect.component';
-import { TeacherListComponent } from './components/teachers/teacher-list/teacher-list.component';
 import { AddTeacherModalComponent } from './components/teachers/add-teacher-modal/add-teacher-modal.component';
 import { TeacherFormComponent } from './components/teachers/teacher-form/teacher-form.component';
 import { AssignClassesComponent } from './components/teachers/assign-classes/assign-classes.component';
@@ -121,6 +120,8 @@ import { ManageTeachersComponent } from './components/registration/manage-teache
 import { ManageClassesComponent } from './components/enrolment/manage-classes/manage-classes.component';
 import { ManageTermsComponent } from './components/enrolment/manage-terms/manage-terms.component';
 import { EnrolStudentsComponent } from './components/enrolment/enrol-students/enrol-students.component';
+import { MigrateClassShellComponent } from './components/enrolment/migrate-class-shell/migrate-class-shell.component';
+import { MigrateClassEnrolmentComponent } from './components/enrolment/migrate-class-enrolment/migrate-class-enrolment.component';
 import { ClassListsViewComponent } from './components/enrolment/class-lists-view/class-lists-view.component';
 import { MarkRegisterComponent } from './components/attendance/mark-register/mark-register.component';
 import { AttendanceReportsViewComponent } from './components/attendance/attendance-reports-view/attendance-reports-view.component';
@@ -137,7 +138,6 @@ import { ContinuousAssessmentComponent } from './components/exams/continuous-ass
     StudentFormComponent,
     StudentsManageComponent,
     StudentManageAddNewRedirectComponent,
-    TeacherListComponent,
     AddTeacherModalComponent,
     TeacherFormComponent,
     AssignClassesComponent,
@@ -245,6 +245,8 @@ import { ContinuousAssessmentComponent } from './components/exams/continuous-ass
     ManageClassesComponent,
     ManageTermsComponent,
     EnrolStudentsComponent,
+    MigrateClassShellComponent,
+    MigrateClassEnrolmentComponent,
     ClassListsViewComponent,
     MarkRegisterComponent,
     AttendanceReportsViewComponent,

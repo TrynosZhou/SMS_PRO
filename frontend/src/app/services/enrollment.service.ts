@@ -75,5 +75,22 @@ export class EnrollmentService {
     }
     return this.http.get<StudentEnrollment[]>(`${this.apiUrl}/enrollments`, { params });
   }
+
+  getMigrateClassPreview(fromClassId: string): Observable<{ count: number; fromClassId: string; fromClassName: string }> {
+    const params = new HttpParams().set('fromClassId', fromClassId);
+    return this.http.get<{ count: number; fromClassId: string; fromClassName: string }>(
+      `${this.apiUrl}/enrollments/migrate-class/preview`,
+      { params }
+    );
+  }
+
+  migrateClassEnrolments(body: {
+    fromClassId: string;
+    toClassId: string;
+    fromTermId?: string;
+    toTermId?: string;
+  }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/enrollments/migrate-class`, body);
+  }
 }
 

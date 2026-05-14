@@ -1,0 +1,101 @@
+<div class="mce-page">
+  <header class="mce-head">
+    <h1 class="mce-title">
+      <span class="mce-title-ico" aria-hidden="true">🔄</span>
+      Migrate Class Enrolment
+    </h1>
+    <p class="mce-sub">Move every student currently on the source class to the destination class. Terms are recorded on enrolment notes for your records.</p>
+  </header>
+
+  <div class="mce-alert mce-alert--ok" *ngIf="success"><span aria-hidden="true">✓</span> {{ success }}</div>
+  <div class="mce-alert mce-alert--err" *ngIf="error"><span aria-hidden="true">⚠</span> {{ error }}</div>
+
+  <div class="mce-board">
+    <section class="mce-card mce-card--src">
+      <div class="mce-card-head">
+        <span class="mce-card-ico" aria-hidden="true">⬅️</span>
+        <div>
+          <h2 class="mce-card-title">Source</h2>
+          <p class="mce-card-sub">Select the class and term to migrate from</p>
+        </div>
+      </div>
+      <div class="mce-field">
+        <label class="mce-label">Source Class<span class="mce-req">*</span></label>
+        <div class="mce-input-wrap">
+          <select class="mce-select" [(ngModel)]="sourceClassId" (ngModelChange)="refreshPreview()">
+            <option value="" disabled hidden>Select the class to migrate from</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+          <span class="mce-input-ico" aria-hidden="true">📚</span>
+        </div>
+        <p class="mce-hint">Students currently assigned to this class will be moved.</p>
+      </div>
+      <div class="mce-field">
+        <label class="mce-label">Source Term<span class="mce-req">*</span></label>
+        <div class="mce-input-wrap">
+          <select class="mce-select" [(ngModel)]="sourceTermId">
+            <option value="" disabled hidden>Select the source term</option>
+            <option *ngFor="let t of terms" [value]="t.id">{{ termLabel(t) }}</option>
+          </select>
+          <span class="mce-input-ico" aria-hidden="true">📅</span>
+        </div>
+        <p class="mce-hint">Validated and stored on migrated enrolment notes.</p>
+      </div>
+      <div class="mce-preview" *ngIf="sourceClassId">
+        <span *ngIf="previewLoading">Counting students…</span>
+        <span *ngIf="!previewLoading && previewCount !== null">
+          <strong>{{ previewCount }}</strong> student(s) in this class
+        </span>
+      </div>
+    </section>
+
+    <div class="mce-connector" aria-hidden="true">
+      <span class="mce-arrow">➡️</span>
+    </div>
+
+    <section class="mce-card mce-card--dst">
+      <div class="mce-card-head">
+        <span class="mce-card-ico" aria-hidden="true">➡️</span>
+        <div>
+          <h2 class="mce-card-title">Destination</h2>
+          <p class="mce-card-sub">Select the class and term to migrate to</p>
+        </div>
+      </div>
+      <div class="mce-field">
+        <label class="mce-label">Destination Class<span class="mce-req">*</span></label>
+        <div class="mce-input-wrap">
+          <select class="mce-select" [(ngModel)]="destClassId">
+            <option value="" disabled hidden>Select the class to migrate to</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+          <span class="mce-input-ico" aria-hidden="true">📚</span>
+        </div>
+        <p class="mce-hint">Must differ from the source class.</p>
+      </div>
+      <div class="mce-field">
+        <label class="mce-label">Destination Term<span class="mce-req">*</span></label>
+        <div class="mce-input-wrap">
+          <select class="mce-select" [(ngModel)]="destTermId">
+            <option value="" disabled hidden>Select the destination term</option>
+            <option *ngFor="let t of terms" [value]="t.id">{{ termLabel(t) }}</option>
+          </select>
+          <span class="mce-input-ico" aria-hidden="true">📅</span>
+        </div>
+        <p class="mce-hint">Validated and stored on migrated enrolment notes.</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="mce-actions">
+    <button type="button" class="mce-btn mce-btn--reset" (click)="reset()" [disabled]="migrating">Reset</button>
+    <button
+      type="button"
+      class="mce-btn mce-btn--go"
+      (click)="migrate()"
+      [disabled]="disableMigrateBtn"
+    >
+      <span aria-hidden="true">🔄</span>
+      {{ migrating ? 'Migrating…' : 'Migrate Class' }}
+    </button>
+  </div>
+</div>

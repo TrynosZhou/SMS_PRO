@@ -21,6 +21,7 @@ export class TeacherFormComponent implements OnInit {
     gender: '',
     maritalStatus: '',
     phoneNumber: '',
+    email: '',
     address: '',
     dateOfBirth: '',
     qualification: '',
@@ -128,17 +129,27 @@ export class TeacherFormComponent implements OnInit {
     return this.teacher.subjectIds.includes(subjectId);
   }
 
+  private readonly emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  private isValidEmail(value: string): boolean {
+    const t = (value || '').trim();
+    if (!t) return true;
+    return this.emailRegex.test(t);
+  }
+
   loadTeacher(id: string) {
     this.teacherService.getTeacherById(id).subscribe({
       next: (data: any) => {
+        const { user, subjects, classes, department, ...rest } = data;
         this.teacher = {
-          ...data,
+          ...rest,
           role: data.role || 'Teacher',
-          departmentId: data.departmentId || data.department?.id || '',
+          departmentId: data.departmentId || department?.id || '',
           dateOfBirth: data.dateOfBirth?.split('T')[0],
-          subjectIds: data.subjects?.map((s: any) => s.id) || [],
+          subjectIds: subjects?.map((s: any) => s.id) || [],
           phoneNumber: data.phoneNumber || '',
-          maritalStatus: data.maritalStatus || ''
+          maritalStatus: data.maritalStatus || '',
+          email: (data.email ?? user?.email ?? '') || '',
         };
       },
       error: (err: any) => {
@@ -214,6 +225,12 @@ export class TeacherFormComponent implements OnInit {
       return;
     }
 
+    if (this.isEdit && (this.teacher.email || '').trim() && !this.isValidEmail(this.teacher.email)) {
+      this.error = 'Please enter a valid email address.';
+      this.submitting = false;
+      return;
+    }
+
     if (this.isEdit) {
       // Don't send teacherId in update (it cannot be changed). Omit nested entities so the API
       // always receives an explicit scalar `role` (demotion HOD → Teacher was not persisting when
@@ -235,6 +252,7 @@ export class TeacherFormComponent implements OnInit {
         String(this.teacher?.departmentId ?? '').trim() ||
         String(this.teacher?.department?.id ?? '').trim();
       updateData['departmentId'] = dep || null;
+      updateData['email'] = (this.teacher.email ?? '').trim();
 
       this.teacherService.updateTeacher(this.teacher.id, updateData).subscribe({
         next: () => {
@@ -253,6 +271,7 @@ export class TeacherFormComponent implements OnInit {
       const teacherData = { ...this.teacher };
       delete teacherData.teacherId; // Remove teacherId, it will be auto-generated
       delete teacherData.id;
+      delete teacherData.user;
       
       this.teacherService.createTeacher(teacherData).subscribe({
         next: (response: any) => {

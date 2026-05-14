@@ -1,0 +1,36 @@
+<div class="mcs-page">
+  <div class="mcs-shell">
+    <header class="mcs-banner">
+      <h1 class="mcs-banner-title">
+        <span class="mcs-banner-ico" aria-hidden="true">🎒</span>
+        Class moves &amp; promotion
+      </h1>
+      <p class="mcs-banner-sub">Year-end promotion rules, or move an entire class roster between classes and terms.</p>
+    </header>
+
+    <nav class="mcs-tabs" aria-label="Migrate class sections">
+      <a
+        routerLink="/migrate-class/promote"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="mcs-tab"
+      >
+        <span class="mcs-tab-ico" aria-hidden="true">⬆️</span>
+        Promote Students
+      </a>
+      <a
+        routerLink="/migrate-class/enrolment"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="mcs-tab"
+      >
+        <span class="mcs-tab-ico" aria-hidden="true">↔️</span>
+        Migrate Class
+      </a>
+    </nav>
+
+    <div class="mcs-outlet">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>

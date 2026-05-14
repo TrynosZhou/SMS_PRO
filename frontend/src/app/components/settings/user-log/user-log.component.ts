@@ -39,8 +39,8 @@ export class UserLogComponent implements OnInit, OnDestroy {
 
   readonly entityTypeOptions = [
     { value: '', label: 'All Types' },
-    { value: 'with_invoice', label: 'Linked to invoice' },
-    { value: 'no_invoice', label: 'No invoice link' },
+    { value: 'with_invoice', label: 'With invoice' },
+    { value: 'no_invoice', label: 'Without invoice' },
   ];
 
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -148,9 +148,10 @@ export class UserLogComponent implements OnInit, OnDestroy {
     this.loadLogs();
   }
 
-  onLimitChange(n: number): void {
-    if (!Number.isFinite(n) || n < 1 || n === this.limit) return;
-    this.limit = n;
+  onLimitChange(n: number | string): void {
+    const v = typeof n === 'number' ? n : parseInt(String(n), 10);
+    if (!Number.isFinite(v) || v < 1 || v === this.limit) return;
+    this.limit = v;
     this.page = 1;
     this.loadLogs();
   }

@@ -641,7 +641,10 @@ export const getTeacherById = async (req: AuthRequest, res: Response) => {
       (teacher as any).subjects = [];
     }
 
-    res.json(teacher);
+    res.json({
+      ...(teacher as any),
+      email: (teacher as any).user?.email ?? (teacher as any).email ?? null,
+    });
   } catch (error: any) {
     console.error('[getTeacherById] Error:', error);
     console.error('[getTeacherById] Error stack:', error.stack);
@@ -671,7 +674,8 @@ export const updateTeacher = async (req: AuthRequest, res: Response) => {
       gender,
       maritalStatus,
       role,
-      departmentId
+      departmentId,
+      email,
     } = req.body;
 
     const teacherRepository = AppDataSource.getRepository(Teacher);
@@ -782,12 +786,50 @@ export const updateTeacher = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Update linked account email (optional; stored on users.email)
+    if (email !== undefined) {
+      if (!teacher.userId) {
+        const wantsEmail = typeof email === 'string' && email.trim();
+        if (wantsEmail) {
+          return res.status(400).json({
+            message: 'This teacher has no linked login account; email cannot be set.',
+          });
+        }
+      } else {
+        const userRepo = AppDataSource.getRepository(User);
+        const user = await userRepo.findOne({ where: { id: teacher.userId } });
+        if (user) {
+          const trimmed = typeof email === 'string' ? email.trim() : '';
+          if (!trimmed) {
+            user.email = null;
+            await userRepo.save(user);
+          } else {
+            const lower = trimmed.toLowerCase();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(lower)) {
+              return res.status(400).json({ message: 'Please provide a valid email address.' });
+            }
+            const existing = await userRepo.findOne({ where: { email: lower } });
+            if (existing && existing.id !== user.id) {
+              return res.status(400).json({ message: 'A user with this email address already exists.' });
+            }
+            user.email = lower;
+            await userRepo.save(user);
+          }
+        }
+      }
+    }
+
     const updatedTeacher = await teacherRepository.findOne({
       where: { id },
-      relations: ['subjects', 'classes', 'department']
+      relations: ['subjects', 'classes', 'department', 'user'],
     });
 
-    res.json({ message: 'Teacher updated successfully', teacher: updatedTeacher });
+    const teacherOut = updatedTeacher
+      ? { ...(updatedTeacher as any), email: updatedTeacher.user?.email ?? null }
+      : updatedTeacher;
+
+    res.json({ message: 'Teacher updated successfully', teacher: teacherOut });
   } catch (error: any) {
     console.error('Error updating teacher:', error);
     res.status(500).json({ 

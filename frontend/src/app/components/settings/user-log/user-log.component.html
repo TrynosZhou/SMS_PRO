@@ -34,7 +34,7 @@
             [(ngModel)]="filterAction"
             (ngModelChange)="onFilterImmediate()"
           >
-            <option *ngFor="let o of actionOptions" [value]="o.value">{{ o.label }}</option>
+            <option *ngFor="let o of actionOptions" [ngValue]="o.value">{{ o.label }}</option>
           </select>
         </div>
 
@@ -46,7 +46,7 @@
             [(ngModel)]="filterEntityType"
             (ngModelChange)="onFilterImmediate()"
           >
-            <option *ngFor="let o of entityTypeOptions" [value]="o.value">{{ o.label }}</option>
+            <option *ngFor="let o of entityTypeOptions" [ngValue]="o.value">{{ o.label }}</option>
           </select>
         </div>
 

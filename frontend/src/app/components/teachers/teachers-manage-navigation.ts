@@ -9,9 +9,10 @@ export function isInTeachersManageShell(router: Router): boolean {
 export function teachersManageNav(router: Router) {
   const m = isInTeachersManageShell(router);
   return {
-    list: m ? '/teachers/manage/teachers' : '/teachers',
+    /** Teacher directory / uploads: single page at `/teachers` (Manage Teachers). */
+    list: '/teachers',
     /** @deprecated Add Teacher is now an in-app modal; call AddTeacherModalService.open() instead. */
-    addNew: m ? '/teachers/manage/teachers' : '/teachers',
+    addNew: '/teachers',
     assignClasses: '/assign-classes',
     allocateClass: '/allocate_class',
     recordBook: m ? '/teachers/manage/record-book' : '/admin/teacher-record-book',

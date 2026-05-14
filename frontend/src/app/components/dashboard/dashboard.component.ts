@@ -236,7 +236,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
             { label: 'Terms', icon: '📆', route: '/terms' },
             { label: 'Enrol', icon: '✅', route: '/enrol' },
             { label: 'Class Lists', icon: '📋', route: '/class-lists' },
-            { label: 'Migrate Class', icon: '⬆️', route: '/migrate-class' }
+            { label: 'Promote Students', icon: '⬆️', route: '/migrate-class/promote' },
+            { label: 'Migrate Class', icon: '↔️', route: '/migrate-class/enrolment' }
           ]
         },
         {

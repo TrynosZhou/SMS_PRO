@@ -1,12 +1,25 @@
 import { Router } from 'express';
-import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import { UserRole } from '../entities/User';
 import * as enrollmentController from '../controllers/enrollment.controller';
 
 const router = Router();
 
-// All enrollment routes require authentication and admin access
+// All enrollment routes require authentication
 router.use(authenticate);
+
+// Bulk class migration — administrators only (before the broader role gate below)
+router.get(
+  '/migrate-class/preview',
+  authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.DEMO_USER),
+  enrollmentController.getMigrateClassPreview
+);
+router.post(
+  '/migrate-class',
+  authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.DEMO_USER),
+  enrollmentController.migrateClassEnrollments
+);
+
 router.use(
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.ACCOUNTANT, UserRole.TEACHER)
 );

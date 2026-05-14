@@ -207,6 +207,23 @@
         </div>
       </div>
 
+      <div class="form-grid" *ngIf="isEdit">
+        <div class="form-group">
+          <label for="teacherEmail">Email address</label>
+          <input
+            type="email"
+            id="teacherEmail"
+            name="teacherEmail"
+            [(ngModel)]="teacher.email"
+            class="form-input"
+            placeholder="name@school.org"
+            autocomplete="email"
+            inputmode="email"
+          />
+          <small class="form-hint">Optional. Stored on the teacher’s login account (recovery and notifications). Leave blank to clear.</small>
+        </div>
+      </div>
+
       <div class="form-group full-width">
         <label for="address">Address</label>
         <textarea 

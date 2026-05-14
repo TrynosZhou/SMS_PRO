@@ -1,12 +1,12 @@
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { SmsTitleStrategy } from './services/sms-title.strategy';
+import { RouterModule, Routes, TitleStrategy } from '@angular/router';
 import { LoginComponent } from './components/login/login.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { StudentFormComponent } from './components/students/student-form/student-form.component';
 import { StudentsManageComponent } from './components/students/students-manage/students-manage.component';
 import { PromoteStudentsComponent } from './components/students/promote-students/promote-students.component';
 import { StudentManageAddNewRedirectComponent } from './components/students/student-manage-add-new-redirect/student-manage-add-new-redirect.component';
-import { TeacherListComponent } from './components/teachers/teacher-list/teacher-list.component';
 import { TeacherFormComponent } from './components/teachers/teacher-form/teacher-form.component';
 import { TeachersManageComponent } from './components/teachers/teachers-manage/teachers-manage.component';
 import { AssignClassesComponent } from './components/teachers/assign-classes/assign-classes.component';
@@ -122,11 +122,13 @@ import { ManageClassesComponent } from './components/enrolment/manage-classes/ma
 import { ManageTermsComponent } from './components/enrolment/manage-terms/manage-terms.component';
 import { EnrolStudentsComponent } from './components/enrolment/enrol-students/enrol-students.component';
 import { ClassListsViewComponent } from './components/enrolment/class-lists-view/class-lists-view.component';
+import { MigrateClassShellComponent } from './components/enrolment/migrate-class-shell/migrate-class-shell.component';
+import { MigrateClassEnrolmentComponent } from './components/enrolment/migrate-class-enrolment/migrate-class-enrolment.component';
 
 const routes: Routes = [
-  { path: '', component: SplashComponent },
-  { path: 'login', component: LoginComponent },
-  { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
+  { path: '', component: SplashComponent, title: 'Welcome' },
+  { path: 'login', component: LoginComponent, title: 'Login' },
+  { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard], title: 'Dashboard' },
   { path: 'parent/dashboard', component: ParentDashboardComponent, canActivate: [AuthGuard] },
   { path: 'parent/elearning-manage', redirectTo: '/parent/all_in_one', pathMatch: 'full' },
   { path: 'parent/all_in_one', component: ParentElearningManageComponent, canActivate: [AuthGuard] },
@@ -206,9 +208,9 @@ const routes: Routes = [
     component: TeachersManageComponent,
     canActivate: [AuthGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'teachers' },
-      { path: 'add-new', pathMatch: 'full', redirectTo: 'teachers' },
-      { path: 'teachers', component: TeacherListComponent, canActivate: [AuthGuard] },
+      { path: '', pathMatch: 'full', redirectTo: 'record-book' },
+      { path: 'add-new', pathMatch: 'full', redirectTo: '/teachers' },
+      { path: 'teachers', pathMatch: 'full', redirectTo: '/teachers' },
       { path: 'assign-classes', pathMatch: 'full', redirectTo: '/assign-classes' },
       {
         path: 'teacher_subject/contact/:teacherId',
@@ -463,7 +465,16 @@ const routes: Routes = [
   { path: 'terms', component: ManageTermsComponent, canActivate: [AuthGuard] },
   { path: 'enrol', component: EnrolStudentsComponent, canActivate: [AuthGuard] },
   { path: 'class-lists', component: ClassListsViewComponent, canActivate: [AuthGuard] },
-  { path: 'migrate-class', component: ClassPromotionComponent, canActivate: [AuthGuard] },
+  {
+    path: 'migrate-class',
+    component: MigrateClassShellComponent,
+    canActivate: [AuthGuard],
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'promote' },
+      { path: 'promote', component: ClassPromotionComponent, canActivate: [AuthGuard], title: 'Promote Students' },
+      { path: 'enrolment', component: MigrateClassEnrolmentComponent, canActivate: [AuthGuard], title: 'Migrate Class Enrolment' },
+    ],
+  },
   {
     path: 'subjects/manage',
     component: SubjectsManageComponent,
@@ -555,6 +566,7 @@ const routes: Routes = [
   { path: 'system/integrations', component: IntegrationsComponent, canActivate: [AuthGuard] },
   { path: 'integrations', pathMatch: 'full', redirectTo: '/system/integrations' },
   { path: 'system-settings', component: SystemSettingsComponent, canActivate: [AuthGuard] },
+  { path: 'system/audit', pathMatch: 'full', redirectTo: '/audit-logs' },
   { path: 'audit-logs', component: UserLogComponent, canActivate: [AuthGuard] },
   {
     path: 'academic-settings',
@@ -600,6 +612,7 @@ const routes: Routes = [
     }),
   ],
   exports: [RouterModule],
+  providers: [{ provide: TitleStrategy, useClass: SmsTitleStrategy }],
 })
 export class AppRoutingModule { }
 

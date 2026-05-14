@@ -4,7 +4,12 @@
   padding: 1.25rem 1.5rem 2.5rem;
   min-height: calc(100vh - 64px);
   box-sizing: border-box;
-  background: linear-gradient(165deg, #eef2ff 0%, #e8f4fc 42%, #f1f5f9 100%);
+  /* Faded blue wash — ~30% stronger than prior for clearer tint */
+  background-color: #d6e8f6;
+  background-image:
+    radial-gradient(ellipse 140% 70% at 50% 0%, rgba(96, 165, 250, 0.36), transparent 55%),
+    radial-gradient(ellipse 90% 55% at 0% 100%, rgba(147, 197, 253, 0.46), transparent 50%),
+    radial-gradient(ellipse 90% 55% at 100% 100%, rgba(147, 197, 253, 0.46), transparent 50%);
 }
 
 .al-card {
