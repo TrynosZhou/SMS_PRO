@@ -96,7 +96,7 @@ const PATH_TITLES: Record<string, string> = {
   'outstanding-balance': 'Outstanding balance',
   balance_enquiry: 'Balance enquiry',
   audit_log: 'Transaction audit',
-  'payroll/manage/overview': 'Payroll — overview',
+  'payroll/overview': 'Payroll — overview',
   'payroll/manage/employees': 'Payroll — employees',
   'payroll/manage/structures/new': 'Payroll — new structure',
   'payroll/manage/structures': 'Payroll — structures',

@@ -373,12 +373,80 @@ export class StudentFormComponent implements OnInit {
     });
   }
 
+  readonly addSectionSteps = [
+    { id: 1, label: 'Student', icon: '👤' },
+    { id: 2, label: 'Contact', icon: '📞' },
+    { id: 3, label: 'Academic', icon: '🎓' },
+  ];
+
   getCompletionPercent(): number {
-    const completed = this.requiredFields.filter(field => {
-      const value = this.student?.[field];
-      return value !== null && value !== undefined && String(value).trim() !== '';
-    }).length;
-    return Math.round((completed / this.requiredFields.length) * 100);
+    if (this.isEdit) {
+      const completed = this.requiredFields.filter((field) => {
+        const value = this.student?.[field];
+        return value !== null && value !== undefined && String(value).trim() !== '';
+      }).length;
+      return Math.round((completed / this.requiredFields.length) * 100);
+    }
+    const checks = this.getAddRequiredChecks();
+    const done = checks.filter(Boolean).length;
+    return Math.round((done / checks.length) * 100);
+  }
+
+  private getAddRequiredChecks(): boolean[] {
+    const s = this.student;
+    return [
+      !!s?.firstName?.trim(),
+      !!s?.lastName?.trim(),
+      !!s?.nationalId?.trim(),
+      !!s?.dateOfBirth,
+      !!s?.gender,
+      !!s?.contactNumber?.trim(),
+      !!s?.email?.trim(),
+      !!s?.address?.trim(),
+      !!s?.dateOfJoining,
+      !!s?.studentType,
+    ];
+  }
+
+  isAddSectionComplete(sectionId: number): boolean {
+    const s = this.student;
+    switch (sectionId) {
+      case 1:
+        return !!(
+          s?.firstName?.trim() &&
+          s?.lastName?.trim() &&
+          s?.nationalId?.trim() &&
+          s?.dateOfBirth &&
+          s?.gender
+        );
+      case 2:
+        return !!(s?.contactNumber?.trim() && s?.email?.trim() && s?.address?.trim());
+      case 3:
+        return !!(s?.dateOfJoining && s?.studentType);
+      default:
+        return false;
+    }
+  }
+
+  isAddStepCurrent(sectionId: number): boolean {
+    for (const step of this.addSectionSteps) {
+      if (!this.isAddSectionComplete(step.id)) {
+        return step.id === sectionId;
+      }
+    }
+    return sectionId === this.addSectionSteps[this.addSectionSteps.length - 1].id;
+  }
+
+  getStudentPreviewName(): string {
+    const first = this.student?.firstName?.trim();
+    const last = this.student?.lastName?.trim();
+    if (first && last) return `${first} ${last}`;
+    return first || last || '';
+  }
+
+  scrollToAddSection(sectionId: number): void {
+    const el = document.getElementById(`sfa-section-${sectionId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
 }

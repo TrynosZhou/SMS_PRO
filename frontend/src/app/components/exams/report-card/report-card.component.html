@@ -53,67 +53,99 @@
             <line x1="10" y1="18" x2="14" y2="18"></line>
           </svg>
         </span>
-        <h2 class="rp-params-title">Report Parameters</h2>
+        <div class="rp-params-head-text">
+          <h2 class="rp-params-title">Report Parameters</h2>
+          <p class="rp-params-sub">Pick term, class, and exam type, then generate report cards.</p>
+        </div>
+        <span
+          class="rp-filters-steps"
+          [class.rp-filters-steps--ready]="isSelectionValid() && !hasGeneratedReports"
+          [class.rp-filters-steps--loaded]="hasGeneratedReports"
+        >
+          <ng-container *ngIf="hasGeneratedReports">
+            {{ filteredReportCards.length }} card{{ filteredReportCards.length === 1 ? '' : 's' }} ready
+          </ng-container>
+          <ng-container *ngIf="!hasGeneratedReports">
+            {{ filtersReadyCount }} / {{ filtersTotalCount }} filters set
+          </ng-container>
+        </span>
       </header>
 
       <form (ngSubmit)="generateReportCards()">
         <div class="rp-grid">
 
-          <!-- Choose Term -->
-          <div class="rp-field" [class.has-value]="!!selectedTerm" [class.is-invalid]="!loadingTerms && isFieldInvalid('term')">
-            <select id="rpTerm"
-              class="rp-input"
+          <div class="rp-field-col" [class.rp-field-col--invalid]="!loadingTerms && isFieldInvalid('term')">
+            <label class="rp-field-label" for="rpTerm">Term <span class="rp-req">*</span></label>
+            <select
+              id="rpTerm"
+              class="rp-select"
               [(ngModel)]="selectedTerm"
               name="term"
               required
               [disabled]="loadingTerms"
-              (change)="onSelectionChange()">
-              <option value="" disabled hidden></option>
+              (change)="onSelectionChange()"
+            >
+              <option value="">Choose term</option>
               <option *ngFor="let term of availableTerms" [value]="term">{{ term }}</option>
             </select>
-            <label for="rpTerm" class="rp-label">Choose Term<span class="rp-req">*</span></label>
-            <span class="rp-caret" aria-hidden="true">▾</span>
           </div>
 
-          <!-- Choose Class -->
-          <div class="rp-field" *ngIf="!isParent; else parentClassFieldTpl"
-            [class.has-value]="!!selectedClass"
-            [class.is-invalid]="isFieldInvalid('class')">
-            <select id="rpClass"
-              class="rp-input"
-              [(ngModel)]="selectedClass"
-              name="class"
-              required
-              (change)="onSelectionChange()">
-              <option value="" disabled hidden></option>
-              <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
-            </select>
-            <label for="rpClass" class="rp-label">Choose Class<span class="rp-req">*</span></label>
-            <span class="rp-caret" aria-hidden="true">▾</span>
-          </div>
+          <ng-container *ngIf="!isParent; else parentClassFieldTpl">
+            <div class="rp-field-col" [class.rp-field-col--invalid]="isFieldInvalid('class')">
+              <label class="rp-field-label" for="rpClass">Class <span class="rp-req">*</span></label>
+              <select
+                id="rpClass"
+                class="rp-select"
+                [(ngModel)]="selectedClass"
+                name="class"
+                required
+                (change)="onSelectionChange()"
+              >
+                <option value="">Choose class</option>
+                <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+              </select>
+            </div>
+          </ng-container>
           <ng-template #parentClassFieldTpl>
-            <div class="rp-field has-value rp-field-readonly">
-              <div class="rp-readonly-value">{{ parentStudentClassName || 'Class information unavailable' }}</div>
-              <span class="rp-label">Class (auto)</span>
-              <span class="rp-lock" aria-hidden="true">🔒</span>
+            <div class="rp-field-col">
+              <label class="rp-field-label">Class</label>
+              <div class="rp-readonly-box">
+                <span>{{ parentStudentClassName || 'Class information unavailable' }}</span>
+                <span class="rp-lock" aria-hidden="true" title="Auto-filled for parent">🔒</span>
+              </div>
             </div>
           </ng-template>
 
-          <!-- Exam Type -->
-          <div class="rp-field" [class.has-value]="!!selectedExamType" [class.is-invalid]="isFieldInvalid('examType')">
-            <select id="rpExamType"
-              class="rp-input"
+          <div class="rp-field-col" [class.rp-field-col--invalid]="isFieldInvalid('examType')">
+            <label class="rp-field-label" for="rpExamType">Exam type <span class="rp-req">*</span></label>
+            <select
+              id="rpExamType"
+              class="rp-select"
               [(ngModel)]="selectedExamType"
               name="examType"
               required
-              (change)="onSelectionChange()">
-              <option value="" disabled hidden></option>
+              (change)="onSelectionChange()"
+            >
+              <option value="">Choose exam type</option>
               <option *ngFor="let type of examTypes" [value]="type.value">{{ type.label }}</option>
             </select>
-            <label for="rpExamType" class="rp-label">Exam Type<span class="rp-req">*</span></label>
-            <span class="rp-caret" aria-hidden="true">▾</span>
           </div>
 
+        </div>
+
+        <div class="rp-kpi-row" *ngIf="hasGeneratedReports">
+          <div class="rp-kpi">
+            <span class="rp-kpi-value">{{ filteredReportCards.length }}</span>
+            <span class="rp-kpi-label">Report cards</span>
+          </div>
+          <div class="rp-kpi">
+            <span class="rp-kpi-value">{{ getOverallAverage() | number:'1.1-1' }}%</span>
+            <span class="rp-kpi-label">Class average</span>
+          </div>
+          <div class="rp-kpi">
+            <span class="rp-kpi-value">{{ selectedTerm }}</span>
+            <span class="rp-kpi-label">Term</span>
+          </div>
         </div>
 
         <div class="rp-actions">
@@ -327,13 +359,20 @@
             <div class="info-item">
               <span class="info-label">Class Position:</span>
               <span class="info-value">
-                {{ reportCard.classPosition ? reportCard.classPosition : 0 }} out of {{ reportCard.totalStudents ? reportCard.totalStudents : 0 }}
+                <ng-container *ngIf="reportCard.classPosition > 0 && reportCard.totalStudents > 0">
+                  {{ reportCard.classPosition }} out of {{ reportCard.totalStudents }}
+                </ng-container>
+                <ng-container *ngIf="!(reportCard.classPosition > 0 && reportCard.totalStudents > 0)">—</ng-container>
               </span>
             </div>
             <div class="info-item">
               <span class="info-label">Grade Position:</span>
               <span class="info-value">
-                {{ reportCard.formPosition ? reportCard.formPosition : 0 }} out of {{ reportCard.totalStudentsPerStream ? reportCard.totalStudentsPerStream : 0 }}
+                <ng-container *ngIf="reportCard.formPosition > 0 && reportCard.totalStudentsPerStream > 0">
+                  {{ reportCard.formPosition }} out of {{ reportCard.totalStudentsPerStream }}
+                  <span *ngIf="reportCard.streamForm" class="info-stream">({{ reportCard.streamForm }})</span>
+                </ng-container>
+                <ng-container *ngIf="!(reportCard.formPosition > 0 && reportCard.totalStudentsPerStream > 0)">—</ng-container>
               </span>
             </div>
             <div class="info-item" *ngIf="reportCard.totalAttendance !== undefined && reportCard.totalAttendance !== null">

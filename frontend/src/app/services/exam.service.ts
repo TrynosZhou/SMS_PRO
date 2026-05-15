@@ -46,8 +46,11 @@ export class ExamService {
     return this.http.get(`${this.apiUrl}/exams/rankings/class`, { params });
   }
 
-  getClassRankingsByType(examType: string, classId: string): Observable<any> {
-    const params: any = { examType, classId };
+  getClassRankingsByType(examType: string, classId: string, term?: string): Observable<any> {
+    const params: Record<string, string> = { examType, classId };
+    if (term) {
+      params['term'] = term;
+    }
     return this.http.get(`${this.apiUrl}/exams/rankings/class-by-type`, { params });
   }
 
@@ -66,8 +69,12 @@ export class ExamService {
     return this.http.get(`${this.apiUrl}/exams/rankings/form`, { params: { examId, form } });
   }
 
-  getOverallPerformanceRankings(form: string, examType: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/exams/rankings/overall-performance`, { params: { form, examType } });
+  getOverallPerformanceRankings(form: string, examType: string, term?: string): Observable<any> {
+    const params: Record<string, string> = { form, examType };
+    if (term) {
+      params['term'] = term;
+    }
+    return this.http.get(`${this.apiUrl}/exams/rankings/overall-performance`, { params });
   }
 
   /**

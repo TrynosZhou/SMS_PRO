@@ -19,10 +19,7 @@
       </h2>
     </div>
     <form (ngSubmit)="loadRankings()" class="filter-form">
-      <div
-        class="form-grid"
-        [class.form-grid--subject]="rankingType === 'subject'"
-      >
+      <div class="form-grid" [ngClass]="'form-grid--' + rankingType">
         <div class="form-group">
           <label for="rankingType">
             <span class="label-icon">📊</span>
@@ -40,7 +37,7 @@
           </select>
         </div>
 
-        <div class="form-group" *ngIf="rankingType === 'class' || rankingType === 'subject' || rankingType === 'overall-performance'">
+        <div class="form-group">
           <label for="selectedExamType">
             <span class="label-icon">📊</span>
             Exam Type <span class="required">*</span>
@@ -58,14 +55,31 @@
           </select>
         </div>
 
+        <div class="form-group">
+          <label for="selectedTerm">
+            <span class="label-icon">📅</span>
+            Term <span class="required">*</span>
+          </label>
+          <select
+            id="selectedTerm"
+            [(ngModel)]="selectedTerm"
+            name="term"
+            required
+            [disabled]="loadingTerms"
+            class="form-select">
+            <option value="">{{ loadingTerms ? 'Loading terms…' : 'Select Term' }}</option>
+            <option *ngFor="let term of terms" [value]="term.label">{{ term.label }}</option>
+          </select>
+        </div>
+
         <div class="form-group" *ngIf="rankingType === 'class'">
           <label for="selectedClass">
             <span class="label-icon">🏫</span>
             Class <span class="required">*</span>
           </label>
-          <select 
+          <select
             id="selectedClass"
-            [(ngModel)]="selectedClass" 
+            [(ngModel)]="selectedClass"
             name="class"
             required
             class="form-select">
@@ -259,7 +273,8 @@
   <div class="empty-state" *ngIf="!loading && rankings.length === 0 && hasSearched">
     <div class="empty-icon">📊</div>
     <h3>No Rankings Found</h3>
-    <p>Try adjusting your filters or select different criteria to view rankings.</p>
+    <p *ngIf="!loadError">Try adjusting your filters or select different criteria to view rankings.</p>
+    <p class="load-error" *ngIf="loadError">{{ loadError }}</p>
   </div>
 
   <!-- Loading State -->

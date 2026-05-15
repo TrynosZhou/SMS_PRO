@@ -1,9 +1,10 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ExamService } from '../../../services/exam.service';
 import { ClassService } from '../../../services/class.service';
 import { SubjectService } from '../../../services/subject.service';
 import { StudentService } from '../../../services/student.service';
 import { SettingsService } from '../../../services/settings.service';
+import { firstValueFrom } from 'rxjs';
 import {
   getGradeInfoFromSettingsRow,
   scoreToPercent
@@ -43,6 +44,8 @@ interface MarkRow {
   score: number | null;
   remarks: string;
   dirty: boolean;
+  /** Row already has a mark row on the server (allows remarks-only auto-save). */
+  persisted: boolean;
   /** Timestamp of the last successful save (auto or manual) for this row. Drives the ✓✓ indicator. */
   autoSavedAt: Date | null;
 }
@@ -80,6 +83,7 @@ export class MarksInputComponent implements OnInit, OnDestroy {
   marks: Record<string, MarkRow> = {};
 
   filterText = '';
+  sortBy: 'default' | 'name' | 'number' | 'score' = 'default';
   maxScore = 100;
 
   // Status
@@ -96,7 +100,8 @@ export class MarksInputComponent implements OnInit, OnDestroy {
   /** Pending debounce handle so we can cancel/reschedule on each keystroke. */
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   /** Debounce delay (ms) — short enough to feel "instant", long enough to coalesce keystrokes. */
-  private readonly AUTO_SAVE_DELAY_MS = 1000;
+  private readonly AUTO_SAVE_DELAY_MS = 700;
+  private autoSaveRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Same settings row as Academic Settings → Grading (`getSettings()`).
@@ -226,11 +231,11 @@ export class MarksInputComponent implements OnInit, OnDestroy {
   // so the user must re-fetch with the new selection (avoids stale data).
   onFilterChange(): void {
     if (this.hasLoadedRoster) {
-      // Cancel any pending auto-save so we don't post stale rows against the previous selection.
       if (this.autoSaveTimer !== null) {
         clearTimeout(this.autoSaveTimer);
         this.autoSaveTimer = null;
       }
+      this.flushAutoSave();
       this.hasLoadedRoster = false;
       this.currentExam = null;
       this.students = [];
@@ -271,43 +276,17 @@ export class MarksInputComponent implements OnInit, OnDestroy {
   }
 
   private findOrCreateExam(): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.examService.getExams(this.selectedClassId).subscribe({
-        next: (raw: any) => {
-          const exams: any[] = Array.isArray(raw) ? raw : raw?.data || [];
-          const existing = exams.find(
-            (e) =>
-              e.term === this.selectedTermLabel &&
-              e.type === this.selectedExamType &&
-              e.classId === this.selectedClassId &&
-              (e.subjects || []).some((s: any) => s.id === this.selectedSubjectId)
-          );
-          if (existing) {
-            resolve(existing);
-            return;
-          }
-          // Create a new one with this single subject
-          const examName = `${this.selectedTermLabel} - ${this.getSelectedExamTypeLabel()} - ${this.getSelectedClassName()}`;
-          this.examService
-            .createExam({
-              name: examName,
-              type: this.selectedExamType,
-              term: this.selectedTermLabel,
-              examDate: new Date().toISOString().split('T')[0],
-              classId: this.selectedClassId,
-              subjectIds: [this.selectedSubjectId]
-            })
-            .subscribe({
-              // The backend returns { message, exam } from POST /api/exams; the exam itself (with `id`)
-              // is the `exam` property. Without this unwrap, `currentExam.id` ends up undefined and
-              // a subsequent save would POST to /api/exams/marks with no examId (→ 400).
-              next: (created: any) => resolve(created?.exam ?? created),
-              error: (err: any) => reject(err)
-            });
-        },
-        error: (err: any) => reject(err)
-      });
-    });
+    const examName = `${this.selectedTermLabel} - ${this.getSelectedExamTypeLabel()} - ${this.getSelectedClassName()}`;
+    return firstValueFrom(
+      this.examService.createExam({
+        name: examName,
+        type: this.selectedExamType,
+        term: this.selectedTermLabel,
+        examDate: new Date().toISOString().split('T')[0],
+        classId: this.selectedClassId,
+        subjectIds: [this.selectedSubjectId]
+      })
+    ).then((res: any) => res?.exam ?? res);
   }
 
   private loadStudentsForClass(classId: string): Promise<void> {
@@ -336,7 +315,14 @@ export class MarksInputComponent implements OnInit, OnDestroy {
           // Initialize marks map
           this.marks = {};
           this.students.forEach((s) => {
-            this.marks[s.id] = { studentId: s.id, score: null, remarks: '', dirty: false, autoSavedAt: null };
+            this.marks[s.id] = {
+              studentId: s.id,
+              score: null,
+              remarks: '',
+              dirty: false,
+              persisted: false,
+              autoSavedAt: null
+            };
           });
           resolve();
         },
@@ -351,18 +337,25 @@ export class MarksInputComponent implements OnInit, OnDestroy {
 
   private loadExistingMarks(examId: string): Promise<void> {
     return new Promise((resolve) => {
-      this.examService.getMarks(examId).subscribe({
+      this.examService.getMarks(examId, undefined, this.selectedClassId).subscribe({
         next: (data: any) => {
           const list: any[] = Array.isArray(data) ? data : data?.marks || data?.data || [];
           list
-            .filter((m) => m.subjectId === this.selectedSubjectId)
+            .filter((m) => {
+              const sid = m.subjectId ?? m.subject?.id;
+              return sid === this.selectedSubjectId;
+            })
             .forEach((m) => {
               const row = this.marks[m.studentId];
               if (row) {
-                row.score = typeof m.score === 'number' ? m.score : Number(m.score) || null;
-                // Backend / DB field is `comments` (per-subject teacher remark)
+                const parsed = Number(m.score);
+                row.score = Number.isFinite(parsed) ? parsed : null;
                 row.remarks = m.comments ?? m.remarks ?? '';
                 row.dirty = false;
+                row.persisted = true;
+                if (row.score !== null && row.score !== undefined) {
+                  row.autoSavedAt = m.updatedAt ? new Date(m.updatedAt) : new Date();
+                }
               }
             });
           resolve();
@@ -372,27 +365,96 @@ export class MarksInputComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ---------- Filter ----------
+  // ---------- Filter / sort ----------
   onFilterTextChange(): void {
     this.applyFilterText();
   }
 
+  onSortChange(): void {
+    this.applyFilterText();
+  }
+
   private applyFilterText(): void {
-    if (!this.filterText.trim()) {
-      this.filteredStudents = [...this.students];
-      return;
-    }
+    let list = [...this.students];
     const q = this.filterText.toLowerCase().trim();
-    this.filteredStudents = this.students.filter((s) => {
-      const full = `${s.lastName} ${s.firstName}`.toLowerCase();
-      const number = (s.studentNumber || '').toLowerCase();
-      return (
-        full.includes(q) ||
-        (s.lastName || '').toLowerCase().includes(q) ||
-        (s.firstName || '').toLowerCase().includes(q) ||
-        number.includes(q)
-      );
+    if (q) {
+      list = list.filter((s) => {
+        const full = `${s.lastName} ${s.firstName}`.toLowerCase();
+        const number = (s.studentNumber || '').toLowerCase();
+        return (
+          full.includes(q) ||
+          (s.lastName || '').toLowerCase().includes(q) ||
+          (s.firstName || '').toLowerCase().includes(q) ||
+          number.includes(q)
+        );
+      });
+    }
+    list.sort((a, b) => this.compareStudents(a, b));
+    this.filteredStudents = list;
+  }
+
+  private compareStudents(a: StudentRow, b: StudentRow): number {
+    if (this.sortBy === 'name') {
+      const ln = String(a.lastName || '').localeCompare(String(b.lastName || ''), undefined, {
+        sensitivity: 'base'
+      });
+      if (ln !== 0) return ln;
+      return String(a.firstName || '').localeCompare(String(b.firstName || ''), undefined, {
+        sensitivity: 'base'
+      });
+    }
+    if (this.sortBy === 'number') {
+      return String(a.studentNumber || '').localeCompare(String(b.studentNumber || ''), undefined, {
+        numeric: true,
+        sensitivity: 'base'
+      });
+    }
+    if (this.sortBy === 'score') {
+      const sa = this.marks[a.id]?.score;
+      const sb = this.marks[b.id]?.score;
+      const na = sa === null || sa === undefined ? -1 : Number(sa);
+      const nb = sb === null || sb === undefined ? -1 : Number(sb);
+      return nb - na;
+    }
+    return 0;
+  }
+
+  jumpToNextEmpty(): void {
+    const startIdx = this.filteredStudents.findIndex((s) => {
+      const r = this.marks[s.id];
+      return !r || r.score === null || r.score === undefined;
     });
+    if (startIdx < 0) return;
+    const student = this.filteredStudents[startIdx];
+    const el = document.getElementById(`mi-score-${student.id}`) as HTMLInputElement | null;
+    el?.focus();
+    el?.select();
+  }
+
+  onScoreEnter(event: Event, studentId: string): void {
+    event.preventDefault();
+    const idx = this.filteredStudents.findIndex((s) => s.id === studentId);
+    if (idx < 0) return;
+    for (let i = idx + 1; i < this.filteredStudents.length; i++) {
+      const s = this.filteredStudents[i];
+      const r = this.marks[s.id];
+      if (!r || r.score === null || r.score === undefined) {
+        const el = document.getElementById(`mi-score-${s.id}`) as HTMLInputElement | null;
+        el?.focus();
+        el?.select();
+        return;
+      }
+    }
+    this.jumpToNextEmpty();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (!this.hasLoadedRoster || this.saving) return;
+      event.preventDefault();
+      this.saveAll();
+    }
   }
 
   // ---------- Mark editing ----------
@@ -425,13 +487,13 @@ export class MarksInputComponent implements OnInit, OnDestroy {
   }
 
   // ---------- Auto-save ----------
-  /** True for a row that has been auto-saved and hasn't been edited since (drives the ✓✓ tick). */
+  /** True for a row that was loaded from server or successfully auto-saved and not dirty since. */
   isRowSaved(studentId: string): boolean {
     const r = this.marks[studentId];
     return !!(r && r.autoSavedAt && !r.dirty);
   }
 
-  /** Debounced auto-save: every edit re-arms the timer so we coalesce rapid keystrokes. */
+  // ---------- Auto-save ----------
   private scheduleAutoSave(): void {
     if (this.autoSaveTimer !== null) clearTimeout(this.autoSaveTimer);
     this.autoSaveTimer = setTimeout(() => {
@@ -440,53 +502,101 @@ export class MarksInputComponent implements OnInit, OnDestroy {
     }, this.AUTO_SAVE_DELAY_MS);
   }
 
-  /** Persist all currently dirty rows that have a usable score. Rows without a score are skipped
-   *  (the backend rejects them anyway, and we don't want to wipe partial entries). */
+  /** Flush pending debounce and save immediately (on blur / filter change / destroy). */
+  flushAutoSave(): void {
+    if (this.autoSaveTimer !== null) {
+      clearTimeout(this.autoSaveTimer);
+      this.autoSaveTimer = null;
+    }
+    if (this.hasUnsaved && this.currentExam?.id && !this.autoSaving) {
+      this.autoSaveDirtyRows();
+    }
+  }
+
+  onFieldBlur(): void {
+    this.flushAutoSave();
+  }
+
+  private buildAutoSavePayload(): Array<{
+    studentId: string; subjectId: string; score: number; maxScore: number; comments: string;
+  }> {
+    return this.students
+      .map((s) => {
+        const r = this.marks[s.id];
+        if (!r || !r.dirty) return null;
+        if (r.score === null || r.score === undefined) return null;
+        return {
+          studentId: s.id,
+          subjectId: this.selectedSubjectId,
+          score: Number(r.score),
+          maxScore: this.maxScore,
+          comments: r.remarks || ''
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => !!x);
+  }
+
   private autoSaveDirtyRows(): void {
-    if (!this.currentExam || !this.currentExam.id) return;
-    // If a manual save is mid-flight, re-arm the debounce and try again shortly.
+    if (!this.currentExam?.id) return;
     if (this.saving || this.autoSaving) {
       this.scheduleAutoSave();
       return;
     }
 
-    const dirtyRows = this.students.filter((s) => {
-      const r = this.marks[s.id];
-      return r && r.dirty && r.score !== null && r.score !== undefined;
-    });
-    if (dirtyRows.length === 0) return;
+    const payload = this.buildAutoSavePayload();
+    if (payload.length === 0) return;
 
-    const payload = dirtyRows.map((s) => {
-      const r = this.marks[s.id] as MarkRow;
-      return {
-        studentId: s.id,
-        subjectId: this.selectedSubjectId,
-        score: r.score as number,
-        comments: r.remarks || '',
-      };
-    });
+    // Capture IDs before async call so we clear the right rows
+    const sentIds = new Set(payload.map((p) => p.studentId));
 
     this.autoSaving = true;
     this.examService.captureMarks(this.currentExam.id, payload).subscribe({
-      next: () => {
+      next: (res: any) => {
         const now = new Date();
+        const savedCount = Number(res?.savedCount ?? 0);
+        const invalidMarks: any[] = Array.isArray(res?.invalidMarks) ? res.invalidMarks : [];
+        const invalidStudentIds = new Set(invalidMarks.map((m: any) => String(m?.studentId || '')));
+
+        if (savedCount <= 0) {
+          this.autoSaving = false;
+          this.error = res?.message || 'Auto-save failed: no rows were stored.';
+          this.dismissError();
+          if (this.hasUnsaved) this.scheduleAutoSave();
+          return;
+        }
+
         this.lastAutoSavedAt = now;
         this.lastSavedAt = now;
-        // Only stamp rows that were still pristine since the request went out — anything edited
-        // mid-flight stays `dirty` so it gets picked up in the next debounce window.
-        dirtyRows.forEach((s) => {
-          const r = this.marks[s.id];
+        this.error = '';
+        sentIds.forEach((id) => {
+          if (invalidStudentIds.has(String(id))) return;
+          const r = this.marks[id];
           if (!r) return;
-          if (r.dirty) {
+          // Only clear dirty if the value hasn't changed while the request was in-flight.
+          const sent = payload.find((p) => p.studentId === id);
+          if (sent && r.score === sent.score && (r.remarks || '') === (sent.comments || '')) {
             r.dirty = false;
+            r.persisted = true;
             r.autoSavedAt = now;
           }
         });
+        if (invalidStudentIds.size > 0) {
+          this.error = `Saved ${savedCount}, but ${invalidStudentIds.size} row(s) were rejected.`;
+          this.dismissError();
+        }
         this.autoSaving = false;
+        if (this.hasUnsaved) this.scheduleAutoSave();
       },
-      error: () => {
-        // Leave dirty flags untouched so the next debounce or manual save can retry.
+      error: (err: any) => {
         this.autoSaving = false;
+        const msg = err?.error?.message || '';
+        this.error = msg || 'Auto-save failed — will retry';
+        this.dismissError();
+        if (this.autoSaveRetryTimer !== null) clearTimeout(this.autoSaveRetryTimer);
+        this.autoSaveRetryTimer = setTimeout(() => {
+          this.autoSaveRetryTimer = null;
+          if (this.hasUnsaved) this.autoSaveDirtyRows();
+        }, 3000);
       }
     });
   }
@@ -495,6 +605,15 @@ export class MarksInputComponent implements OnInit, OnDestroy {
     if (this.autoSaveTimer !== null) {
       clearTimeout(this.autoSaveTimer);
       this.autoSaveTimer = null;
+    }
+    if (this.autoSaveRetryTimer !== null) {
+      clearTimeout(this.autoSaveRetryTimer);
+      this.autoSaveRetryTimer = null;
+    }
+    // Best-effort flush before component tears down
+    const payload = this.buildAutoSavePayload();
+    if (payload.length > 0 && this.currentExam?.id) {
+      this.examService.captureMarks(this.currentExam.id, payload).subscribe();
     }
   }
 
@@ -507,6 +626,34 @@ export class MarksInputComponent implements OnInit, OnDestroy {
 
   get totalCount(): number {
     return this.students.length;
+  }
+
+  get remainingCount(): number {
+    return Math.max(0, this.totalCount - this.markedCount);
+  }
+
+  get completionPercent(): number {
+    if (this.totalCount === 0) return 0;
+    return Math.round((this.markedCount / this.totalCount) * 100);
+  }
+
+  get filtersReadyCount(): number {
+    let n = 0;
+    if (this.selectedTermLabel) n++;
+    if (this.selectedExamType) n++;
+    if (this.selectedClassId) n++;
+    if (this.selectedSubjectId) n++;
+    return n;
+  }
+
+  get averageScore(): number | null {
+    const scored = this.students.filter((s) => {
+      const sc = this.marks[s.id]?.score;
+      return sc !== null && sc !== undefined;
+    });
+    if (scored.length === 0) return null;
+    const sum = scored.reduce((acc, s) => acc + (this.marks[s.id]?.score as number), 0);
+    return Math.round((sum / scored.length) * 10) / 10;
   }
 
   get hasUnsaved(): boolean {
@@ -543,19 +690,25 @@ export class MarksInputComponent implements OnInit, OnDestroy {
       this.dismissError();
       return;
     }
+    // Cancel any pending auto-save — we're doing a full save now
+    if (this.autoSaveTimer !== null) {
+      clearTimeout(this.autoSaveTimer);
+      this.autoSaveTimer = null;
+    }
+    // Always include ALL rows that have a score, whether dirty or not.
     const payload = this.students
       .map((s) => {
         const row = this.marks[s.id];
-        if (!row) return null;
-        if (row.score === null || row.score === undefined) return null;
+        if (!row || row.score === null || row.score === undefined) return null;
         return {
           studentId: s.id,
           subjectId: this.selectedSubjectId,
-          score: row.score,
-          comments: row.remarks || '',
+          score: Number(row.score),
+          maxScore: this.maxScore,
+          comments: row.remarks || ''
         };
       })
-      .filter((x): x is { studentId: string; subjectId: string; score: number; comments: string } => !!x);
+      .filter((x): x is NonNullable<typeof x> => !!x);
 
     if (payload.length === 0) {
       this.error = 'No marks to save — enter at least one score.';
@@ -569,21 +722,32 @@ export class MarksInputComponent implements OnInit, OnDestroy {
 
     this.examService.captureMarks(this.currentExam.id, payload).subscribe({
       next: (res: any) => {
-        this.success = res?.message || `Saved ${payload.length} mark(s) successfully`;
+        const savedCount = Number(res?.savedCount ?? 0);
+        const invalidMarks: any[] = Array.isArray(res?.invalidMarks) ? res.invalidMarks : [];
+        const invalidStudentIds = new Set(invalidMarks.map((m: any) => String(m?.studentId || '')));
         this.saving = false;
+
+        if (savedCount <= 0) {
+          this.error = res?.message || 'No marks were saved.';
+          this.dismissError();
+          return;
+        }
+
+        this.success = `Saved ${savedCount} mark(s) successfully`;
         const now = new Date();
         this.lastSavedAt = now;
         this.lastAutoSavedAt = now;
-        // Reset dirty flags and stamp the row-level "saved" tick so the ✓✓ indicator lights up
-        // for every row included in this batch (same indicator as auto-save).
         this.students.forEach((s) => {
           const r = this.marks[s.id];
-          if (!r) return;
+          if (!r || invalidStudentIds.has(String(s.id))) return;
           r.dirty = false;
-          if (r.score !== null && r.score !== undefined) {
-            r.autoSavedAt = now;
-          }
+          r.persisted = true;
+          r.autoSavedAt = r.score !== null && r.score !== undefined ? now : r.autoSavedAt;
         });
+        if (invalidStudentIds.size > 0) {
+          this.error = `${invalidStudentIds.size} row(s) were rejected by the server.`;
+          this.dismissError();
+        }
         setTimeout(() => (this.success = ''), 4000);
       },
       error: (err: any) => {

@@ -56,6 +56,30 @@ export function inferStudentFeeLevelBand(classEntity: Class | null | undefined):
   return 'UNKNOWN';
 }
 
+export function isALevelSubjectCategory(category: string | null | undefined): boolean {
+  const c = String(category || 'O_LEVEL').toUpperCase().replace(/[\s-]+/g, '_');
+  return c === 'A_LEVEL' || c === 'AS_A_LEVEL';
+}
+
+/** Whether an active subject applies to the class O vs A level band. */
+export function subjectMatchesClassLevelBand(
+  subjectCategory: string | null | undefined,
+  band: StudentFeeLevelBand
+): boolean {
+  const isA = isALevelSubjectCategory(subjectCategory);
+  if (band === 'A_LEVEL') return isA;
+  if (band === 'O_LEVEL') return !isA;
+  return !isA;
+}
+
+export function filterSubjectsForClass<T extends { category?: string | null }>(
+  subjects: T[],
+  classEntity: Class | null | undefined
+): T[] {
+  const band = inferStudentFeeLevelBand(classEntity);
+  return subjects.filter((s) => subjectMatchesClassLevelBand(s.category, band));
+}
+
 /**
  * When fee catalog uses separate O vs A Level categories, skip rows that do not match the student's class.
  */

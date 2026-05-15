@@ -417,13 +417,17 @@ const routes: Routes = [
   { path: 'balance_enquiry', component: BalanceEnquiryComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance' } },
   { path: 'audit_log', component: TransactionAuditComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance' } },
   {
+    path: 'payroll/manage/overview',
+    redirectTo: '/payroll/overview',
+    pathMatch: 'full',
+  },
+  {
     path: 'payroll/manage',
     component: PayrollManageComponent,
     canActivate: [AuthGuard, ModuleAccessGuard],
     data: { module: 'finance' },
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'overview' },
-      { path: 'overview', component: PayrollManagementComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance', tab: 'overview' } },
+      { path: '', pathMatch: 'full', redirectTo: '/payroll/overview' },
       { path: 'employees', component: PayrollManagementComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance', tab: 'employees' } },
       { path: 'structures/new', component: PayrollManagementComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance', tab: 'structures', structurePage: 'new' } },
       { path: 'structures', component: PayrollManagementComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance', tab: 'structures', structurePage: 'list' } },
@@ -435,7 +439,8 @@ const routes: Routes = [
     ],
   },
   { path: 'payroll_manage', redirectTo: 'payroll/manage', pathMatch: 'full' },
-  { path: 'payroll', component: PayrollManagementComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance', tab: 'overview' } },
+  { path: 'payroll', redirectTo: '/payroll/overview', pathMatch: 'full' },
+  { path: 'payroll/overview', component: PayrollManagementComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance', tab: 'overview' } },
   { path: 'payroll/employees', component: PayrollManagementComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance', tab: 'employees' } },
   { path: 'payroll/structures/new', component: PayrollManagementComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance', tab: 'structures', structurePage: 'new' } },
   { path: 'payroll/structures', component: PayrollManagementComponent, canActivate: [AuthGuard, ModuleAccessGuard], data: { module: 'finance', tab: 'structures', structurePage: 'list' } },
@@ -609,9 +614,8 @@ const routes: Routes = [
 @NgModule({
   imports: [
     RouterModule.forRoot(routes, {
-      // Initial navigation is performed manually from AppComponent so that
-      // every app bootstrap goes through the Splash -> Login -> Dashboard
-      // flow, regardless of which URL the browser landed on.
+      // Initial navigation is performed manually from AppComponent so refresh
+      // can restore the session and return to the same URL when still signed in.
       initialNavigation: 'disabled',
       anchorScrolling: 'enabled',
       scrollPositionRestoration: 'enabled',

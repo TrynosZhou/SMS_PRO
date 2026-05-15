@@ -303,7 +303,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         {
           id: 'payroll', label: 'Payroll', icon: '🧮',
           children: [
-            { label: 'Overview', icon: '🗂️', route: '/payroll/manage/overview' },
+            { label: 'Overview', icon: '🗂️', route: '/payroll/overview' },
             { label: 'Employees', icon: '👥', route: '/payroll/manage/employees' },
             { label: 'Structures', icon: '🏛️', route: '/payroll/manage/structures' },
             { label: 'Assignments', icon: '🔗', route: '/payroll/manage/assignments' },
@@ -411,7 +411,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         {
           id: 'payroll', label: 'Payroll', icon: '🧮',
           children: [
-            { label: 'Overview', icon: '🗂️', route: '/payroll/manage/overview' },
+            { label: 'Overview', icon: '🗂️', route: '/payroll/overview' },
             { label: 'Payslips', icon: '🧾', route: '/payroll/manage/payslips' },
             { label: 'Reports', icon: '📊', route: '/payroll/manage/reports' }
           ]

@@ -27,6 +27,16 @@ import {
   getGradePointValue,
   getPassThresholdPercentForMarkSheet,
 } from '../utils/gradeBandsResolve';
+import {
+  filterSubjectsForClass,
+  inferStudentFeeLevelBand,
+} from '../utils/managedFeesBilling';
+import {
+  activeStudentIdsForClass,
+  findActiveStudentsForClass,
+  findStudentsForClassListing,
+  findStudentsForFormStream,
+} from '../utils/classRoster';
 
 // Helper function to assign positions with proper tie handling
 // Students with the same score (average or percentage) get the same position, and positions are skipped after ties
@@ -104,6 +114,164 @@ function sortSubjectsByName(subjects: Subject[]): Subject[] {
   return [...subjects].sort((a, b) =>
     (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
   );
+}
+
+/** Add one mark row into per-student average accumulator (supports uniformMark). */
+function accumulateMarkIntoStudentAverages(
+  map: Record<string, { total: number; count: number }>,
+  mark: Marks
+): void {
+  if (!mark.studentId || !mark.maxScore || mark.maxScore === 0) {
+    return;
+  }
+  const hasUniformMark = mark.uniformMark !== null && mark.uniformMark !== undefined;
+  const hasScore = mark.score !== null && mark.score !== undefined;
+  if (!hasUniformMark && (!hasScore || !mark.score)) {
+    return;
+  }
+
+  const sid = mark.studentId;
+  if (!map[sid]) {
+    map[sid] = { total: 0, count: 0 };
+  }
+  const percentage = hasUniformMark
+    ? parseFloat(String(mark.uniformMark))
+    : ((mark.score || 0) / mark.maxScore) * 100;
+  if (!Number.isFinite(percentage)) {
+    return;
+  }
+  map[sid].total += percentage;
+  map[sid].count += 1;
+}
+
+function studentAveragesToRankings(
+  averages: Record<string, { total: number; count: number }>
+): Array<{ studentId: string; average: number; position: number }> {
+  const unsorted = Object.entries(averages).map(([studentId, avg]) => ({
+    studentId,
+    average: avg.count > 0 ? avg.total / avg.count : 0,
+  }));
+  unsorted.sort((a, b) => b.average - a.average);
+  return assignPositionsWithTies(unsorted).map((r) => ({
+    studentId: r.studentId,
+    average: r.average,
+    position: r.position,
+  }));
+}
+
+/** Staff roles that may use draft exam sessions (same as marks capture). */
+function isStaffExamViewer(role?: string): boolean {
+  return (
+    role === 'admin' ||
+    role === 'superadmin' ||
+    role === 'teacher' ||
+    role === 'hod' ||
+    role === 'demo_user' ||
+    role === 'accountant'
+  );
+}
+
+/**
+ * Resolve class + term + exam-type session exams. Parents/students only see published exams.
+ * When duplicate session exams exist, use the single exam with the most marks (matches createExam).
+ */
+async function resolveExamsForSession(
+  examRepository: ReturnType<typeof AppDataSource.getRepository<Exam>>,
+  marksRepository: ReturnType<typeof AppDataSource.getRepository<Marks>>,
+  classId: string,
+  examType: ExamType | string,
+  term: string,
+  options: { includeDrafts: boolean }
+): Promise<Exam[]> {
+  const termValue = String(term).trim();
+  let exams = await examRepository.find({
+    where: { classId, type: examType as ExamType, term: termValue },
+    relations: ['subjects'],
+    order: { createdAt: 'ASC' },
+  });
+
+  if (!options.includeDrafts) {
+    exams = exams.filter((e) => e.status === ExamStatus.PUBLISHED);
+  }
+
+  if (exams.length <= 1) {
+    return exams;
+  }
+
+  const withCounts = await Promise.all(
+    exams.map(async (exam) => ({
+      exam,
+      markCount: await marksRepository.count({ where: { examId: exam.id } }),
+    }))
+  );
+  withCounts.sort((a, b) => b.markCount - a.markCount);
+  const withMarks = withCounts.filter((x) => x.markCount > 0);
+  if (withMarks.length > 0) {
+    if (withMarks.length > 1) {
+      console.log(
+        `[resolveExamsForSession] class=${classId} term=${termValue} type=${examType}: ` +
+          `using exam ${withMarks[0].exam.id} (${withMarks[0].markCount} marks), ` +
+          `skipped ${withMarks.length - 1} duplicate session exam(s)`
+      );
+    }
+    return [withMarks[0].exam];
+  }
+
+  const published = exams.filter((e) => e.status === ExamStatus.PUBLISHED);
+  if (published.length > 0) {
+    return [published[0]];
+  }
+  return [exams[0]];
+}
+
+/** One exam session per class in a form/stream (avoids duplicate draft exams in rankings). */
+async function resolveExamIdsForFormStream(
+  examRepository: ReturnType<typeof AppDataSource.getRepository<Exam>>,
+  marksRepository: ReturnType<typeof AppDataSource.getRepository<Marks>>,
+  classIds: string[],
+  examType: ExamType | string,
+  term: string,
+  includeDrafts: boolean
+): Promise<string[]> {
+  const ids: string[] = [];
+  for (const cid of classIds) {
+    const sessionExams = await resolveExamsForSession(
+      examRepository,
+      marksRepository,
+      cid,
+      examType,
+      term,
+      { includeDrafts }
+    );
+    for (const e of sessionExams) {
+      if (!ids.includes(e.id)) {
+        ids.push(e.id);
+      }
+    }
+  }
+  return ids;
+}
+
+/** Keep latest mark per student+subject when legacy data split across duplicate exams. */
+function dedupeMarksByStudentSubject(marks: Marks[]): Marks[] {
+  const map = new Map<string, Marks>();
+  for (const mark of marks) {
+    if (!mark.studentId || !mark.subjectId) {
+      continue;
+    }
+    const key = `${mark.studentId}:${mark.subjectId}`;
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, mark);
+      continue;
+    }
+    const existingAt = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+    const markAt = mark.updatedAt ? new Date(mark.updatedAt).getTime() : 0;
+    if (markAt >= existingAt) {
+      map.set(key, mark);
+    }
+  }
+  return Array.from(map.values());
 }
 
 export const createExam = async (req: AuthRequest, res: Response) => {
@@ -199,13 +367,15 @@ export const createExam = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Exam date must be a valid date' });
     }
 
+    const normalizedTerm = term ? String(term).trim() : null;
+
     // Create exam
     const examData: Partial<Exam> = {
       name: String(name).trim(),
       type: type as ExamType,
       examDate: parsedExamDate,
       classId: trimmedClassId,
-      term: term ? String(term).trim() : null
+      term: normalizedTerm
     };
     
     // Only include description if it's provided and not empty
@@ -266,6 +436,59 @@ export const createExam = async (req: AuthRequest, res: Response) => {
           }
         }
       }
+    }
+
+    // Reuse an existing draft exam for the same session identity (class + type + term)
+    // so marks-input cannot split marks across multiple exam IDs.
+    const sessionWhere: any = {
+      classId: trimmedClassId,
+      type: type as ExamType,
+      term: normalizedTerm === null ? IsNull() : normalizedTerm
+    };
+
+    const sessionExams = await examRepository.find({
+      where: sessionWhere,
+      relations: ['classEntity', 'subjects'],
+      order: { createdAt: 'ASC' }
+    });
+
+    const draftExams = sessionExams.filter((e) => e.status !== ExamStatus.PUBLISHED);
+    let existingDraftExam: Exam | null = null;
+    if (draftExams.length === 1) {
+      existingDraftExam = draftExams[0];
+    } else if (draftExams.length > 1) {
+      const marksRepository = AppDataSource.getRepository(Marks);
+      let bestCount = -1;
+      for (const e of draftExams) {
+        const cnt = await marksRepository.count({ where: { examId: e.id } });
+        if (cnt > bestCount) {
+          bestCount = cnt;
+          existingDraftExam = e;
+        }
+      }
+      if (!existingDraftExam) existingDraftExam = draftExams[0];
+    }
+
+    if (existingDraftExam) {
+      if (subjectsToAssign.length > 0) {
+        const existingIds = new Set((existingDraftExam.subjects || []).map((s) => s.id));
+        const mergedSubjects = [...(existingDraftExam.subjects || [])];
+        for (const s of subjectsToAssign) {
+          if (!existingIds.has(s.id)) mergedSubjects.push(s);
+        }
+        existingDraftExam.subjects = mergedSubjects;
+        await examRepository.save(existingDraftExam);
+      }
+
+      const hydratedExisting = await examRepository.findOne({
+        where: { id: existingDraftExam.id },
+        relations: ['classEntity', 'subjects']
+      });
+      return res.status(200).json({
+        message: 'Exam session already exists. Reusing existing draft exam.',
+        exam: hydratedExisting ?? existingDraftExam,
+        reused: true
+      });
     }
 
     let savedExam: Exam;
@@ -869,6 +1092,8 @@ export const captureMarks = async (req: AuthRequest, res: Response) => {
     }
 
     await marksRepository.save(marksToSave);
+
+    console.log('[captureMarks] Saved', marksToSave.length, 'mark row(s) for exam', examId);
     
     res.json({ 
       message: 'Marks saved successfully. Report cards are now available for all students.',
@@ -1258,7 +1483,13 @@ export const getMarks = async (req: AuthRequest, res: Response) => {
     const { examId, studentId, classId } = req.query;
     const user = req.user;
 
-    console.log('[getMarks] Request params:', { examId, studentId, classId });
+    const logParams: Record<string, string> = {};
+    if (examId) logParams.examId = String(examId);
+    if (studentId) logParams.studentId = String(studentId);
+    if (classId) logParams.classId = String(classId);
+    console.log('[getMarks] Request params:', logParams);
+    const logResultCount = (count: number) =>
+      console.log('[getMarks] Returning', count, 'mark row(s)');
 
     const where: any = { };
     if (examId) where.examId = examId;
@@ -1269,15 +1500,32 @@ export const getMarks = async (req: AuthRequest, res: Response) => {
       relations: ['student', 'exam', 'subject']
     });
 
-    // Filter by class if provided
+    // Filter by class roster membership (same rules as GET /students?classId=).
     if (classId) {
-      marks = marks.filter(mark => mark.student?.classId === classId);
+      const cid = String(classId);
+      if (examId) {
+        const examEntity =
+          marks[0]?.exam ?? (await examRepository.findOne({ where: { id: String(examId) } }));
+        if (examEntity?.classId && examEntity.classId !== cid) {
+          marks = [];
+        }
+      } else {
+        const studentRepository = AppDataSource.getRepository(Student);
+        const rosterIds = await activeStudentIdsForClass(studentRepository, cid);
+        marks = marks.filter((mark) => rosterIds.has(mark.studentId));
+      }
     }
 
-    // Filter by exam status: non-admin users can only see published exams
+    // Parents/students only see published exam marks. Staff capturing marks must reload drafts.
     const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
-    if (!isAdmin) {
-      // Get all exam IDs from marks
+    const isStaffMarksEntry =
+      isAdmin ||
+      user?.role === 'teacher' ||
+      user?.role === 'hod' ||
+      user?.role === 'demo_user' ||
+      user?.role === 'accountant';
+    const isParentOrStudent = user?.role === 'parent' || user?.role === 'student';
+    if (isParentOrStudent && !isStaffMarksEntry) {
       const examIds = [...new Set(marks.map(m => m.examId))];
       if (examIds.length > 0) {
         const exams = await examRepository.find({
@@ -1286,7 +1534,6 @@ export const getMarks = async (req: AuthRequest, res: Response) => {
         const publishedExamIds = new Set(
           exams.filter(e => e.status === ExamStatus.PUBLISHED).map(e => e.id)
         );
-        // Only return marks from published exams
         marks = marks.filter(mark => publishedExamIds.has(mark.examId));
       }
     }
@@ -1298,6 +1545,7 @@ export const getMarks = async (req: AuthRequest, res: Response) => {
       maxScore: Math.round(parseFloat(String(mark.maxScore)) || 100)
     }));
 
+    logResultCount(roundedMarks.length);
     res.json(roundedMarks);
   } catch (error: any) {
     console.error('[getMarks] Error getting marks:', error);
@@ -1411,69 +1659,101 @@ export const getSubjectRankings = async (req: AuthRequest, res: Response) => {
 
 export const getClassRankingsByType = async (req: AuthRequest, res: Response) => {
   try {
-    const { examType, classId } = req.query;
-    
+    const { examType, classId, term } = req.query;
+
     if (!examType || !classId) {
       return res.status(400).json({ message: 'Exam type and class ID are required' });
     }
 
     const marksRepository = AppDataSource.getRepository(Marks);
     const examRepository = AppDataSource.getRepository(Exam);
+    const studentRepository = AppDataSource.getRepository(Student);
+    const settingsRepository = AppDataSource.getRepository(Settings);
 
-    // Get all exams of the specified type for this class
-    const exams = await examRepository.find({
-      where: {
-        classId: classId as string,
-        type: examType as ExamType,
-      }
-    });
-
-    if (exams.length === 0) {
-      return res.status(404).json({ message: `No exams found for class with exam type: ${examType}` });
+    let termValue = term ? String(term).trim() : '';
+    if (!termValue) {
+      const settingsList = await settingsRepository.find({
+        order: { createdAt: 'DESC' },
+        take: 1,
+      });
+      termValue = String(settingsList[0]?.activeTerm || settingsList[0]?.currentTerm || '').trim();
     }
 
-    const examIds = exams.map(e => e.id);
+    const includeDraftExams = isStaffExamViewer(req.user?.role);
+    const classIdStr = String(classId);
+    let examIds: string[] = [];
 
-    // Get all marks for these exams
-    const marks = await marksRepository.find({
-      where: { examId: In(examIds) },
-      relations: ['student', 'subject', 'exam']
+    if (termValue) {
+      const sessionExams = await resolveExamsForSession(
+        examRepository,
+        marksRepository,
+        classIdStr,
+        examType as string,
+        termValue,
+        { includeDrafts: includeDraftExams }
+      );
+      examIds = sessionExams.map((e) => e.id);
+    }
+
+    if (examIds.length === 0) {
+      const exams = await examRepository.find({
+        where: {
+          classId: classIdStr,
+          type: examType as ExamType,
+        },
+      });
+      const usable = includeDraftExams
+        ? exams
+        : exams.filter((e) => e.status === ExamStatus.PUBLISHED);
+      examIds = usable.map((e) => e.id);
+    }
+
+    if (examIds.length === 0) {
+      return res.json([]);
+    }
+
+    const rosterStudents = await findStudentsForClassListing(studentRepository, classIdStr);
+    const rosterIds = new Set(rosterStudents.map((s) => s.id));
+    if (rosterIds.size === 0) {
+      return res.json([]);
+    }
+
+    let marks = await marksRepository.find({
+      where: {
+        examId: In(examIds),
+        studentId: In([...rosterIds]),
+      },
+      relations: ['student', 'subject', 'exam'],
     });
+    marks = dedupeMarksByStudentSubject(marks);
 
-    // Filter by class
-    const filteredMarks = marks.filter(m => m.student.classId === classId);
-
-    // Calculate averages per student across all exams
-    const studentAverages: { [key: string]: { total: number; count: number; student: Student } } = {};
-
-    filteredMarks.forEach(mark => {
-      const studentId = mark.studentId;
-      if (!studentAverages[studentId]) {
-        studentAverages[studentId] = {
-          total: 0,
-          count: 0,
-          student: mark.student
-        };
+    const studentAverages: Record<string, { total: number; count: number }> = {};
+    marks.forEach((mark) => {
+      if (rosterIds.has(mark.studentId)) {
+        accumulateMarkIntoStudentAverages(studentAverages, mark);
       }
-      studentAverages[studentId].total += (mark.score / mark.maxScore) * 100;
-      studentAverages[studentId].count += 1;
     });
 
-    // Calculate final averages and create rankings
-    const rankings = Object.values(studentAverages).map(avg => ({
-      studentId: avg.student.id,
-      studentName: `${avg.student.firstName} ${avg.student.lastName}`,
-      average: avg.count > 0 ? avg.total / avg.count : 0
-    }));
+    const studentById = new Map(rosterStudents.map((s) => [s.id, s]));
+    const rankings = Object.entries(studentAverages)
+      .map(([studentId, avg]) => {
+        const stu = studentById.get(studentId);
+        const markStudent = marks.find((m) => m.studentId === studentId)?.student;
+        const nameSource = stu || markStudent;
+        return {
+          studentId,
+          studentName: nameSource
+            ? `${nameSource.firstName} ${nameSource.lastName}`
+            : 'Unknown',
+          average: avg.count > 0 ? avg.total / avg.count : 0,
+        };
+      })
+      .sort((a, b) => b.average - a.average);
 
-    // Sort by average descending
-    rankings.sort((a, b) => b.average - a.average);
-
-    // Add positions with proper tie handling
     const rankingsWithTies = assignPositionsWithTies(rankings);
-    const rankingsWithPositions = rankingsWithTies.map(rank => ({
+    const rankingsWithPositions = rankingsWithTies.map((rank) => ({
       ...rank,
-      classPosition: rank.position
+      classPosition: rank.position,
     }));
 
     res.json(rankingsWithPositions);
@@ -1647,8 +1927,8 @@ export const getFormRankings = async (req: AuthRequest, res: Response) => {
 
 export const getOverallPerformanceRankings = async (req: AuthRequest, res: Response) => {
   try {
-    const { form, examType } = req.query;
-    
+    const { form, examType, term } = req.query;
+
     if (!form || !examType) {
       return res.status(400).json({ message: 'Form and exam type are required' });
     }
@@ -1657,90 +1937,110 @@ export const getOverallPerformanceRankings = async (req: AuthRequest, res: Respo
     const studentRepository = AppDataSource.getRepository(Student);
     const classRepository = AppDataSource.getRepository(Class);
     const examRepository = AppDataSource.getRepository(Exam);
+    const settingsRepository = AppDataSource.getRepository(Settings);
 
-    // Get all classes for the form/stream
-    const classes = await classRepository.find({ where: { form: form as string } });
+    let termValue = term ? String(term).trim() : '';
+    if (!termValue) {
+      const settingsList = await settingsRepository.find({
+        order: { createdAt: 'DESC' },
+        take: 1,
+      });
+      const settings = settingsList[0];
+      termValue = String(settings?.activeTerm || settings?.currentTerm || '').trim();
+    }
+
+    const formValue = String(form).trim();
+    const classes = await classRepository.find({ where: { form: formValue } });
     if (classes.length === 0) {
-      return res.status(404).json({ message: `No classes found for form: ${form}` });
+      return res.json([]);
     }
 
-    const classIds = classes.map(c => c.id);
+    const classIds = classes.map((c) => c.id);
+    const students = await findStudentsForFormStream(
+      studentRepository,
+      classRepository,
+      formValue
+    );
 
-    // Get all students in these classes with class relation loaded
-    const students = await studentRepository.find({
-      where: { classId: In(classIds) },
-      relations: ['classEntity']
-    });
-    
-    // Create a map of student IDs to class names for quick lookup
     const studentClassMap = new Map<string, string>();
-    students.forEach(student => {
-      if (student.classEntity) {
-        studentClassMap.set(student.id, student.classEntity.name);
+    for (const cls of classes) {
+      const roster = await findStudentsForClassListing(studentRepository, cls.id);
+      for (const student of roster) {
+        if (!studentClassMap.has(student.id)) {
+          studentClassMap.set(student.id, cls.name);
+        }
       }
-    });
-
-    if (students.length === 0) {
-      return res.status(404).json({ message: `No students found in form: ${form}` });
     }
 
-    const studentIds = students.map(s => s.id);
+    const studentById = new Map(students.map((s) => [s.id, s]));
+    const studentIds = students.map((s) => s.id);
+    if (studentIds.length === 0) {
+      return res.json([]);
+    }
 
-    // Get all exams of the specified type for these classes
-    const exams = await examRepository.find({
+    const includeDraftExams = isStaffExamViewer(req.user?.role);
+    let examIds: string[] = [];
+
+    if (termValue) {
+      examIds = await resolveExamIdsForFormStream(
+        examRepository,
+        marksRepository,
+        classIds,
+        examType as string,
+        termValue,
+        includeDraftExams
+      );
+    }
+
+    if (examIds.length === 0) {
+      const exams = await examRepository.find({
+        where: {
+          classId: In(classIds),
+          type: examType as ExamType,
+        },
+      });
+      const usable = includeDraftExams
+        ? exams
+        : exams.filter((e) => e.status === ExamStatus.PUBLISHED);
+      examIds = usable.map((e) => e.id);
+    }
+
+    if (examIds.length === 0) {
+      return res.json([]);
+    }
+
+    let marks = await marksRepository.find({
       where: {
-        classId: In(classIds),
-        type: examType as ExamType,
-      }
+        examId: In(examIds),
+        studentId: In(studentIds),
+      },
+      relations: ['student', 'subject', 'exam'],
     });
+    marks = dedupeMarksByStudentSubject(marks);
 
-    if (exams.length === 0) {
-      return res.status(404).json({ message: `No exams found for form ${form} with exam type: ${examType}` });
-    }
+    const studentAverages: Record<string, { total: number; count: number }> = {};
+    marks.forEach((mark) => accumulateMarkIntoStudentAverages(studentAverages, mark));
 
-    const examIds = exams.map(e => e.id);
-
-    // Get all marks for these students across all exams of this type
-    const marks = await marksRepository.find({
-      where: { examId: In(examIds) },
-      relations: ['student', 'subject', 'exam']
-    });
-
-    const filteredMarks = marks.filter(m => studentIds.includes(m.studentId));
-
-    // Calculate overall averages across all exams
-    const studentAverages: { [key: string]: { total: number; count: number; studentId: string; firstName: string; lastName: string } } = {};
-
-    filteredMarks.forEach(mark => {
-      const studentId = mark.studentId;
-      if (!studentAverages[studentId]) {
-        studentAverages[studentId] = {
-          total: 0,
-          count: 0,
-          studentId: mark.student.id,
-          firstName: mark.student.firstName,
-          lastName: mark.student.lastName
+    const rankings = Object.entries(studentAverages)
+      .map(([studentId, avg]) => {
+        const stu = studentById.get(studentId);
+        return {
+          studentId,
+          studentName: stu
+            ? `${stu.firstName} ${stu.lastName}`
+            : marks.find((m) => m.studentId === studentId)?.student
+              ? `${marks.find((m) => m.studentId === studentId)!.student.firstName} ${marks.find((m) => m.studentId === studentId)!.student.lastName}`
+              : 'Unknown',
+          average: avg.count > 0 ? avg.total / avg.count : 0,
+          class: studentClassMap.get(studentId) || stu?.classEntity?.name || 'N/A',
         };
-      }
-      studentAverages[studentId].total += (mark.score / mark.maxScore) * 100;
-      studentAverages[studentId].count += 1;
-    });
-
-    // Create rankings with overall performance, using the class map
-    const rankings = Object.values(studentAverages)
-      .map(avg => ({
-        studentId: avg.studentId,
-        studentName: `${avg.firstName} ${avg.lastName}`,
-        average: avg.count > 0 ? avg.total / avg.count : 0,
-        class: studentClassMap.get(avg.studentId) || 'N/A'
-      }))
+      })
       .sort((a, b) => b.average - a.average);
-    
-    // Assign positions with proper tie handling
+
     const rankingsWithTies = assignPositionsWithTies(rankings);
-    const rankingsWithPositions = rankingsWithTies.map(rank => ({
+    const rankingsWithPositions = rankingsWithTies.map((rank) => ({
       ...rank,
-      overallPosition: rank.position
+      overallPosition: rank.position,
     }));
 
     res.json(rankingsWithPositions);
@@ -1766,6 +2066,7 @@ export const getReportCard = async (req: AuthRequest, res: Response) => {
     const isParent = user?.role === 'parent';
     const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
     const isTeacher = user?.role === 'teacher';
+    const includeDraftExams = isStaffExamViewer(user?.role);
     const termValue = term ? String(term).trim() : '';
     
     console.log('[getReportCard] Report card request received:', { classId, examType, term: termValue, studentId, subjectId, isParent, isTeacher, isAdmin, query: req.query, path: req.path });
@@ -1863,54 +2164,29 @@ export const getReportCard = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Get all students enrolled in the class (including inactive students for report cards)
+    // Class roster (direct classId, classEntity, or enrollment row — same as GET /students?classId=)
     console.log('Looking for students with classId:', classId);
-    let students: Student[] = [];
-    let parentStudentRecord: Student | null = null;
-    
-    if (isParent && studentId) {
-      // Parent access - first verify their linked student exists in this class
-      parentStudentRecord = await studentRepository.findOne({
-        where: { id: studentId as string, classId: classId as string },
-        relations: ['classEntity']
-      });
+    const rosterIds = await activeStudentIdsForClass(studentRepository, classId as string);
+    let students = await findStudentsForClassListing(studentRepository, classId as string);
 
-      if (!parentStudentRecord) {
+    if (students.length === 0 && rosterIds.size > 0) {
+      students = await studentRepository.find({
+        where: { id: In([...rosterIds]) },
+        relations: ['classEntity'],
+        order: { firstName: 'ASC', lastName: 'ASC' },
+      });
+    }
+
+    if (isParent && studentId) {
+      const sid = String(studentId);
+      const inRoster =
+        rosterIds.has(sid) || students.some((s) => s.id === sid);
+      if (!inRoster) {
         return res.status(404).json({ message: 'Student not found in this class' });
       }
     }
 
-    // Always fetch full class roster for accurate rankings/positions
-    students = await studentRepository.find({
-      where: { classId: classId as string },
-      relations: ['classEntity'],
-      order: { firstName: 'ASC', lastName: 'ASC' } // Sort alphabetically for sequential display
-    });
-
-    // Ensure parent's student is included even if not returned above (e.g., data inconsistencies)
-    if (isParent && parentStudentRecord && !students.find(s => s.id === parentStudentRecord!.id)) {
-      students.push(parentStudentRecord);
-    }
-    console.log('Found students with direct query:', students.length);
-
-    // If no students found, try alternative method (similar to getStudents)
-    if (students.length === 0) {
-      console.log('No students found with direct query, trying alternative method...');
-      
-      if (classEntity) {
-        students = await studentRepository
-          .createQueryBuilder('student')
-          .leftJoinAndSelect('student.classEntity', 'classEntity')
-          .where('(student.classId = :classId OR classEntity.id = :classId OR classEntity.name = :className)', {
-            classId: classId as string,
-            className: classEntity.name
-          })
-          .orderBy('student.firstName', 'ASC')
-          .addOrderBy('student.lastName', 'ASC')
-          .getMany();
-        console.log('Found students with query builder:', students.length);
-      }
-    }
+    console.log('Found students (roster):', students.length);
 
     if (students.length === 0) {
       return res.status(404).json({ message: 'No students found in this class' });
@@ -1918,19 +2194,22 @@ export const getReportCard = async (req: AuthRequest, res: Response) => {
     
     console.log('Processing', students.length, 'students');
 
-    // Get all exams of the specified type for this class
+    // Get session exams (staff may use draft sessions; parents/students need published)
     console.log('Looking for exams with classId:', classId, 'term:', termValue, 'and examType:', examType);
-    let exams = await examRepository.find({
-      where: { classId: classId as string, type: examType as any, term: termValue },
-      relations: ['subjects']
-    });
-    
-    // Filter by exam status: non-admin users can only see published exams
-    if (!isAdmin) {
-      exams = exams.filter(exam => exam.status === ExamStatus.PUBLISHED);
-    }
-    
-    console.log('Found exams:', exams.length, exams.map(e => ({ id: e.id, name: e.name, type: e.type, classId: e.classId, status: e.status })));
+    let exams = await resolveExamsForSession(
+      examRepository,
+      marksRepository,
+      classId as string,
+      examType as string,
+      termValue,
+      { includeDrafts: includeDraftExams }
+    );
+
+    console.log(
+      'Found exams:',
+      exams.length,
+      exams.map((e) => ({ id: e.id, name: e.name, type: e.type, classId: e.classId, status: e.status }))
+    );
 
     // Subjects for columns: class-assigned ∪ exam-linked (class record alone can omit subjects marks were captured for)
     const classWithSubjects = await classRepository.findOne({
@@ -1954,13 +2233,28 @@ export const getReportCard = async (req: AuthRequest, res: Response) => {
     }
 
     if (exams.length === 0) {
-      // Check if there are any exams for this class at all
       const allClassExams = await examRepository.find({
         where: { classId: classId as string, term: termValue },
-        relations: ['subjects']
+        relations: ['subjects'],
       });
-      console.log('Total exams for this class and term:', allClassExams.length, allClassExams.map(e => ({ name: e.name, type: e.type })));
-      return res.status(404).json({ message: `No ${examType} exams found for ${termValue}` });
+      console.log(
+        'Total exams for this class and term:',
+        allClassExams.length,
+        allClassExams.map((e) => ({ name: e.name, type: e.type, status: e.status }))
+      );
+      const draftOfType = allClassExams.filter(
+        (e) => e.type === examType && e.status !== ExamStatus.PUBLISHED
+      );
+      const hint =
+        draftOfType.length > 0 && !includeDraftExams
+          ? ' Marks exist in draft — publish this exam type for the term before parents can view report cards.'
+          : includeDraftExams
+            ? ' Enter marks for this class/term/exam type on Marks Input, or confirm the term label matches the exam session.'
+            : '';
+      return res.status(404).json({
+        message: `No ${examType} exams found for ${termValue}.${hint}`,
+        code: 'EXAMS_NOT_FOUND',
+      });
     }
 
     // Get settings for grading (dynamic bands + points)
@@ -1993,10 +2287,11 @@ export const getReportCard = async (req: AuthRequest, res: Response) => {
       marksWhere.subjectId = subjectId as string;
     }
     
-    const allMarks = await marksRepository.find({
+    let allMarks = await marksRepository.find({
       where: marksWhere,
       relations: ['subject', 'exam', 'student']
     });
+    allMarks = dedupeMarksByStudentSubject(allMarks);
     console.log('Found marks:', allMarks.length, subjectId ? `(filtered by subject ${subjectId})` : '(all subjects)');
 
     if (!subjectId) {
@@ -2128,86 +2423,63 @@ export const getReportCard = async (req: AuthRequest, res: Response) => {
       position: r.position
     }));
 
-    // Calculate grade rankings for all students in the same grade/form (stream) across ALL classes
-    // e.g., all Grade 7A, Grade 7B, Grade 7C students together
-    // Get unique forms from current students
-    const forms = Array.from(new Set(students.map(s => s.classEntity?.form).filter(Boolean) as string[]));
-    
-    // Initialize form rankings map
-    const formRankingsMap = new Map<string, Array<{ studentId: string; average: number; position: number }>>();
-    
-    if (forms.length > 0) {
-      // Get all classes with the same forms
-      const allClassesWithSameForms = await classRepository.find({
-        where: { form: In(forms) }
-      });
-      const allClassIdsWithSameForms = allClassesWithSameForms.map(c => c.id);
-      
-      // Get all students from classes with the same forms
-      const allFormStudentsList = await studentRepository.find({
-        where: { classId: In(allClassIdsWithSameForms) },
-        relations: ['classEntity']
-      });
-      
-      // Get all exams of the specified type and term from ALL classes with the same form
-      // This is critical - we need exams from all classes, not just the current class
-      const allFormExams = await examRepository.find({
-        where: { 
-          classId: In(allClassIdsWithSameForms),
-          type: examType as any,
-          term: termValue,
-        },
-        relations: ['subjects']
-      });
-      const allFormExamIds = allFormExams.map(e => e.id);
-      console.log('Found exams for form ranking:', allFormExamIds.length, 'across', allClassIdsWithSameForms.length, 'classes');
-      
-      // Get all marks for form ranking (across all classes with same form, using all form exams)
-      const formStudentIds = allFormStudentsList.map(s => s.id);
-      const formMarks = formStudentIds.length > 0 && allFormExamIds.length > 0 ? await marksRepository.find({
-        where: { 
-          examId: In(allFormExamIds),
-          studentId: In(formStudentIds),
-        },
-        relations: ['subject', 'exam', 'student']
-      }) : [];
-      
-      // Calculate form rankings (across all classes with same form)
-      forms.forEach(form => {
-        const formStudents = allFormStudentsList.filter(s => s.classEntity?.form === form);
-        const formStudentIdsSet = new Set(formStudents.map(s => s.id));
-        const formStudentMarks = formMarks.filter(m => formStudentIdsSet.has(m.studentId));
-        
-        const formStudentAverages: { [key: string]: { total: number; count: number } } = {};
-        formStudentMarks.forEach(mark => {
-          if (!mark.studentId || !mark.score || !mark.maxScore || mark.maxScore === 0) {
-            return;
-          }
-          const sid = mark.studentId;
-          if (!formStudentAverages[sid]) {
-            formStudentAverages[sid] = { total: 0, count: 0 };
-          }
-          const percentage = (mark.score / mark.maxScore) * 100;
-          formStudentAverages[sid].total += percentage;
-          formStudentAverages[sid].count += 1;
-        });
-        
-        const formRanksUnsorted = Object.entries(formStudentAverages)
-          .map(([sid, avg]) => ({
-            studentId: sid,
-            average: avg.count > 0 ? avg.total / avg.count : 0
-          }))
-          .sort((a, b) => b.average - a.average);
-        
-        // Assign positions with proper tie handling
-        const formRanks = assignPositionsWithTies(formRanksUnsorted).map(r => ({
-          studentId: r.studentId,
-          average: r.average,
-          position: r.position
-        }));
-        
-        formRankingsMap.set(form, formRanks);
-      });
+    // Grade/stream position: rank against every student in the same form (all classes in stream)
+    const streamForm = (classEntity.form || '').trim();
+    const formRankingsMap = new Map<
+      string,
+      Array<{ studentId: string; average: number; position: number }>
+    >();
+    const formStreamTotalsMap = new Map<string, number>();
+
+    if (streamForm) {
+      const allFormStudentsList = await findStudentsForFormStream(
+        studentRepository,
+        classRepository,
+        streamForm
+      );
+      formStreamTotalsMap.set(streamForm, allFormStudentsList.length);
+
+      const allClassIdsWithSameForm = (
+        await classRepository.find({ where: { form: streamForm } })
+      ).map((c) => c.id);
+
+      const allFormExamIds = await resolveExamIdsForFormStream(
+        examRepository,
+        marksRepository,
+        allClassIdsWithSameForm,
+        examType as string,
+        termValue,
+        includeDraftExams
+      );
+      console.log(
+        '[getReportCard] Form stream',
+        streamForm,
+        'classes=',
+        allClassIdsWithSameForm.length,
+        'roster=',
+        allFormStudentsList.length,
+        'sessionExams=',
+        allFormExamIds.length
+      );
+
+      const formStudentIds = allFormStudentsList.map((s) => s.id);
+      let formMarks =
+        formStudentIds.length > 0 && allFormExamIds.length > 0
+          ? await marksRepository.find({
+              where: {
+                examId: In(allFormExamIds),
+                studentId: In(formStudentIds),
+              },
+              relations: ['subject', 'exam', 'student'],
+            })
+          : [];
+      formMarks = dedupeMarksByStudentSubject(formMarks);
+
+      const formStudentAverages: Record<string, { total: number; count: number }> = {};
+      formMarks.forEach((mark) => accumulateMarkIntoStudentAverages(formStudentAverages, mark));
+      const formRanks = studentAveragesToRankings(formStudentAverages);
+      formRankingsMap.set(streamForm, formRanks);
+      console.log('[getReportCard] Form stream ranked students:', formRanks.length);
     }
 
     const subjectPositionLookup = buildSubjectPositionLookup(
@@ -2361,17 +2633,16 @@ export const getReportCard = async (req: AuthRequest, res: Response) => {
       const classRankEntry = classRankings.find(r => r.studentId === student.id);
       const classPosition = classRankEntry?.position || 0;
       
-      // Find grade position (across all classes with the same grade/form, e.g., Grade 7A, 7B, 7C)
+      // Grade position across the whole form/stream (e.g. all Form 1 classes)
+      const studentForm = (student.classEntity?.form || streamForm || '').trim();
       let formPosition = 0;
       let totalStudentsPerStream = 0;
-      if (student.classEntity?.form) {
-        const formRanks = formRankingsMap.get(student.classEntity.form);
-        if (formRanks && formRanks.length > 0) {
-          const formRankEntry = formRanks.find(r => r.studentId === student.id);
-          if (formRankEntry) {
-            formPosition = formRankEntry.position; // Position with tie handling
-          }
-          totalStudentsPerStream = formRanks.length; // Total students with marks in the grade/stream
+      if (studentForm) {
+        totalStudentsPerStream = formStreamTotalsMap.get(studentForm) ?? 0;
+        const formRanks = formRankingsMap.get(studentForm);
+        const formRankEntry = formRanks?.find((r) => r.studentId === student.id);
+        if (formRankEntry) {
+          formPosition = formRankEntry.position;
         }
       }
       
@@ -2403,7 +2674,7 @@ export const getReportCard = async (req: AuthRequest, res: Response) => {
           id: student.id,
           name: `${student.firstName} ${student.lastName}`,
           studentNumber: student.studentNumber,
-          class: student.classEntity?.name
+          class: student.classEntity?.name || classEntity.name
         },
         examType: examType,
         exams: (() => {
@@ -2421,8 +2692,9 @@ export const getReportCard = async (req: AuthRequest, res: Response) => {
         overallGrade: getGradeLabelOnly(overallAverage, settings),
         classPosition: classPosition || 0,
         formPosition: formPosition || 0,
-        totalStudents: classRankings.length, // Add total number of students with marks for ranking
-        totalStudentsPerStream: totalStudentsPerStream || 0, // Add total number of students per stream
+        streamForm: streamForm || studentForm || null,
+        totalStudents: students.length,
+        totalStudentsPerStream: totalStudentsPerStream || 0,
         totalAttendance: totalAttendance, // Total attendance days for the term
         presentAttendance: presentAttendance, // Present/excused attendance days
         remarks: {
@@ -2831,14 +3103,20 @@ export const generateReportCardPDF = async (req: AuthRequest, res: Response) => 
       const upperFormKeywordsPdf = ['form 5', 'form five', 'form v', 'form 6', 'form six', 'form vi', 'lower six', 'upper six', 'a level', 'as level'];
       const isUpperForm = upperFormKeywordsPdf.some(keyword => classDescriptor.includes(keyword));
 
-      // Get all exams of the specified type for this class
-      const exams = await examRepository.find({
-        where: { classId: classId as string, type: examType as any, term: termValue as string },
-        relations: ['subjects']
-      });
+      const exams = await resolveExamsForSession(
+        examRepository,
+        marksRepository,
+        classId as string,
+        examType as string,
+        termValue,
+        { includeDrafts: isStaffExamViewer(req.user?.role) }
+      );
 
       if (exams.length === 0) {
-        return res.status(404).json({ message: `No ${examType} exams found for this class` });
+        return res.status(404).json({
+          message: `No ${examType} exams found for ${termValue}. Enter marks or publish the exam session first.`,
+          code: 'EXAMS_NOT_FOUND',
+        });
       }
 
       const classWithSubjects = await classRepository.findOne({
@@ -3072,63 +3350,57 @@ export const generateReportCardPDF = async (req: AuthRequest, res: Response) => 
       const classRankEntry = rankings.find(r => r.studentId === studentId);
       const classPosition = classRankEntry?.position || 0;
 
-      // Calculate grade position (across all classes with the same grade/form) - get all students in the same form
       let formPosition = 0;
       let totalStudentsPerStream = 0;
-      if (student.classEntity?.form) {
-        const classRepository = AppDataSource.getRepository(Class);
-        const formClasses = await classRepository.find({ where: { form: student.classEntity.form } });
-        const formClassIds = formClasses.map(c => c.id);
-        const formStudents = await studentRepository.find({
-          where: { classId: In(formClassIds) },
-          relations: ['classEntity']
-        });
-        
-        // Get all exams of the specified type and term from ALL classes with the same form
-        // This is critical - we need exams from all classes, not just the current class
-        const allFormExams = await examRepository.find({
-          where: { 
+      const classEntityForPdf = await classRepository.findOne({
+        where: { id: classId as string },
+      });
+      const streamFormPdf = (
+        classEntityForPdf?.form ||
+        student.classEntity?.form ||
+        ''
+      ).trim();
+
+      if (streamFormPdf) {
+        const formStudentsList = await findStudentsForFormStream(
+          studentRepository,
+          classRepository,
+          streamFormPdf
+        );
+        totalStudentsPerStream = formStudentsList.length;
+
+        const formClassIds = (
+          await classRepository.find({ where: { form: streamFormPdf } })
+        ).map((c) => c.id);
+
+        let allFormExams = await examRepository.find({
+          where: {
             classId: In(formClassIds),
             type: examType as any,
             term: termValue,
           },
-          relations: ['subjects']
+          relations: ['subjects'],
         });
-        const allFormExamIds = allFormExams.map(e => e.id);
-        console.log('PDF: Found exams for form ranking:', allFormExamIds.length, 'across', formClassIds.length, 'classes');
-        
-        // Get all marks for form students (using all form exams, not just current class exams)
-        const formMarks = allFormExamIds.length > 0 ? await marksRepository.find({
-          where: { examId: In(allFormExamIds), studentId: In(formStudents.map(s => s.id)) },
-          relations: ['student', 'subject']
-        }) : [];
-        
-        // Calculate form rankings
-        const formStudentAverages: { [key: string]: { total: number; count: number } } = {};
-        formMarks.forEach(mark => {
-          const sid = mark.studentId;
-          if (!formStudentAverages[sid]) {
-            formStudentAverages[sid] = { total: 0, count: 0 };
-          }
-          formStudentAverages[sid].total += (mark.score / mark.maxScore) * 100;
-          formStudentAverages[sid].count += 1;
-        });
-        
-        const formRankingsUnsorted = Object.entries(formStudentAverages)
-          .map(([sid, avg]) => ({
-            studentId: sid,
-            average: avg.count > 0 ? avg.total / avg.count : 0
-          }))
-          .sort((a, b) => b.average - a.average);
-        
-        // Assign positions with proper tie handling
-        const formRankings = assignPositionsWithTies(formRankingsUnsorted);
-        
-        // Get total students per stream with marks (for ranking) - must be set before finding position
-        totalStudentsPerStream = formRankings.length;
-        
-        // Find grade position with tie handling
-        const formRankEntry = formRankings.find(r => r.studentId === studentId);
+        if (!isStaffExamViewer(req.user?.role)) {
+          allFormExams = allFormExams.filter((e) => e.status === ExamStatus.PUBLISHED);
+        }
+        const allFormExamIds = allFormExams.map((e) => e.id);
+
+        const formMarks =
+          allFormExamIds.length > 0 && formStudentsList.length > 0
+            ? await marksRepository.find({
+                where: {
+                  examId: In(allFormExamIds),
+                  studentId: In(formStudentsList.map((s) => s.id)),
+                },
+                relations: ['student', 'subject'],
+              })
+            : [];
+
+        const formStudentAverages: Record<string, { total: number; count: number }> = {};
+        formMarks.forEach((mark) => accumulateMarkIntoStudentAverages(formStudentAverages, mark));
+        const formRankings = studentAveragesToRankings(formStudentAverages);
+        const formRankEntry = formRankings.find((r) => r.studentId === studentId);
         if (formRankEntry) {
           formPosition = formRankEntry.position;
         }
@@ -3300,76 +3572,61 @@ export const generateReportCardPDF = async (req: AuthRequest, res: Response) => 
       const classRankEntry = rankings.find(r => r.studentId === studentId);
       const classPosition = classRankEntry?.position || 0;
 
-      // Calculate grade position (across all classes with the same grade/form) - get all students in the same form
       let formPosition = 0;
       let totalStudentsPerStream = 0;
-      if (student.classEntity?.form) {
-        const classRepository = AppDataSource.getRepository(Class);
-        const formClasses = await classRepository.find({ where: { form: student.classEntity.form } });
-        const formClassIds = formClasses.map(c => c.id);
-        const formStudents = await studentRepository.find({
-          where: { classId: In(formClassIds) },
-          relations: ['classEntity']
-        });
-        
-        // For old format (single examId), we need to get the exam type and term from the exam
-        // Then get all exams of that type and term from all classes with the same form
-        const singleExam = await examRepository.findOne({
-          where: { id: examId as string },
-          relations: ['subjects']
-        });
-        
-        let allFormExamIds: string[] = [];
-        if (singleExam) {
-          // Get all exams of the same type and term from all classes with the same form
-          const whereClause: any = { 
-            classId: In(formClassIds),
-            type: singleExam.type
-          };
-          // Only include term if it's not null
-          if (singleExam.term) {
-            whereClause.term = singleExam.term;
-          }
-          const allFormExams = await examRepository.find({
-            where: whereClause,
-            relations: ['subjects']
-          });
-          allFormExamIds = allFormExams.map(e => e.id);
-          console.log('PDF (old format): Found exams for form ranking:', allFormExamIds.length, 'across', formClassIds.length, 'classes');
+      const singleExam = await examRepository.findOne({
+        where: { id: examId as string },
+        relations: ['subjects', 'classEntity'],
+      });
+      const streamFormOld = (
+        singleExam?.classEntity?.form ||
+        student.classEntity?.form ||
+        ''
+      ).trim();
+
+      if (streamFormOld && singleExam) {
+        const formStudentsList = await findStudentsForFormStream(
+          studentRepository,
+          classRepository,
+          streamFormOld
+        );
+        totalStudentsPerStream = formStudentsList.length;
+
+        const formClassIds = (
+          await classRepository.find({ where: { form: streamFormOld } })
+        ).map((c) => c.id);
+
+        const whereClause: { classId: any; type: ExamType; term?: string } = {
+          classId: In(formClassIds),
+          type: singleExam.type,
+        };
+        if (singleExam.term) {
+          whereClause.term = singleExam.term;
         }
-        
-        // Get all marks for form students (using all form exams, not just the single exam)
-        const formMarks = allFormExamIds.length > 0 ? await marksRepository.find({
-          where: { examId: In(allFormExamIds), studentId: In(formStudents.map(s => s.id)) },
-          relations: ['student', 'subject']
-        }) : [];
-        
-        // Calculate form rankings
-        const formStudentAverages: { [key: string]: { total: number; count: number } } = {};
-        formMarks.forEach(mark => {
-          const sid = mark.studentId;
-          if (!formStudentAverages[sid]) {
-            formStudentAverages[sid] = { total: 0, count: 0 };
-          }
-          formStudentAverages[sid].total += (mark.score / mark.maxScore) * 100;
-          formStudentAverages[sid].count += 1;
+        let allFormExams = await examRepository.find({
+          where: whereClause,
+          relations: ['subjects'],
         });
-        
-        const formRankingsUnsorted = Object.entries(formStudentAverages)
-          .map(([sid, avg]) => ({
-            studentId: sid,
-            average: avg.count > 0 ? avg.total / avg.count : 0
-          }))
-          .sort((a, b) => b.average - a.average);
-        
-        // Assign positions with proper tie handling
-        const formRankings = assignPositionsWithTies(formRankingsUnsorted);
-        
-        // Get total students per stream with marks (for ranking) - must be set before finding position
-        totalStudentsPerStream = formRankings.length;
-        
-        // Find grade position with tie handling
-        const formRankEntry = formRankings.find(r => r.studentId === studentId);
+        if (!isStaffExamViewer(req.user?.role)) {
+          allFormExams = allFormExams.filter((e) => e.status === ExamStatus.PUBLISHED);
+        }
+        const allFormExamIds = allFormExams.map((e) => e.id);
+
+        const formMarks =
+          allFormExamIds.length > 0 && formStudentsList.length > 0
+            ? await marksRepository.find({
+                where: {
+                  examId: In(allFormExamIds),
+                  studentId: In(formStudentsList.map((s) => s.id)),
+                },
+                relations: ['student', 'subject'],
+              })
+            : [];
+
+        const formStudentAverages: Record<string, { total: number; count: number }> = {};
+        formMarks.forEach((mark) => accumulateMarkIntoStudentAverages(formStudentAverages, mark));
+        const formRankings = studentAveragesToRankings(formStudentAverages);
+        const formRankEntry = formRankings.find((r) => r.studentId === studentId);
         if (formRankEntry) {
           formPosition = formRankEntry.position;
         }
@@ -3496,30 +3753,38 @@ export const generateMarkSheet = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Get all students in the class
-    const students = await studentRepository.find({
-      where: { classId: classId as string, isActive: true },
-      order: { firstName: 'ASC', lastName: 'ASC' }
-    });
+    const students = await findStudentsForClassListing(
+      studentRepository,
+      classId as string
+    );
 
     if (students.length === 0) {
       return res.status(404).json({ message: 'No students found in this class' });
     }
 
     const termStr = term ? String(term).trim() : '';
-    const examWhere: Record<string, unknown> = {
-      classId: classId as string,
-      type: examType as ExamType,
-    };
+    const includeDraftExams = isStaffExamViewer(user?.role);
+    let exams: Exam[] = [];
     if (termStr) {
-      examWhere.term = termStr;
+      exams = await resolveExamsForSession(
+        examRepository,
+        marksRepository,
+        classId as string,
+        examType as string,
+        termStr,
+        { includeDrafts: includeDraftExams }
+      );
+    } else {
+      let found = await examRepository.find({
+        where: { classId: classId as string, type: examType as ExamType },
+        relations: ['subjects'],
+        order: { examDate: 'DESC' },
+      });
+      if (!includeDraftExams) {
+        found = found.filter((e) => e.status === ExamStatus.PUBLISHED);
+      }
+      exams = found;
     }
-
-    const exams = await examRepository.find({
-      where: examWhere as any,
-      relations: ['subjects'],
-      order: { examDate: 'DESC' },
-    });
 
     if (exams.length === 0) {
       return res.status(404).json({
@@ -3719,34 +3984,43 @@ export const generateMarkSheetPDF = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Get all students in the class
-    const students = await studentRepository.find({
-      where: { classId: classId as string, isActive: true },
-      order: { firstName: 'ASC', lastName: 'ASC' }
-    });
+    const students = await findStudentsForClassListing(
+      studentRepository,
+      classId as string
+    );
 
     if (students.length === 0) {
       return res.status(404).json({ message: 'No students found in this class' });
     }
 
-    // Build exam query with optional term filter
-    const examWhere: any = {
-      classId: classId as string,
-      type: examType as ExamType,
-    };
-    if (term) {
-      examWhere.term = term as string;
+    const termStr = term ? String(term).trim() : '';
+    const includeDraftExams = isStaffExamViewer(user?.role);
+    let exams: Exam[] = [];
+    if (termStr) {
+      exams = await resolveExamsForSession(
+        examRepository,
+        marksRepository,
+        classId as string,
+        examType as string,
+        termStr,
+        { includeDrafts: includeDraftExams }
+      );
+    } else {
+      let found = await examRepository.find({
+        where: { classId: classId as string, type: examType as ExamType },
+        relations: ['subjects'],
+        order: { examDate: 'DESC' },
+      });
+      if (!includeDraftExams) {
+        found = found.filter((e) => e.status === ExamStatus.PUBLISHED);
+      }
+      exams = found;
     }
 
-    // Get exams of the specified type for this class (and term if provided)
-    const exams = await examRepository.find({
-      where: examWhere,
-      relations: ['subjects'],
-      order: { examDate: 'DESC' }
-    });
-
     if (exams.length === 0) {
-      return res.status(404).json({ message: `No ${examType} exams found for this class${term ? ` in ${term}` : ''}` });
+      return res.status(404).json({
+        message: `No ${examType} exams found for this class${termStr ? ` in ${termStr}` : ''}`,
+      });
     }
 
     const examIds = exams.map((exam) => exam.id);
@@ -4149,11 +4423,7 @@ export const moderateMarksEndpoint = async (req: AuthRequest, res: Response) => 
       });
     }
 
-    // Get all students in the class
-    const students = await studentRepository.find({
-      where: { classId, isActive: true },
-      order: { firstName: 'ASC', lastName: 'ASC' }
-    });
+    const students = await findStudentsForClassListing(studentRepository, classId as string);
 
     if (students.length === 0) {
       return res.status(404).json({ message: 'No students found in this class' });
@@ -4642,10 +4912,9 @@ export const getMarkInputProgressByClassSubjects = async (req: AuthRequest, res:
       return res.status(404).json({ message: 'Class not found' });
     }
 
-    const students = await studentRepository.find({
-      where: { classId: classEntity.id, isActive: true }
-    });
+    const students = await findActiveStudentsForClass(studentRepository, classEntity.id);
     const totalStudents = students.length;
+    const rosterStudentIds = students.map((s) => s.id);
 
     // Exams to consider (term/examType), scoped to class.
     const examWhere: any = { classId: classEntity.id };
@@ -4655,11 +4924,12 @@ export const getMarkInputProgressByClassSubjects = async (req: AuthRequest, res:
     const exams = await examRepository.find({ where: examWhere });
     const examIds = exams.map(e => e.id);
 
-    // Active subjects list (we can later restrict to classEntity.subjects if needed)
-    const subjects = await subjectRepository.find({
+    const allSubjects = await subjectRepository.find({
       where: { isActive: true },
       order: { code: 'ASC', name: 'ASC' }
     });
+    const subjects = filterSubjectsForClass(allSubjects, classEntity);
+    const levelBand = inferStudentFeeLevelBand(classEntity);
 
     if (totalStudents === 0 || examIds.length === 0 || subjects.length === 0) {
       return res.json({
@@ -4671,30 +4941,34 @@ export const getMarkInputProgressByClassSubjects = async (req: AuthRequest, res:
         class: {
           id: classEntity.id,
           name: classEntity.name,
-          form: classEntity.form
+          form: classEntity.form,
+          levelBand
         },
         totalStudents,
         subjects: subjects.map(s => ({
           subjectId: s.id,
           subjectName: s.name,
           subjectCode: s.code,
+          subjectCategory: s.category,
           studentsWithMarks: 0,
           completionPercentage: 0
         }))
       });
     }
 
-    const studentIds = students.map(s => s.id);
-
-    // Aggregate: for each subject, how many distinct students have a mark record.
-    const raw = await marksRepository
+    // Aggregate: for each subject, how many distinct roster students have a mark record.
+    const marksQb = marksRepository
       .createQueryBuilder('marks')
       .select('marks.subjectId', 'subjectId')
       .addSelect('COUNT(DISTINCT marks.studentId)', 'studentsWithMarks')
       .where('marks.examId IN (:...examIds)', { examIds })
-      .andWhere('marks.studentId IN (:...studentIds)', { studentIds })
-      .groupBy('marks.subjectId')
-      .getRawMany();
+      .groupBy('marks.subjectId');
+    if (rosterStudentIds.length > 0) {
+      marksQb.andWhere('marks.studentId IN (:...rosterStudentIds)', { rosterStudentIds });
+    } else {
+      marksQb.andWhere('1 = 0');
+    }
+    const raw = await marksQb.getRawMany();
 
     const countsBySubject = new Map<string, number>();
     for (const row of raw) {
@@ -4711,6 +4985,7 @@ export const getMarkInputProgressByClassSubjects = async (req: AuthRequest, res:
         subjectId: s.id,
         subjectName: s.name,
         subjectCode: s.code,
+        subjectCategory: s.category,
         studentsWithMarks,
         completionPercentage
       };
@@ -4725,7 +5000,8 @@ export const getMarkInputProgressByClassSubjects = async (req: AuthRequest, res:
       class: {
         id: classEntity.id,
         name: classEntity.name,
-        form: classEntity.form
+        form: classEntity.form,
+        levelBand
       },
       totalStudents,
       subjects: subjectsProgress
@@ -4774,20 +5050,10 @@ export const getMarkInputProgressAllClassesSubjects = async (req: AuthRequest, r
 
     const allExamIds = allExams.map(e => e.id);
 
-    const studentCountsRaw = await studentRepository
-      .createQueryBuilder('s')
-      .select('s.classId', 'classId')
-      .addSelect('COUNT(s.id)', 'cnt')
-      .where('s.isActive = true')
-      .andWhere('s.classId IS NOT NULL')
-      .groupBy('s.classId')
-      .getRawMany();
-
     const studentCountByClass = new Map<string, number>();
-    for (const row of studentCountsRaw) {
-      if (row.classId) {
-        studentCountByClass.set(String(row.classId), Number(row.cnt) || 0);
-      }
+    for (const classEntity of classes) {
+      const roster = await findActiveStudentsForClass(studentRepository, classEntity.id);
+      studentCountByClass.set(classEntity.id, roster.length);
     }
 
     const countsByClassSubject = new Map<string, Map<string, number>>();
@@ -4798,7 +5064,6 @@ export const getMarkInputProgressAllClassesSubjects = async (req: AuthRequest, r
         .innerJoin('m.exam', 'e')
         .innerJoin(Student, 's', 's.id = m.studentId')
         .where('e.id IN (:...examIds)', { examIds: allExamIds })
-        .andWhere('s.classId = e.classId')
         .andWhere('s.isActive = true')
         .select('e.classId', 'classId')
         .addSelect('m.subjectId', 'subjectId')
@@ -4819,8 +5084,10 @@ export const getMarkInputProgressAllClassesSubjects = async (req: AuthRequest, r
     const classesOut = classes.map(classEntity => {
       const totalStudents = studentCountByClass.get(classEntity.id) ?? 0;
       const bySubject = countsByClassSubject.get(classEntity.id) ?? new Map();
+      const classSubjects = filterSubjectsForClass(subjectList, classEntity);
+      const levelBand = inferStudentFeeLevelBand(classEntity);
 
-      const subjectsProgress = subjectList.map(s => {
+      const subjectsProgress = classSubjects.map(s => {
         const studentsWithMarks = bySubject.get(s.id) ?? 0;
         const completionPercentage =
           totalStudents > 0 ? parseFloat(((studentsWithMarks / totalStudents) * 100).toFixed(2)) : 0;
@@ -4828,6 +5095,7 @@ export const getMarkInputProgressAllClassesSubjects = async (req: AuthRequest, r
           subjectId: s.id,
           subjectName: s.name,
           subjectCode: s.code,
+          subjectCategory: s.category,
           studentsWithMarks,
           completionPercentage
         };
@@ -4837,7 +5105,8 @@ export const getMarkInputProgressAllClassesSubjects = async (req: AuthRequest, r
         class: {
           id: classEntity.id,
           name: classEntity.name,
-          form: classEntity.form
+          form: classEntity.form,
+          levelBand
         },
         totalStudents,
         subjects: subjectsProgress

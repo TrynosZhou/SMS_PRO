@@ -34,11 +34,7 @@ export class AuthService {
   private readonly logoutMessageKey = 'sessionMessage';
 
   constructor(private http: HttpClient, private router: Router) {
-    // Enforce the Splash -> Login -> Dashboard flow on every app bootstrap.
-    // Wipe any persisted credentials so the user must re-authenticate each
-    // time the application is (re)loaded; the in-memory user is only ever
-    // populated again via a successful sign-in below.
-    this.clearStoredAuth();
+    this.restoreStoredSession();
 
     this.router.events.subscribe(() => {
       if (this.isAuthenticated()) {
@@ -47,9 +43,53 @@ export class AuthService {
     });
   }
 
+  /** Default landing route after login or when refreshing from splash/login. */
+  getDefaultHomeRoute(user?: User | null): string {
+    const u = user ?? this.getCurrentUser();
+    if (!u) {
+      return '/login';
+    }
+    if (u.role === 'student') {
+      return '/student/dashboard';
+    }
+    if (u.role === 'teacher' || u.role === 'hod') {
+      return u.mustChangePassword ? '/teacher/manage-account' : '/teacher/dashboard';
+    }
+    if (u.role === 'parent') {
+      return '/parent/dashboard';
+    }
+    if (u.role === 'accountant') {
+      return '/invoices';
+    }
+    return '/dashboard';
+  }
+
+  /**
+   * Rehydrate in-memory user from localStorage so a browser refresh keeps the session.
+   */
+  private restoreStoredSession(): void {
+    try {
+      const token = localStorage.getItem('token');
+      const userJson = localStorage.getItem('user');
+      if (!token || !userJson) {
+        this.currentUserSubject.next(null);
+        return;
+      }
+      const user = JSON.parse(userJson) as User;
+      if (!user?.id || !user?.role) {
+        this.clearStoredAuth();
+        return;
+      }
+      this.currentUserSubject.next(user);
+      this.startInactivityTracking();
+    } catch {
+      this.clearStoredAuth();
+    }
+  }
+
   /**
    * Remove the persisted token/user without making a backend call or
-   * triggering navigation. Used on app bootstrap to force re-authentication.
+   * triggering navigation.
    */
   private clearStoredAuth(): void {
     try {

@@ -116,6 +116,6 @@ export class SalaryAssignmentsComponent implements OnInit {
   }
 
   back(): void {
-    this.router.navigate(['/payroll']);
+    this.router.navigate(['/payroll/overview']);
   }
 }

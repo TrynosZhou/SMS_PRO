@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ExamService } from '../../../services/exam.service';
 import { ClassService } from '../../../services/class.service';
 import { SettingsService } from '../../../services/settings.service';
+import { SubjectUtilsService } from '../../../services/subject-utils.service';
 
 @Component({
   selector: 'app-mark-input-progress',
@@ -42,7 +43,8 @@ export class MarkInputProgressComponent implements OnInit {
   constructor(
     private examService: ExamService,
     private classService: ClassService,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private subjectUtils: SubjectUtilsService
   ) {}
 
   ngOnInit() {
@@ -103,6 +105,14 @@ export class MarkInputProgressComponent implements OnInit {
 
   get canLoad(): boolean {
     return !!this.selectedTerm && !!this.selectedExamType && !!this.selectedClassId;
+  }
+
+  get filtersReadyCount(): number {
+    let n = 0;
+    if (this.selectedTerm) n++;
+    if (this.selectedExamType) n++;
+    if (this.selectedClassId) n++;
+    return n;
   }
 
   getSelectedClassName(): string {
@@ -167,14 +177,21 @@ export class MarkInputProgressComponent implements OnInit {
     return 'started';
   }
 
-  private applySubjectFilterSort(subjects: any[]): any[] {
+  private applySubjectFilterSort(subjects: any[], classContext?: { form?: string; name?: string; levelBand?: string }): any[] {
     const statusFilter = this.statusFilter;
     const sortKey = this.sortKey;
     const sortDir = this.sortDir;
     const dir = sortDir === 'asc' ? 1 : -1;
     const q = this.subjectSearch.trim().toLowerCase();
+    const band =
+      classContext?.levelBand && classContext.levelBand !== 'UNKNOWN'
+        ? (classContext.levelBand as 'O_LEVEL' | 'A_LEVEL')
+        : this.subjectUtils.inferClassLevelBand(classContext ?? null);
 
     const filtered = subjects.filter((s: any) => {
+      if (!this.subjectUtils.subjectMatchesClassLevelBand(s?.subjectCategory, band)) {
+        return false;
+      }
       const pct = this.normalizePct(s?.completionPercentage);
       const statusOk = statusFilter === 'all' || this.statusKeyFromPercentage(pct) === statusFilter;
       if (!statusOk) return false;
@@ -219,7 +236,7 @@ export class MarkInputProgressComponent implements OnInit {
   get filteredSortedSubjects(): any[] {
     if (this.isAllClassesView) return [];
     const subjects = Array.isArray(this.progressData?.subjects) ? this.progressData.subjects : [];
-    return this.applySubjectFilterSort(subjects);
+    return this.applySubjectFilterSort(subjects, this.progressData?.class);
   }
 
   /** Per-class blocks with filtered/sorted subjects (All classes mode). */
@@ -229,7 +246,7 @@ export class MarkInputProgressComponent implements OnInit {
     return list
       .map((block) => ({
         ...block,
-        subjects: this.applySubjectFilterSort(block.subjects || [])
+        subjects: this.applySubjectFilterSort(block.subjects || [], block.class)
       }))
       .filter((block) => block.subjects.length > 0);
   }

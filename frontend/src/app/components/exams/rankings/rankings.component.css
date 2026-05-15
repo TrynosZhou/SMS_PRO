@@ -1,6 +1,7 @@
 /* Rankings Component Styles */
 
-.pdf-error {
+.pdf-error,
+.load-error {
   margin: 12px 0 0;
   padding: 10px 14px;
   border-radius: 8px;
@@ -105,15 +106,24 @@
 
 .form-grid {
   display: grid;
-  /* Default: up to three filters per row (class / form position). */
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: 16px;
   margin-bottom: 24px;
+  align-items: end;
 }
 
-/* Subject position: four filters (type, exam, form, subject) on one row on desktop. */
-.form-grid.form-grid--subject {
+/* Class position: type, exam, term, class — one row on desktop. */
+.form-grid.form-grid--class {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Form position: type, exam, term, form — one row on desktop. */
+.form-grid.form-grid--overall-performance {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Subject position: type, exam, term, form, subject — one row on desktop. */
+.form-grid.form-grid--subject {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .form-group {
@@ -527,7 +537,9 @@
   }
 
   .form-grid,
-  .form-grid.form-grid--subject {
+  .form-grid.form-grid--class,
+  .form-grid.form-grid--subject,
+  .form-grid.form-grid--overall-performance {
     grid-template-columns: 1fr;
   }
 

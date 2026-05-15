@@ -534,7 +534,9 @@ export class ReportCardComponent implements OnInit, OnDestroy {
         if (err.status === 0) {
           this.error = 'Cannot connect to server. Please ensure the backend server is running.';
         } else if (err.status === 404) {
-          this.error = err.error?.message || 'Report card endpoint not found. Please check the server configuration.';
+          this.error =
+            err.error?.message ||
+            'No exam session or marks were found for the selected class, term, and exam type.';
         } else if (err.status === 400) {
           this.error = err.error?.message || 'Invalid request parameters. Please check your selections.';
         } else if (err.status === 403) {
@@ -832,6 +834,18 @@ export class ReportCardComponent implements OnInit, OnDestroy {
   /** True once the user has generated report cards in this session. */
   get hasGeneratedReports(): boolean {
     return this.reportCards.length > 0;
+  }
+
+  get filtersTotalCount(): number {
+    return this.isParent ? 2 : 3;
+  }
+
+  get filtersReadyCount(): number {
+    let count = 0;
+    if (this.selectedTerm) count++;
+    if (this.selectedExamType) count++;
+    if (this.isParent || this.selectedClass) count++;
+    return count;
   }
 
   // Download all PDFs

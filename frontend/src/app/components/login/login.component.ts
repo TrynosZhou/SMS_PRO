@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -57,7 +57,11 @@ export class LoginComponent implements OnInit {
   showSignupPassword = false;
   showSignupConfirmPassword = false;
 
-  constructor(private authService: AuthService, private router: Router) { }
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) { }
 
   ngOnInit(): void {
     const storedMessage = sessionStorage.getItem('sessionMessage');
@@ -67,6 +71,16 @@ export class LoginComponent implements OnInit {
     }
 
     if (this.authService.isAuthenticated()) {
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+      if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+        this.router.navigateByUrl(returnUrl).catch(() => {
+          const user = this.authService.getCurrentUser();
+          if (user) {
+            this.routeAuthenticatedUserHome(user);
+          }
+        });
+        return;
+      }
       const user = this.authService.getCurrentUser();
       if (user) {
         this.routeAuthenticatedUserHome(user);
@@ -83,6 +97,19 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+      this.router.navigateByUrl(returnUrl).catch((err) => {
+        console.error('Navigation error:', err);
+        this.navigateByRoleHome(user);
+      });
+      return;
+    }
+
+    this.navigateByRoleHome(user);
+  }
+
+  private navigateByRoleHome(user: any): void {
     if (user.role === 'student') {
       this.router.navigate(['/student/dashboard']).catch(err => {
         console.error('Navigation error:', err);

@@ -1,44 +1,61 @@
 <form (ngSubmit)="onSubmit()" #studentForm="ngForm" novalidate>
   <!-- ========== Add student — full-page admission layout ========== -->
-  <div class="sfa-page" *ngIf="!isEdit">
+  <div class="sfa-page sfa-modern" *ngIf="!isEdit">
     <div class="sfa-shell">
-      <header class="sfa-header">
-        <h1 class="sfa-title" id="sm-add-student-title">Student Registration</h1>
-        <p class="sfa-sub">Register a new student — fields marked * are required.</p>
-        <div class="sfa-legend" aria-hidden="true">
-          <span class="sfa-leg sfa-leg--req">Required *</span>
-          <span class="sfa-leg sfa-leg--opt">Optional</span>
+      <header class="sfa-hero">
+        <div class="sfa-hero-main">
+          <p class="sfa-eyebrow">Registration · Students</p>
+          <h1 class="sfa-title" id="sm-add-student-title">Student Registration</h1>
+          <p class="sfa-sub">Create a student profile, then enroll them in a class from Enroll Student.</p>
+          <div class="sfa-legend" aria-hidden="true">
+            <span class="sfa-leg sfa-leg--req">Required *</span>
+            <span class="sfa-leg sfa-leg--opt">Optional</span>
+          </div>
+          <p class="sfa-preview" *ngIf="getStudentPreviewName()">
+            Registering: <strong>{{ getStudentPreviewName() }}</strong>
+            <span class="sfa-preview-meta" *ngIf="student.studentType"> · {{ student.studentType }}</span>
+            <span class="sfa-preview-meta" *ngIf="getAgePreview()"> · {{ getAgePreview() }} yrs</span>
+          </p>
+        </div>
+        <div class="sfa-hero-aside">
+          <div class="sfa-progress-card" aria-label="Form completion">
+            <div class="sfa-progress-top">
+              <span class="sfa-progress-label">Completion</span>
+              <span class="sfa-progress-pct">{{ getCompletionPercent() }}%</span>
+            </div>
+            <div class="sfa-progress-track">
+              <div class="sfa-progress-fill" [style.width.%]="getCompletionPercent()"></div>
+            </div>
+            <p class="sfa-progress-hint" *ngIf="getCompletionPercent() < 100">Complete required fields to submit</p>
+            <p class="sfa-progress-hint sfa-progress-hint--ok" *ngIf="getCompletionPercent() === 100">Ready to register</p>
+          </div>
         </div>
       </header>
 
-      <div class="alert alert-success" *ngIf="success">
-        <span class="alert-icon">✓</span>
-        {{ success }}
-      </div>
-      <div class="alert alert-error" *ngIf="error">
-        <span class="alert-icon">⚠</span>
-        {{ error }}
-      </div>
+      <nav class="sfa-steps" aria-label="Form sections">
+        <button type="button" class="sfa-step" *ngFor="let s of addSectionSteps" [class.sfa-step--done]="isAddSectionComplete(s.id)" [class.sfa-step--current]="isAddStepCurrent(s.id)" (click)="scrollToAddSection(s.id)">
+          <span class="sfa-step-icon" aria-hidden="true">{{ s.icon }}</span>
+          <span class="sfa-step-num">{{ s.id }}</span>
+          <span class="sfa-step-label">{{ s.label }}</span>
+          <span class="sfa-step-check" *ngIf="isAddSectionComplete(s.id)" aria-hidden="true">✓</span>
+        </button>
+      </nav>
 
-      <div class="sfa-progress" aria-label="Form completion">
-        <div class="sfa-progress-label">
-          <span>Form completion</span>
-          <strong>{{ getCompletionPercent() }}%</strong>
-        </div>
-        <div class="sfa-progress-track">
-          <div class="sfa-progress-fill" [style.width.%]="getCompletionPercent()"></div>
-        </div>
-      </div>
-
+      <div class="alert alert-success sfa-alert" *ngIf="success"><span class="alert-icon">✓</span> {{ success }}</div>
+      <div class="alert alert-error sfa-alert" *ngIf="error"><span class="alert-icon">⚠</span> {{ error }}</div>
       <!-- Section 1 -->
-      <section class="sfa-section">
+      <section class="sfa-section sfa-section-card" id="sfa-section-1">
         <div class="sfa-rowhead">
           <h2 class="sfa-rowhead-title">
             <span class="sfa-num">1</span>
             <span class="sfa-rowhead-text">Student information</span>
           </h2>
           <div class="sfa-rowhead-line" aria-hidden="true"></div>
+          <span class="sfa-section-badge" [class.sfa-section-badge--done]="isAddSectionComplete(1)">
+            {{ isAddSectionComplete(1) ? 'Complete' : 'Required' }}
+          </span>
         </div>
+        <p class="sfa-section-intro">Identity details and photo for ID cards, reports, and the student directory.</p>
 
         <div class="sfa-grid sfa-grid-3">
           <div class="sfa-field sfa-field--opt sfa-col-span-3">
@@ -90,14 +107,18 @@
       </section>
 
       <!-- Section 2 -->
-      <section class="sfa-section">
+      <section class="sfa-section sfa-section-card" id="sfa-section-2">
         <div class="sfa-rowhead">
           <h2 class="sfa-rowhead-title">
             <span class="sfa-num">2</span>
             <span class="sfa-rowhead-text">Contact information</span>
           </h2>
           <div class="sfa-rowhead-line" aria-hidden="true"></div>
+          <span class="sfa-section-badge" [class.sfa-section-badge--done]="isAddSectionComplete(2)">
+            {{ isAddSectionComplete(2) ? 'Complete' : 'Required' }}
+          </span>
         </div>
+        <p class="sfa-section-intro">Phone, email, and home address for guardians and school communications.</p>
 
         <div class="sfa-grid sfa-grid-3">
           <div class="sfa-field sfa-field--req" [class.sfa-field--invalid]="studentForm.submitted && !student.contactNumber?.trim()">
@@ -119,14 +140,18 @@
       </section>
 
       <!-- Section 3 -->
-      <section class="sfa-section">
+      <section class="sfa-section sfa-section-card" id="sfa-section-3">
         <div class="sfa-rowhead">
           <h2 class="sfa-rowhead-title">
             <span class="sfa-num">3</span>
             <span class="sfa-rowhead-text">Academic &amp; school services</span>
           </h2>
           <div class="sfa-rowhead-line" aria-hidden="true"></div>
+          <span class="sfa-section-badge" [class.sfa-section-badge--done]="isAddSectionComplete(3)">
+            {{ isAddSectionComplete(3) ? 'Complete' : 'Required' }}
+          </span>
         </div>
+        <p class="sfa-section-intro">Enrollment date, student type, and optional transport or dining services.</p>
 
         <div class="sfa-grid sfa-grid-3">
           <div class="sfa-field sfa-field--req sfa-field--date" [class.sfa-field--invalid]="studentForm.submitted && !student.dateOfJoining">
@@ -198,12 +223,19 @@
         </div>
       </section>
 
-      <footer class="sfa-foot">
-        <button type="button" class="sfa-btn sfa-btn-cancel" (click)="goToStudentsList()">Cancel</button>
-        <button type="submit" class="sfa-btn sfa-btn-submit" [disabled]="submitting">
-          <span *ngIf="submitting" class="spinner"></span>
-          {{ submitting ? 'Processing…' : 'Add student' }}
-        </button>
+      <footer class="sfa-foot sfa-foot--sticky">
+        <div class="sfa-foot-summary" *ngIf="getStudentPreviewName()">
+          <span class="sfa-foot-summary-label">New student</span>
+          <strong>{{ getStudentPreviewName() }}</strong>
+          <span class="sfa-foot-pct">{{ getCompletionPercent() }}% complete</span>
+        </div>
+        <div class="sfa-foot-actions">
+          <button type="button" class="sfa-btn sfa-btn-cancel" (click)="goToStudentsList()">Cancel</button>
+          <button type="submit" class="sfa-btn sfa-btn-submit" [disabled]="submitting">
+            <span *ngIf="submitting" class="spinner"></span>
+            {{ submitting ? 'Processing…' : 'Add student' }}
+          </button>
+        </div>
       </footer>
     </div>
   </div>

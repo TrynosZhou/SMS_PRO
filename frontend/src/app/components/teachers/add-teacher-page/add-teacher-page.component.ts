@@ -131,6 +131,81 @@ export class AddTeacherPageComponent implements OnInit {
     return index;
   }
 
+  readonly sectionSteps = [
+    { id: 1, label: 'Personal', icon: '👤' },
+    { id: 2, label: 'Employment', icon: '💼' },
+    { id: 3, label: 'Contact', icon: '📞' },
+    { id: 4, label: 'Qualifications', icon: '🎓' },
+  ];
+
+  getCompletionPercent(): number {
+    const checks = [
+      !!this.draft.title,
+      !!this.draft.firstName?.trim(),
+      !!this.draft.lastName?.trim(),
+      !!this.draft.nationalId?.trim(),
+      !!this.draft.dateOfBirth,
+      !!this.draft.gender,
+      !!this.draft.role,
+      !!this.draft.departmentId,
+      !!this.draft.dateOfJoining,
+      !!this.draft.phoneNumber?.trim() && this.phoneRegex.test(this.draft.phoneNumber.trim()),
+      !!this.draft.email?.trim() && this.isEmailLike(this.draft.email),
+    ];
+    const done = checks.filter(Boolean).length;
+    return Math.round((done / checks.length) * 100);
+  }
+
+  isSectionComplete(sectionId: number): boolean {
+    const d = this.draft;
+    switch (sectionId) {
+      case 1:
+        return !!(
+          d.title &&
+          d.firstName?.trim() &&
+          d.lastName?.trim() &&
+          d.nationalId?.trim() &&
+          d.dateOfBirth &&
+          d.gender
+        );
+      case 2:
+        return !!(d.role && d.departmentId && d.dateOfJoining);
+      case 3:
+        return !!(
+          d.phoneNumber?.trim() &&
+          this.phoneRegex.test(d.phoneNumber.trim()) &&
+          d.email?.trim() &&
+          this.isEmailLike(d.email)
+        );
+      case 4:
+        return (d.qualifications || []).some((q) => q.trim().length > 0);
+      default:
+        return false;
+    }
+  }
+
+  getTeacherPreviewName(): string {
+    const parts = [this.draft.title, this.draft.firstName?.trim(), this.draft.lastName?.trim()].filter(
+      Boolean
+    );
+    return parts.length > 1 ? parts.join(' ') : '';
+  }
+
+  scrollToSection(sectionId: number): void {
+    const el = document.getElementById(`tf-section-${sectionId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /** Highlights the first section that still needs required input. */
+  isStepCurrent(sectionId: number): boolean {
+    for (const s of this.sectionSteps) {
+      if (!this.isSectionComplete(s.id)) {
+        return s.id === sectionId;
+      }
+    }
+    return sectionId === this.sectionSteps[this.sectionSteps.length - 1].id;
+  }
+
   private isEmailLike(value: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   }

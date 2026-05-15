@@ -1,5 +1,5 @@
-<div class="payroll-wrapper">
-  <div class="payroll-card">
+<div class="payroll-wrapper" [class.payroll-overview-route]="isPayrollOverviewRoute()">
+  <div class="payroll-card" [class.payroll-card--overview-border]="isPayrollOverviewRoute()">
     <div class="alert alert-error" *ngIf="overviewError && tab==='overview'">
       {{ overviewError }}
     </div>
@@ -17,91 +17,218 @@
       {{ reportError }}
     </div>
 
-    <!-- ---------------- Payroll Overview ---------------- -->
-    <div *ngIf="tab==='overview'" class="tab-panel payroll-overview">
-      <div *ngIf="overviewLoading" class="loading">Loading overview…</div>
+    <!-- ---------------- Payroll Overview (modern) ---------------- -->
+    <div *ngIf="tab==='overview'" class="tab-panel payroll-overview po-modern">
+      <div *ngIf="overviewLoading" class="po-skeleton" aria-busy="true" aria-label="Loading payroll overview">
+        <div class="po-skel-hero"></div>
+        <div class="po-skel-kpis">
+          <div class="po-skel-card" *ngFor="let _ of [1,2,3,4]"></div>
+        </div>
+        <div class="po-skel-grid">
+          <div class="po-skel-panel"></div>
+          <div class="po-skel-panel"></div>
+        </div>
+      </div>
+
+      <div class="alert alert-error po-overview-alert" *ngIf="overviewError">{{ overviewError }}</div>
 
       <ng-container *ngIf="!overviewLoading">
-        <div class="subtitle overview-subtitle">Manage staff payroll, salary structures, and payroll runs</div>
+        <header class="po-hero">
+          <div class="po-hero-text">
+            <p class="po-eyebrow">Finance · Payroll</p>
+            <h2 class="po-hero-title">Payroll Overview</h2>
+            <p class="po-hero-sub">Manage staff payroll, salary structures, assignments, and monthly runs in one place.</p>
+            <p class="po-refresh-hint" *ngIf="overviewLastRefreshLabel">{{ overviewLastRefreshLabel }}</p>
+          </div>
+          <div class="po-hero-actions">
+            <div class="po-period" aria-label="Overview period">
+              <button type="button" class="po-period-btn" (click)="shiftOverviewPeriod(-1)" aria-label="Previous month">‹</button>
+              <div class="po-period-selects">
+                <select class="po-select" [(ngModel)]="overviewMonth" (ngModelChange)="onOverviewPeriodChange()" aria-label="Month">
+                  <option *ngFor="let m of monthOptions" [ngValue]="m.value">{{ m.label }}</option>
+                </select>
+                <select class="po-select po-select-year" [(ngModel)]="overviewYear" (ngModelChange)="onOverviewPeriodChange()" aria-label="Year">
+                  <option *ngFor="let y of overviewYearOptions" [ngValue]="y">{{ y }}</option>
+                </select>
+              </div>
+              <button type="button" class="po-period-btn" (click)="shiftOverviewPeriod(1)" aria-label="Next month">›</button>
+            </div>
+            <button type="button" class="po-btn po-btn-ghost" (click)="resetOverviewPeriodToToday()">Today</button>
+            <button type="button" class="po-btn po-btn-primary" (click)="refreshOverview()">↻ Refresh</button>
+          </div>
+        </header>
 
-        <!-- First part (top) -->
-        <div class="overview-top-cards">
-          <div class="overview-stat-card">
-            <div class="overview-icon">👥</div>
-            <div>
-              <div class="overview-value">{{ employeeStats.total }}</div>
-              <div class="overview-label">TOTAL EMPLOYEES</div>
-              <div class="overview-meta">👷 {{ overviewPayrollStaffCount }} ancillary &amp; support staff</div>
-            </div>
-          </div>
-          <div class="overview-stat-card">
-            <div class="overview-icon icon-runs">📋</div>
-            <div>
-              <div class="overview-value">{{ overviewRunsThisMonth }}</div>
-              <div class="overview-label">RUNS THIS MONTH</div>
-            </div>
-          </div>
-          <div class="overview-stat-card">
-            <div class="overview-icon icon-structures">📊</div>
-            <div>
-              <div class="overview-value">{{ overviewStructuresCount }}</div>
-              <div class="overview-label">SALARY STRUCTURES</div>
-            </div>
-          </div>
-          <div class="overview-stat-card">
-            <div class="overview-icon icon-assignments">🔗</div>
-            <div>
-              <div class="overview-value">0</div>
-              <div class="overview-label">ASSIGNMENTS</div>
-            </div>
-          </div>
+        <div class="po-kpis">
+          <button type="button" class="po-kpi po-kpi--employees" (click)="navigateToTab('employees')">
+            <span class="po-kpi-icon" aria-hidden="true">👥</span>
+            <span class="po-kpi-body">
+              <span class="po-kpi-value">{{ employeeStats.total }}</span>
+              <span class="po-kpi-label">Payroll employees</span>
+              <span class="po-kpi-meta">{{ employeeStats.active }} active · {{ employeeStats.departments }} dept{{ employeeStats.departments === 1 ? '' : 's' }}</span>
+            </span>
+            <span class="po-kpi-arrow" aria-hidden="true">→</span>
+          </button>
+          <button type="button" class="po-kpi po-kpi--runs" (click)="navigateToTab('process')">
+            <span class="po-kpi-icon" aria-hidden="true">📋</span>
+            <span class="po-kpi-body">
+              <span class="po-kpi-value">{{ overviewRunsThisMonth }}</span>
+              <span class="po-kpi-label">Runs · {{ overviewPeriodLabel }}</span>
+              <span class="po-kpi-meta">{{ overviewTotalRuns }} total runs on record</span>
+            </span>
+            <span class="po-kpi-arrow" aria-hidden="true">→</span>
+          </button>
+          <button type="button" class="po-kpi po-kpi--structures" (click)="navigateToTab('structures')">
+            <span class="po-kpi-icon" aria-hidden="true">📊</span>
+            <span class="po-kpi-body">
+              <span class="po-kpi-value">{{ overviewStructuresCount }}</span>
+              <span class="po-kpi-label">Salary structures</span>
+              <span class="po-kpi-meta">Templates for payroll lines</span>
+            </span>
+            <span class="po-kpi-arrow" aria-hidden="true">→</span>
+          </button>
+          <button type="button" class="po-kpi po-kpi--assign" (click)="navigateToAssignments()">
+            <span class="po-kpi-icon" aria-hidden="true">🔗</span>
+            <span class="po-kpi-body">
+              <span class="po-kpi-value">{{ overviewAssignmentsCount }}</span>
+              <span class="po-kpi-label">Salary assignments</span>
+              <span class="po-kpi-meta">{{ overviewUnassignedCount }} still unassigned</span>
+            </span>
+            <span class="po-kpi-arrow" aria-hidden="true">→</span>
+          </button>
         </div>
 
-        <!-- Second part (middle) -->
-        <div class="overview-middle">
-          <div class="panel middle-left">
-            <h3>Quick Actions</h3>
-            <div class="quick-grid">
-              <button type="button" class="quick-card" (click)="navigateToTab('employees')">
-                <span>👥</span>
-                <strong>Employees</strong>
-              </button>
-              <button type="button" class="quick-card" (click)="navigateToTab('structures')">
-                <span>📊</span>
-                <strong>Salary Structures</strong>
-              </button>
-              <button type="button" class="quick-card" (click)="navigateToAssignments()">
-                <span>🔗</span>
-                <strong>Assignments</strong>
-              </button>
-              <button type="button" class="quick-card quick-active" (click)="navigateToTab('process')">
-                <span>⚙️</span>
-                <strong>Process Payroll</strong>
-              </button>
-              <button type="button" class="quick-card" (click)="navigateToTab('reports')">
-                <span>📈</span>
-                <strong>Reports</strong>
-              </button>
-              <button type="button" class="quick-card">
-                <span>📋</span>
-                <strong>Loan Overview</strong>
-              </button>
+        <div class="po-insights">
+          <section class="po-panel po-panel--finance" *ngIf="overviewHasPeriodRun; else noPeriodRun">
+            <div class="po-panel-head">
+              <h3>Period snapshot</h3>
+              <span [ngClass]="runStatusClass(overviewSummary.status)">{{ runStatusLabel(overviewSummary.status) }}</span>
             </div>
-          </div>
+            <p class="po-panel-sub">{{ overviewSummary.periodLabel }} · {{ overviewSummary.employeeCount }} employees on run</p>
+            <div class="po-finance-grid">
+              <div class="po-finance-item">
+                <span class="po-finance-label">Net payroll</span>
+                <span class="po-finance-value">{{ formatMoney(overviewSummary.totalNetSalary) }}</span>
+              </div>
+              <div class="po-finance-item po-finance-item--up">
+                <span class="po-finance-label">Allowances</span>
+                <span class="po-finance-value">+{{ formatMoney(overviewSummary.totalAllowances) }}</span>
+              </div>
+              <div class="po-finance-item po-finance-item--down">
+                <span class="po-finance-label">Deductions</span>
+                <span class="po-finance-value">−{{ formatMoney(overviewSummary.totalDeductions) }}</span>
+              </div>
+            </div>
+            <div class="po-finance-actions">
+              <button type="button" class="po-btn po-btn-sm po-btn-primary" (click)="openRunInProcess(overviewSummary.runId)">Open run</button>
+              <button type="button" class="po-btn po-btn-sm po-btn-ghost" (click)="navigateToPayslipsWithRun(overviewSummary.runId)">Payslips</button>
+              <button type="button" class="po-btn po-btn-sm po-btn-ghost" (click)="navigateToTab('reports')">Reports</button>
+            </div>
+          </section>
+          <ng-template #noPeriodRun>
+            <section class="po-panel po-panel--empty-run">
+              <span class="po-empty-icon" aria-hidden="true">📅</span>
+              <h3>No payroll run for {{ overviewPeriodLabel }}</h3>
+              <p>Generate a run to see net pay, allowances, and deductions for this period.</p>
+              <button type="button" class="po-btn po-btn-primary" (click)="navigateToTab('process')">Process payroll →</button>
+            </section>
+          </ng-template>
 
-          <div class="panel middle-right">
-            <h3>Recent Payroll Runs</h3>
-            <div *ngIf="overviewRecentRuns.length === 0" class="recent-empty">
-              <div>No payroll runs yet.</div>
-              <button type="button" class="btn btn-primary" (click)="openProcessFirstRun()">Process first run →</button>
+          <section class="po-panel po-panel--workforce">
+            <h3>Workforce health</h3>
+            <p class="po-panel-sub">Ancillary &amp; support staff on payroll</p>
+            <div class="po-workforce-bars" *ngIf="employeeStats.total > 0">
+              <div class="po-bar-row">
+                <span class="po-bar-label">Active</span>
+                <div class="po-bar-track"><div class="po-bar-fill po-bar-fill--active" [style.width.%]="(employeeStats.active / employeeStats.total) * 100"></div></div>
+                <span class="po-bar-num">{{ employeeStats.active }}</span>
+              </div>
+              <div class="po-bar-row">
+                <span class="po-bar-label">Inactive</span>
+                <div class="po-bar-track"><div class="po-bar-fill po-bar-fill--inactive" [style.width.%]="(employeeStats.inactive / employeeStats.total) * 100"></div></div>
+                <span class="po-bar-num">{{ employeeStats.inactive }}</span>
+              </div>
+              <div class="po-bar-row" *ngIf="employeeStats.terminated > 0">
+                <span class="po-bar-label">Terminated</span>
+                <div class="po-bar-track"><div class="po-bar-fill po-bar-fill--terminated" [style.width.%]="(employeeStats.terminated / employeeStats.total) * 100"></div></div>
+                <span class="po-bar-num">{{ employeeStats.terminated }}</span>
+              </div>
             </div>
-            <div *ngIf="overviewRecentRuns.length > 0" class="recent-list">
-              <button type="button" class="recent-item" *ngFor="let r of overviewRecentRuns.slice(0, 5)" (click)="openRunInProcess(r.id)">
-                <span>{{ r.periodLabel }}</span>
-                <span [ngClass]="runStatusClass(r.status)">{{ r.status }}</span>
+            <div class="po-assign-ring">
+              <div class="po-ring-label">
+                <span class="po-ring-pct">{{ overviewAssignmentPercent }}%</span>
+                <span class="po-ring-text">salaries assigned</span>
+              </div>
+              <div class="po-ring-track" role="progressbar" [attr.aria-valuenow]="overviewAssignmentPercent" aria-valuemin="0" aria-valuemax="100">
+                <div class="po-ring-fill" [style.width.%]="overviewAssignmentPercent"></div>
+              </div>
+              <button type="button" class="po-link-btn" (click)="navigateToAssignments()">Manage assignments →</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="po-bottom">
+          <section class="po-panel po-panel--actions">
+            <h3>Quick actions</h3>
+            <p class="po-panel-sub">Jump to common payroll tasks</p>
+            <div class="po-actions-grid">
+              <button type="button" class="po-action" (click)="navigateToTab('employees')">
+                <span class="po-action-ico">👥</span>
+                <span class="po-action-text"><strong>Employees</strong><small>Register &amp; manage staff</small></span>
+              </button>
+              <button type="button" class="po-action" (click)="navigateToTab('structures')">
+                <span class="po-action-ico">📊</span>
+                <span class="po-action-text"><strong>Salary structures</strong><small>Pay templates &amp; components</small></span>
+              </button>
+              <button type="button" class="po-action" (click)="navigateToAssignments()">
+                <span class="po-action-ico">🔗</span>
+                <span class="po-action-text"><strong>Assignments</strong><small>Link staff to structures</small></span>
+              </button>
+              <button type="button" class="po-action po-action--featured" (click)="navigateToTab('process')">
+                <span class="po-action-ico">⚙️</span>
+                <span class="po-action-text"><strong>Process payroll</strong><small>Generate &amp; approve runs</small></span>
+              </button>
+              <button type="button" class="po-action" (click)="navigateToTab('payslips')">
+                <span class="po-action-ico">📄</span>
+                <span class="po-action-text"><strong>Payslips</strong><small>View &amp; download PDFs</small></span>
+              </button>
+              <button type="button" class="po-action" (click)="navigateToTab('leave')">
+                <span class="po-action-ico">📅</span>
+                <span class="po-action-text"><strong>Leave</strong><small>Balances &amp; compliance</small></span>
+              </button>
+              <button type="button" class="po-action" (click)="navigateToTab('reports')">
+                <span class="po-action-ico">📈</span>
+                <span class="po-action-text"><strong>Reports</strong><small>Monthly &amp; department views</small></span>
               </button>
             </div>
-          </div>
+          </section>
+
+          <section class="po-panel po-panel--runs">
+            <div class="po-panel-head">
+              <div>
+                <h3>Recent payroll runs</h3>
+                <p class="po-panel-sub po-panel-sub--tight">Latest activity across all periods</p>
+              </div>
+              <button type="button" class="po-link-btn" *ngIf="overviewTotalRuns > 0" (click)="navigateToTab('process')">View all →</button>
+            </div>
+            <div *ngIf="overviewRecentRuns.length === 0" class="po-runs-empty">
+              <span class="po-empty-icon" aria-hidden="true">📋</span>
+              <p>No payroll runs yet.</p>
+              <button type="button" class="po-btn po-btn-primary" (click)="openProcessFirstRun()">Process first run</button>
+            </div>
+            <ul class="po-runs-list" *ngIf="overviewRecentRuns.length > 0">
+              <li *ngFor="let r of overviewRecentRuns; let i = index">
+                <button type="button" class="po-run-row" (click)="openRunInProcess(r.id)">
+                  <span class="po-run-index">{{ i + 1 }}</span>
+                  <span class="po-run-main">
+                    <span class="po-run-period">{{ r.periodLabel || (r.runMonth + '/' + r.runYear) }}</span>
+                    <span class="po-run-meta">{{ getOverviewMonthName(r.runMonth) }} {{ r.runYear }}</span>
+                  </span>
+                  <span [ngClass]="runStatusClass(r.status)">{{ runStatusLabel(r.status) }}</span>
+                  <span class="po-run-chevron" aria-hidden="true">›</span>
+                </button>
+              </li>
+            </ul>
+          </section>
         </div>
       </ng-container>
     </div>

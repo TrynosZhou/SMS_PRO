@@ -22,8 +22,10 @@ export class PayrollManagementComponent implements OnInit, OnDestroy {
   overviewError = '';
   overviewSummary: any = null;
   overviewRecentRuns: any[] = [];
+  overviewAllRuns: any[] = [];
   overviewTotalRuns = 0;
   overviewStructuresCount = 0;
+  overviewLastRefresh: Date | null = null;
   private routeEventsSub?: Subscription;
 
   // Employees
@@ -197,6 +199,12 @@ export class PayrollManagementComponent implements OnInit, OnDestroy {
     return this.router.url.split('?')[0].includes('/payroll/manage');
   }
 
+  /** Standalone payroll overview at `/payroll/overview`. */
+  isPayrollOverviewRoute(): boolean {
+    const p = this.router.url.split('?')[0].replace(/\/+$/, '');
+    return p === '/payroll/overview' || p.endsWith('/payroll/overview');
+  }
+
   /**
    * Link segments for payroll routes — stays under `/payroll/manage/...` when already in the hub.
    */
@@ -218,7 +226,7 @@ export class PayrollManagementComponent implements OnInit, OnDestroy {
     const m = this.inPayrollManageShell();
     switch (page) {
       case 'overview':
-        return m ? ['/payroll', 'manage', 'overview'] : ['/payroll'];
+        return ['/payroll', 'overview'];
       case 'employees':
         return m ? ['/payroll', 'manage', 'employees'] : ['/payroll', 'employees'];
       case 'structures':
@@ -234,7 +242,7 @@ export class PayrollManagementComponent implements OnInit, OnDestroy {
       case 'reports':
         return m ? ['/payroll', 'manage', 'reports'] : ['/payroll', 'reports'];
       default:
-        return ['/payroll'];
+        return ['/payroll', 'overview'];
     }
   }
 
@@ -388,11 +396,21 @@ export class PayrollManagementComponent implements OnInit, OnDestroy {
         this.overviewStructuresCount = (structs || []).length;
 
         const allRuns = res.runs?.runs || [];
+        this.overviewAllRuns = allRuns;
         this.overviewTotalRuns = allRuns.length;
-        this.overviewRecentRuns = allRuns.slice(0, 8);
+        this.overviewRecentRuns = allRuns
+          .slice()
+          .sort((a: any, b: any) => {
+            const ya = Number(a?.runYear) || 0;
+            const yb = Number(b?.runYear) || 0;
+            if (ya !== yb) return yb - ya;
+            return (Number(b?.runMonth) || 0) - (Number(a?.runMonth) || 0);
+          })
+          .slice(0, 8);
 
         this.overviewSummary = res.summary?.summary ?? null;
         this.overviewLoading = false;
+        this.overviewLastRefresh = new Date();
       },
       error: (err: any) => {
         this.overviewError = err?.error?.message || err?.message || 'Failed to load payroll overview';
@@ -458,9 +476,83 @@ export class PayrollManagementComponent implements OnInit, OnDestroy {
   }
 
   get overviewRunsThisMonth(): number {
-    return this.overviewRecentRuns.filter((r: any) =>
-      Number(r?.runMonth) === this.overviewMonth && Number(r?.runYear) === this.overviewYear
+    return this.overviewAllRuns.filter(
+      (r: any) =>
+        Number(r?.runMonth) === this.overviewMonth && Number(r?.runYear) === this.overviewYear
     ).length;
+  }
+
+  get overviewPeriodLabel(): string {
+    const m = this.monthOptions.find((o) => o.value === this.overviewMonth);
+    return `${m?.label || this.overviewMonth} ${this.overviewYear}`;
+  }
+
+  get overviewAssignmentsCount(): number {
+    return this.payrollEmployees.filter((e: any) => String(e?.salaryType || '').trim().length > 0)
+      .length;
+  }
+
+  get overviewUnassignedCount(): number {
+    return Math.max(0, this.overviewPayrollStaffCount - this.overviewAssignmentsCount);
+  }
+
+  get overviewAssignmentPercent(): number {
+    const total = this.overviewPayrollStaffCount;
+    if (!total) return 0;
+    return Math.round((this.overviewAssignmentsCount / total) * 100);
+  }
+
+  get overviewHasPeriodRun(): boolean {
+    return !!this.overviewSummary;
+  }
+
+  get overviewLastRefreshLabel(): string {
+    if (!this.overviewLastRefresh) return '';
+    const sec = Math.floor((Date.now() - this.overviewLastRefresh.getTime()) / 1000);
+    if (sec < 10) return 'Updated just now';
+    if (sec < 60) return `Updated ${sec}s ago`;
+    const min = Math.floor(sec / 60);
+    return `Updated ${min} min ago`;
+  }
+
+  shiftOverviewPeriod(deltaMonths: number): void {
+    let m = this.overviewMonth + deltaMonths;
+    let y = this.overviewYear;
+    while (m > 12) {
+      m -= 12;
+      y += 1;
+    }
+    while (m < 1) {
+      m += 12;
+      y -= 1;
+    }
+    this.overviewMonth = m;
+    this.overviewYear = y;
+    this.onOverviewPeriodChange();
+  }
+
+  resetOverviewPeriodToToday(): void {
+    const now = new Date();
+    this.overviewMonth = now.getMonth() + 1;
+    this.overviewYear = now.getFullYear();
+    this.onOverviewPeriodChange();
+  }
+
+  runStatusLabel(status: string): string {
+    const s = (status || '').toLowerCase().replace(/_/g, ' ');
+    if (!s) return 'Unknown';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  get overviewYearOptions(): number[] {
+    const y = new Date().getFullYear();
+    return [y - 2, y - 1, y, y + 1];
+  }
+
+  getOverviewMonthName(month: number | undefined | null): string {
+    if (month == null) return '';
+    const m = this.monthOptions.find((o) => o.value === Number(month));
+    return m?.label || String(month);
   }
 
   formatMoney(n: number | undefined | null): string {

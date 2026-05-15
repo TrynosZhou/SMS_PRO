@@ -1,174 +1,221 @@
-<div class="mi-page">
-  <!-- Outer purple frame (matches the mockup's purple-bordered container) -->
-  <div class="mi-frame">
-    <!-- Top "Enter Marks" gradient banner -->
-    <div class="mi-banner">
-      <h1 class="mi-banner-title">Enter Marks</h1>
-    </div>
+<div class="mi-page mi-modern">
+  <div class="mi-shell">
+    <header class="mi-hero">
+      <div class="mi-hero-main">
+        <p class="mi-eyebrow">Exams · Marks capturing</p>
+        <h1 class="mi-hero-title">Enter Marks</h1>
+        <p class="mi-hero-sub">
+          Select term, exam type, class and subject, then capture scores with auto-save as you type.
+        </p>
+        <p class="mi-hero-meta" *ngIf="hasLoadedRoster && !loadingStudents">
+          {{ getSelectedClassName() }} · {{ getSelectedSubjectName() }} · {{ getSelectedExamTypeLabel() }} · {{ selectedTermLabel }}
+        </p>
+      </div>
+      <div class="mi-hero-aside" *ngIf="hasLoadedRoster && totalCount > 0">
+        <div class="mi-progress-card" aria-label="Marks entry progress">
+          <div class="mi-progress-top">
+            <span class="mi-progress-label">Completion</span>
+            <span class="mi-progress-pct">{{ completionPercent }}%</span>
+          </div>
+          <div class="mi-progress-track">
+            <div class="mi-progress-fill" [style.width.%]="completionPercent"></div>
+          </div>
+          <p class="mi-progress-hint">{{ markedCount }} of {{ totalCount }} students marked</p>
+        </div>
+      </div>
+    </header>
 
-    <!-- Progress pill row -->
-    <div class="mi-progress-row">
-      <div class="mi-progress-pill">
-        <span class="mi-progress-count">{{ markedCount }} / {{ totalCount }} Marks Entered</span>
+    <div class="mi-kpis" *ngIf="hasLoadedRoster && totalCount > 0">
+      <div class="mi-kpi">
+        <span class="mi-kpi-icon" aria-hidden="true">✓</span>
+        <span class="mi-kpi-body">
+          <span class="mi-kpi-value">{{ markedCount }}</span>
+          <span class="mi-kpi-label">Marked</span>
+        </span>
+      </div>
+      <div class="mi-kpi">
+        <span class="mi-kpi-icon" aria-hidden="true">○</span>
+        <span class="mi-kpi-body">
+          <span class="mi-kpi-value">{{ remainingCount }}</span>
+          <span class="mi-kpi-label">Remaining</span>
+        </span>
+      </div>
+      <div class="mi-kpi">
+        <span class="mi-kpi-icon" aria-hidden="true">👥</span>
+        <span class="mi-kpi-body">
+          <span class="mi-kpi-value">{{ totalCount }}</span>
+          <span class="mi-kpi-label">In class</span>
+        </span>
+      </div>
+      <div class="mi-kpi mi-kpi--avg" *ngIf="averageScore !== null">
+        <span class="mi-kpi-icon" aria-hidden="true">📊</span>
+        <span class="mi-kpi-body">
+          <span class="mi-kpi-value">{{ averageScore }}</span>
+          <span class="mi-kpi-label">Class average / {{ maxScore }}</span>
+        </span>
       </div>
     </div>
 
-    <!-- Alerts -->
-    <div class="mi-alert mi-alert-success" *ngIf="success">
+    <div class="mi-alert mi-alert-success" *ngIf="success" role="status">
       <span class="mi-alert-icon">✓</span>
       <span>{{ success }}</span>
     </div>
-    <div class="mi-alert mi-alert-error" *ngIf="error">
+    <div class="mi-alert mi-alert-error" *ngIf="error" role="alert">
       <span class="mi-alert-icon">!</span>
       <span>{{ error }}</span>
     </div>
 
-    <!-- Filters card -->
-    <div class="mi-card mi-filters-card">
+    <section class="mi-card mi-filters-card">
+      <div class="mi-filters-head">
+        <h2 class="mi-filters-title">Session setup</h2>
+        <span
+          class="mi-filters-steps"
+          [class.mi-filters-steps--ready]="canFetch && !hasLoadedRoster"
+          [class.mi-filters-steps--loaded]="hasLoadedRoster"
+        >
+          <ng-container *ngIf="hasLoadedRoster">
+            {{ totalCount }} student{{ totalCount === 1 ? '' : 's' }} in class
+          </ng-container>
+          <ng-container *ngIf="!hasLoadedRoster">
+            {{ filtersReadyCount }} / 4 filters set
+          </ng-container>
+        </span>
+      </div>
       <div class="mi-filters-row">
-        <!-- Term -->
         <div class="mi-field">
-          <label class="mi-field-label">Choose Term*</label>
+          <label class="mi-field-label" for="mi-term">Term *</label>
           <select
+            id="mi-term"
             class="mi-input"
             [(ngModel)]="selectedTermLabel"
             (ngModelChange)="onFilterChange()"
             name="termLabel"
           >
-            <option value="">Choose Term*</option>
+            <option value="">Choose term</option>
             <option *ngFor="let t of terms" [value]="t.label">{{ t.label }}</option>
           </select>
         </div>
-
-        <!-- Exam type -->
         <div class="mi-field">
-          <label class="mi-field-label">Exam Type*</label>
+          <label class="mi-field-label" for="mi-exam">Exam type *</label>
           <select
+            id="mi-exam"
             class="mi-input"
             [(ngModel)]="selectedExamType"
             (ngModelChange)="onFilterChange()"
             name="examType"
           >
-            <option value="">Exam Type*</option>
+            <option value="">Exam type</option>
             <option *ngFor="let e of examTypes" [value]="e.value">{{ e.label }}</option>
           </select>
         </div>
-
-        <!-- Class -->
         <div class="mi-field">
-          <label class="mi-field-label">Choose Class*</label>
+          <label class="mi-field-label" for="mi-class">Class *</label>
           <select
+            id="mi-class"
             class="mi-input"
             [(ngModel)]="selectedClassId"
             (ngModelChange)="onFilterChange()"
             name="cls"
           >
-            <option value="">Choose Class*</option>
+            <option value="">Choose class</option>
             <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
           </select>
         </div>
-
-        <!-- Subject -->
         <div class="mi-field">
-          <label class="mi-field-label">Choose Subject*</label>
+          <label class="mi-field-label" for="mi-subject">Subject *</label>
           <select
+            id="mi-subject"
             class="mi-input"
             [(ngModel)]="selectedSubjectId"
             (ngModelChange)="onFilterChange()"
             name="subject"
           >
-            <option value="">Choose Subject*</option>
+            <option value="">Choose subject</option>
             <option *ngFor="let s of subjects" [value]="s.id">{{ subjectDisplayLabel(s) }}</option>
           </select>
         </div>
-
-        <!-- Fetch button (circular icon button) -->
         <button
           type="button"
           class="mi-fetch-btn"
           [class.mi-fetch-btn--ready]="canFetch"
           [disabled]="!canFetch || loadingStudents"
           (click)="fetchRoster()"
-          title="Fetch class list"
-          aria-label="Fetch class list"
+          title="Load class roster"
+          aria-label="Load class roster"
         >
-          <span *ngIf="!loadingStudents">≡</span>
+          <span *ngIf="!loadingStudents" class="mi-fetch-label">Load</span>
           <span class="mi-mini-spinner" *ngIf="loadingStudents"></span>
         </button>
       </div>
-    </div>
+    </section>
 
-    <!-- Roster / marks table card -->
-    <div class="mi-card mi-table-card">
+    <section class="mi-card mi-table-card">
       <div class="mi-table-head">
-        <div class="mi-table-info" *ngIf="hasLoadedRoster">
-          <h3 class="mi-table-title">
+        <div class="mi-table-info">
+          <h3 class="mi-table-title" *ngIf="hasLoadedRoster">
             {{ getSelectedClassName() }} — {{ getSelectedSubjectName() }}
           </h3>
-          <p class="mi-table-sub">
+          <h3 class="mi-table-title" *ngIf="!hasLoadedRoster && !loadingStudents">Student roster</h3>
+          <p class="mi-table-sub" *ngIf="hasLoadedRoster">
             {{ getSelectedExamTypeLabel() }} · {{ selectedTermLabel }}
             <span *ngIf="lastSavedAt"> · Last saved {{ lastSavedAt | date:'short' }}</span>
           </p>
-        </div>
-        <div class="mi-table-info" *ngIf="!hasLoadedRoster && !loadingStudents">
-          <h3 class="mi-table-title">Pick your filters above to begin</h3>
-          <p class="mi-table-sub">
-            Choose the term, exam type, class and subject, then tap the fetch button.
+          <p class="mi-table-sub" *ngIf="!hasLoadedRoster && !loadingStudents">
+            Complete the filters above and tap Load to begin mark entry.
           </p>
         </div>
-        <div class="mi-filter">
-          <input
-            type="text"
-            class="mi-filter-input"
-            placeholder="Filter"
-            [(ngModel)]="filterText"
-            (ngModelChange)="onFilterTextChange()"
-            [disabled]="!hasLoadedRoster"
-            name="filterText"
-          />
-          <span class="mi-filter-icon" aria-hidden="true">🔍</span>
+        <div class="mi-toolbar" *ngIf="hasLoadedRoster && students.length > 0">
+          <div class="mi-filter">
+            <input
+              type="text"
+              class="mi-filter-input"
+              placeholder="Search name or student #"
+              [(ngModel)]="filterText"
+              (ngModelChange)="onFilterTextChange()"
+              name="filterText"
+            />
+            <span class="mi-filter-icon" aria-hidden="true">🔍</span>
+          </div>
+          <select class="mi-sort-select" [(ngModel)]="sortBy" (ngModelChange)="onSortChange()" name="sortBy" aria-label="Sort roster">
+            <option value="default">Sort: roster order</option>
+            <option value="name">Sort: name</option>
+            <option value="number">Sort: student #</option>
+            <option value="score">Sort: score</option>
+          </select>
+          <button type="button" class="mi-btn mi-btn-ghost mi-btn-sm" (click)="jumpToNextEmpty()" [disabled]="remainingCount === 0">
+            ↓ Next empty
+          </button>
+        </div>
+        <div class="mi-filter" *ngIf="hasLoadedRoster && students.length === 0">
+          <input type="text" class="mi-filter-input" disabled placeholder="Filter" />
         </div>
       </div>
 
-      <!-- Loading -->
       <div class="mi-loading" *ngIf="loadingStudents">
         <div class="mi-spinner"></div>
         <div>Loading class roster…</div>
       </div>
 
-      <!-- Empty state when nothing loaded yet -->
       <div class="mi-empty" *ngIf="!loadingStudents && !hasLoadedRoster">
-        <div class="mi-empty-icon">📥</div>
-        <div class="mi-empty-title">No roster yet</div>
-        <div class="mi-empty-sub">
-          Make all four selections above and the class roster will appear here for mark entry.
-        </div>
+        <div class="mi-empty-icon">📋</div>
+        <div class="mi-empty-title">Ready when you are</div>
+        <div class="mi-empty-sub">Choose term, exam type, class and subject, then load the roster.</div>
       </div>
 
-      <!-- Empty class -->
-      <div
-        class="mi-empty"
-        *ngIf="!loadingStudents && hasLoadedRoster && students.length === 0"
-      >
+      <div class="mi-empty" *ngIf="!loadingStudents && hasLoadedRoster && students.length === 0">
         <div class="mi-empty-icon">🗒️</div>
         <div class="mi-empty-title">No students in this class</div>
-        <div class="mi-empty-sub">
-          Enrol students in the selected class to enter marks.
-        </div>
+        <div class="mi-empty-sub">Enrol students in the selected class to enter marks.</div>
       </div>
 
-      <!-- Marks table -->
-      <div
-        class="mi-table-wrap"
-        *ngIf="!loadingStudents && hasLoadedRoster && students.length > 0"
-      >
+      <div class="mi-table-wrap" *ngIf="!loadingStudents && hasLoadedRoster && students.length > 0">
         <table class="mi-table">
           <thead>
             <tr>
               <th class="mi-th-num">#</th>
               <th>Student #</th>
-              <th>LastName</th>
-              <th>FirstName</th>
+              <th>Last name</th>
+              <th>First name</th>
               <th>Gender</th>
               <th class="mi-th-score">Score / {{ maxScore }}</th>
               <th>Grade</th>
@@ -179,6 +226,7 @@
             <tr
               *ngFor="let s of filteredStudents; let i = index; trackBy: trackByStudent"
               [class.mi-row--dirty]="marks[s.id]?.dirty"
+              [class.mi-row--saved]="isRowSaved(s.id)"
             >
               <td>{{ i + 1 }}</td>
               <td>{{ s.studentNumber }}</td>
@@ -190,23 +238,30 @@
                   <input
                     type="number"
                     class="mi-score-input"
+                    [id]="'mi-score-' + s.id"
                     [value]="marks[s.id]?.score ?? ''"
                     (input)="onScoreChange(s.id, $any($event.target).value)"
+                    (blur)="onFieldBlur()"
+                    (keydown.enter)="onScoreEnter($event, s.id)"
                     [min]="0"
                     [max]="maxScore"
                     step="1"
                     placeholder="–"
+                    [attr.aria-label]="'Score for ' + s.firstName + ' ' + s.lastName"
                   />
                   <span
                     class="mi-row-saved"
                     *ngIf="isRowSaved(s.id)"
-                    title="Auto-saved"
-                    aria-label="Auto-saved"
-                  >&#10004;&#10004;</span>
+                    title="Saved"
+                    aria-label="Saved"
+                  >✓✓</span>
                 </div>
               </td>
               <td>
-                <span [ngClass]="gradeClass(marks[s.id]?.score)" *ngIf="marks[s.id]?.score !== null && marks[s.id]?.score !== undefined">
+                <span
+                  [ngClass]="gradeClass(marks[s.id]?.score)"
+                  *ngIf="marks[s.id]?.score !== null && marks[s.id]?.score !== undefined"
+                >
                   {{ gradeLabel(marks[s.id]?.score) }}
                 </span>
               </td>
@@ -216,20 +271,20 @@
                   class="mi-remarks-input"
                   [value]="marks[s.id]?.remarks || ''"
                   (input)="onRemarksChange(s.id, $any($event.target).value)"
+                  (blur)="onFieldBlur()"
                   placeholder="Optional remarks"
                 />
               </td>
             </tr>
             <tr *ngIf="filteredStudents.length === 0">
-              <td colspan="8" class="mi-table-empty">No students match your filter.</td>
+              <td colspan="8" class="mi-table-empty">No students match your search.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Footer actions -->
-      <div
-        class="mi-table-foot"
+      <footer
+        class="mi-table-foot mi-table-foot--sticky"
         *ngIf="!loadingStudents && hasLoadedRoster && students.length > 0"
       >
         <span class="mi-save-state" *ngIf="autoSaving">
@@ -239,26 +294,13 @@
           <span class="mi-dot mi-dot--unsaved"></span> Unsaved changes
         </span>
         <span class="mi-save-state mi-save-state--saved" *ngIf="!autoSaving && !hasUnsaved && lastSavedAt">
-          <span class="mi-row-saved mi-row-saved--inline" aria-hidden="true">&#10004;&#10004;</span>
-          Auto-saved
+          <span class="mi-row-saved mi-row-saved--inline" aria-hidden="true">✓✓</span>
+          All saved
           <span class="mi-saved-time" *ngIf="lastAutoSavedAt"> · {{ lastAutoSavedAt | date:'shortTime' }}</span>
         </span>
-
         <span class="mi-foot-spacer"></span>
-
-        <button type="button" class="mi-btn mi-btn-ghost" (click)="clearScores()">
-          ✕ Clear scores
-        </button>
-        <button
-          type="button"
-          class="mi-btn mi-btn-primary"
-          [disabled]="saving || markedCount === 0"
-          (click)="saveAll()"
-        >
-          <span *ngIf="!saving">💾 Save Marks</span>
-          <span *ngIf="saving">Saving…</span>
-        </button>
-      </div>
-    </div>
+        <button type="button" class="mi-btn mi-btn-clear" (click)="clearScores()">Clear scores</button>
+      </footer>
+    </section>
   </div>
 </div>

@@ -1,16 +1,33 @@
-<div class="mip-page">
-  <div class="mip-frame">
+<div class="mip-page mip-modern">
+  <div class="mip-shell">
 
-    <section class="mip-hero card">
-      <div class="hero-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 17 9 11 13 15 21 7"></polyline>
-          <polyline points="14 7 21 7 21 14"></polyline>
-        </svg>
+    <header class="mip-hero">
+      <div class="mip-hero-main">
+        <p class="mip-eyebrow">Exams · Marks progress</p>
+        <h1 class="mip-hero-title">Marks Capture Progress</h1>
+        <p class="mip-hero-sub">Track marks entry completion by subject and class for each exam session.</p>
+        <p class="mip-hero-meta" *ngIf="progressData && !loading">
+          <span *ngIf="isAllClassesView">All classes</span>
+          <span *ngIf="!isAllClassesView && progressData.class?.name">{{ progressData.class.name }}</span>
+          <span *ngIf="progressData.filters?.term"> · {{ progressData.filters.term }}</span>
+          <span *ngIf="progressData.filters?.examType"> · {{ formatExamTypeLabel(progressData.filters.examType) }}</span>
+        </p>
       </div>
-      <h1 class="hero-title">Marks Capture Progress</h1>
-      <p class="hero-subtitle">Track and monitor marks entry progress across subjects</p>
-    </section>
+      <div class="mip-hero-aside" *ngIf="progressData && !loading && overallStats.totalSubjects > 0">
+        <div class="mip-progress-card" aria-label="Overall completion">
+          <div class="mip-progress-top">
+            <span class="mip-progress-label">Avg. completion</span>
+            <span class="mip-progress-pct">{{ overallStats.avgCompletion }}%</span>
+          </div>
+          <div class="mip-progress-track">
+            <div class="mip-progress-fill" [style.width.%]="overallStats.avgCompletion"></div>
+          </div>
+          <p class="mip-progress-hint">
+            {{ overallStats.onTrack }} of {{ overallStats.totalSubjects }} subjects on track (80%+)
+          </p>
+        </div>
+      </div>
+    </header>
 
     <section class="mip-filter card">
       <header class="filter-head">
@@ -22,59 +39,43 @@
           </svg>
         </span>
         <div class="filter-titles">
-          <h2 class="filter-title">Filter Criteria</h2>
-          <p class="filter-sub">Select term, exam type, and class to view progress data</p>
+          <h2 class="filter-title">Session setup</h2>
+          <p class="filter-sub">Select term, exam type, and class, then generate the progress report</p>
         </div>
+        <span
+          class="mip-filters-steps"
+          [class.mip-filters-steps--ready]="canLoad"
+          [class.mip-filters-steps--loaded]="!!progressData"
+        >
+          <ng-container *ngIf="progressData">{{ getSelectedClassName() }}</ng-container>
+          <ng-container *ngIf="!progressData">{{ filtersReadyCount }} / 3 filters set</ng-container>
+        </span>
       </header>
 
       <div class="filter-grid">
-        <div class="field" [class.has-value]="!!selectedTerm">
-          <span class="field-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="17" rx="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-          </span>
-          <select id="termSelect" class="field-input" [(ngModel)]="selectedTerm" (change)="onAnyFilterChange()">
-            <option value="" disabled hidden></option>
+        <div class="mip-field">
+          <label for="termSelect" class="mip-field-label">Term <span class="req">*</span></label>
+          <select id="termSelect" class="mip-select" [(ngModel)]="selectedTerm" (change)="onAnyFilterChange()">
+            <option value="">Choose term</option>
             <option *ngFor="let t of terms" [value]="t.label">{{ t.label }}</option>
           </select>
-          <label for="termSelect" class="field-label">Term<span class="req">*</span></label>
-          <span class="field-caret" aria-hidden="true">▾</span>
         </div>
 
-        <div class="field" [class.has-value]="!!selectedExamType">
-          <span class="field-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="4" y="3" width="16" height="18" rx="2"></rect>
-              <path d="M9 9a3 3 0 1 1 4.5 2.6c-.9.5-1.5 1-1.5 2.4"></path>
-              <line x1="12" y1="17" x2="12" y2="17.5"></line>
-            </svg>
-          </span>
-          <select id="examTypeSelect" class="field-input" [(ngModel)]="selectedExamType" (change)="onAnyFilterChange()">
-            <option value="" disabled hidden></option>
+        <div class="mip-field">
+          <label for="examTypeSelect" class="mip-field-label">Exam type <span class="req">*</span></label>
+          <select id="examTypeSelect" class="mip-select" [(ngModel)]="selectedExamType" (change)="onAnyFilterChange()">
+            <option value="">Choose exam type</option>
             <option *ngFor="let type of examTypes" [value]="type.value">{{ type.label }}</option>
           </select>
-          <label for="examTypeSelect" class="field-label">Exam Type<span class="req">*</span></label>
-          <span class="field-caret" aria-hidden="true">▾</span>
         </div>
 
-        <div class="field" [class.has-value]="!!selectedClassId">
-          <span class="field-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"></path>
-              <path d="M5 17h14"></path>
-            </svg>
-          </span>
-          <select id="classSelect" class="field-input" [(ngModel)]="selectedClassId" (change)="onAnyFilterChange()">
-            <option value="" disabled hidden></option>
+        <div class="mip-field">
+          <label for="classSelect" class="mip-field-label">Class <span class="req">*</span></label>
+          <select id="classSelect" class="mip-select" [(ngModel)]="selectedClassId" (change)="onAnyFilterChange()">
+            <option value="">Choose class</option>
             <option [value]="ALL_CLASSES_VALUE">All classes</option>
             <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
           </select>
-          <label for="classSelect" class="field-label">Class<span class="req">*</span></label>
-          <span class="field-caret" aria-hidden="true">▾</span>
         </div>
       </div>
 

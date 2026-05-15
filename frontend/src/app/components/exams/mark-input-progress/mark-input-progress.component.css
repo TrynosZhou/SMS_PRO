@@ -135,82 +135,49 @@
   .filter-grid { grid-template-columns: 1fr; }
 }
 
-.field {
-  position: relative;
+.mip-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mip-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 6px;
+  letter-spacing: 0.2px;
+}
+
+.mip-field-label .req {
+  color: #ef4444;
+}
+
+.mip-select {
+  width: 100%;
+  padding: 12px 36px 12px 14px;
   border: 1.5px solid #e5e7eb;
   border-radius: 12px;
   background: #fff;
-  padding: 12px 38px 12px 44px;
-  display: flex;
-  align-items: center;
-  height: 60px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.field:focus-within {
-  border-color: var(--mip-purple-1);
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
-}
-
-.field-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  color: #4b5563;
-  background: #f3f4f6;
-  border-radius: 6px;
-}
-
-.field-input {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
   font-size: 14px;
   color: var(--mip-text);
-  padding: 12px 0 0;
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #64748b 50%),
+    linear-gradient(135deg, #64748b 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-select.field-input { cursor: pointer; }
-
-.field-label {
-  position: absolute;
-  left: 44px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-  font-size: 14px;
-  pointer-events: none;
-  transition: transform 0.15s ease, top 0.15s ease, font-size 0.15s ease, color 0.15s ease;
-  background: transparent;
-  padding: 0 4px;
-}
-.field:focus-within .field-label,
-.field.has-value .field-label {
-  top: 10px;
-  transform: translateY(0);
-  font-size: 11px;
-  color: var(--mip-purple-1);
-  background: #fff;
-  font-weight: 600;
-}
-
-.field .req { color: #ef4444; margin-left: 2px; }
-
-.field-caret {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-  font-size: 12px;
-  pointer-events: none;
+.mip-select:focus {
+  border-color: var(--mip-blue, #2563eb);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
 }
 
 /* extras */
@@ -734,4 +701,225 @@ select.field-input { cursor: pointer; }
   .stat-row { grid-template-columns: 1fr 1fr; }
   .filter-actions { justify-content: stretch; }
   .filter-actions .btn { flex: 1; justify-content: center; }
+}
+
+/* ===================================================================
+   Modern marks progress (/marks-progress — .mip-modern)
+   =================================================================== */
+.mip-modern {
+  --mip-blue: #2563eb;
+  --mip-blue-soft: #eff6ff;
+  --mip-ink: #0f172a;
+  --mip-muted: #64748b;
+}
+
+.mip-modern.mip-page {
+  padding: 1rem 1.25rem 2rem;
+  background: #eef2f7;
+  min-height: calc(100vh - 64px);
+}
+
+.mip-modern .mip-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  background: #fff;
+  border: 6px solid var(--mip-blue);
+  border-radius: 14px;
+  padding: 1.5rem 1.5rem 1.25rem;
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mip-modern .mip-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: left;
+}
+
+.mip-modern .mip-hero-main {
+  flex: 1;
+  min-width: 260px;
+}
+
+.mip-modern .mip-eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mip-blue);
+}
+
+.mip-modern .mip-hero-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--mip-ink);
+  letter-spacing: -0.02em;
+}
+
+.mip-modern .mip-hero-sub {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--mip-muted);
+  max-width: 54ch;
+  line-height: 1.45;
+}
+
+.mip-modern .mip-hero-meta {
+  margin: 0.65rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.mip-modern .mip-hero-aside {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 300px;
+}
+
+.mip-modern .mip-progress-card {
+  background: linear-gradient(135deg, var(--mip-blue-soft) 0%, #fff 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.mip-modern .mip-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.mip-modern .mip-progress-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mip-muted);
+}
+
+.mip-modern .mip-progress-pct {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--mip-blue);
+}
+
+.mip-modern .mip-progress-track {
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mip-modern .mip-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, var(--mip-blue));
+  border-radius: inherit;
+  transition: width 0.35s ease;
+}
+
+.mip-modern .mip-progress-hint {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--mip-muted);
+}
+
+.mip-modern .mip-filter.card {
+  padding: 1rem 1.15rem;
+}
+
+.mip-modern .filter-head {
+  flex-wrap: wrap;
+}
+
+.mip-modern .mip-filters-steps {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.mip-modern .mip-filters-steps--ready {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.mip-modern .mip-filters-steps--loaded {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.mip-modern .mip-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+}
+
+.mip-modern .mip-select {
+  border-color: #cbd5e1;
+}
+
+.mip-modern .mip-select:focus {
+  border-color: var(--mip-blue);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.mip-modern .btn-primary {
+  background: linear-gradient(135deg, var(--mip-blue) 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+}
+
+.mip-modern .legend {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.mip-modern .legend-item {
+  color: #475569;
+}
+
+.mip-modern .chip.active {
+  background: linear-gradient(135deg, var(--mip-blue) 0%, #1d4ed8 100%);
+}
+
+.mip-modern .subjects-table thead th {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.mip-modern .subj-code {
+  color: var(--mip-blue);
+}
+
+@media (max-width: 720px) {
+  .mip-modern .mip-shell {
+    padding: 1rem;
+  }
+
+  .mip-modern .mip-hero-aside {
+    max-width: none;
+  }
+
+  .mip-modern .mip-filters-steps {
+    margin-left: 0;
+    width: 100%;
+    text-align: center;
+  }
 }

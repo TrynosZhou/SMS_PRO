@@ -2,6 +2,16 @@ import { Component, OnInit } from '@angular/core';
 import { ExamService } from '../../../services/exam.service';
 import { ClassService } from '../../../services/class.service';
 import { SubjectService } from '../../../services/subject.service';
+import { SettingsService } from '../../../services/settings.service';
+
+/** Same shape as Academic Settings → Terms (`GET /settings/terms`). */
+export interface RankingsTermOption {
+  id: string;
+  termNumber: number;
+  year: number;
+  status: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-rankings',
@@ -17,11 +27,15 @@ export class RankingsComponent implements OnInit {
   selectedSubject = '';
   selectedForm = '';
   selectedExamType = '';
+  selectedTerm = '';
   rankingType = 'class';
   rankings: any[] = [];
   loading = false;
   hasSearched = false;
+  loadError = '';
   availableGrades: string[] = [];
+  terms: RankingsTermOption[] = [];
+  loadingTerms = false;
   pdfBusy = false;
   pdfError = '';
   
@@ -33,13 +47,81 @@ export class RankingsComponent implements OnInit {
   constructor(
     private examService: ExamService,
     private classService: ClassService,
-    private subjectService: SubjectService
+    private subjectService: SubjectService,
+    private settingsService: SettingsService
   ) { }
 
   ngOnInit() {
     this.loadExams();
     this.loadClasses();
     this.loadSubjects();
+    this.loadTerms();
+  }
+
+  /** Loads terms from Academic Settings → Terms (`/api/settings/terms`). */
+  loadTerms() {
+    this.loadingTerms = true;
+    this.settingsService.getTerms().subscribe({
+      next: (data: any) => {
+        const raw: any[] = Array.isArray(data) ? data : data?.terms || data?.data || [];
+        this.terms = raw
+          .map((t: any) => this.mapAcademicTerm(t))
+          .filter((t) => !!t.label);
+        this.loadingTerms = false;
+        this.selectDefaultTerm();
+      },
+      error: () => {
+        this.terms = [];
+        this.loadingTerms = false;
+      }
+    });
+  }
+
+  private mapAcademicTerm(t: any): RankingsTermOption {
+    return {
+      id: String(t?.id || ''),
+      termNumber: Number(t?.termNumber ?? 0),
+      year: Number(t?.year ?? 0),
+      status: String(t?.status || ''),
+      label: this.formatAcademicTermLabel(t),
+    };
+  }
+
+  /** Matches marks-input / mark-sheets: `Term {termNumber} {year}`. */
+  private formatAcademicTermLabel(t: any): string {
+    const n = t?.termNumber ?? t?.term;
+    const y = t?.year;
+    if (n != null && n !== '' && y != null && y !== '') {
+      return `Term ${n} ${y}`;
+    }
+    return '';
+  }
+
+  private selectDefaultTerm() {
+    if (this.selectedTerm) {
+      return;
+    }
+    const activeFromList = this.terms.find((t) => t.status === 'active');
+    if (activeFromList) {
+      this.selectedTerm = activeFromList.label;
+      return;
+    }
+    this.settingsService.getSettings().subscribe({
+      next: (data: any) => {
+        const row = Array.isArray(data) && data.length ? data[0] : data;
+        const activeTerm = row?.activeTerm || row?.currentTerm || '';
+        if (activeTerm && this.terms.some((t) => t.label === activeTerm)) {
+          this.selectedTerm = activeTerm;
+        } else if (this.terms.length > 0) {
+          this.selectedTerm = this.terms[0].label;
+        }
+      },
+      error: () => {
+        if (this.terms.length > 0) {
+          this.selectedTerm = this.terms[0].label;
+        }
+      }
+    });
   }
 
   loadExams() {
@@ -80,17 +162,20 @@ export class RankingsComponent implements OnInit {
   onRankingTypeChange() {
     this.rankings = [];
     this.hasSearched = false;
+    this.loadError = '';
     // Reset form fields when ranking type changes
     this.selectedExam = '';
     this.selectedClass = '';
     this.selectedSubject = '';
     this.selectedForm = '';
     this.selectedExamType = '';
+    // Keep selectedTerm — shared across ranking types
   }
 
   clearFilters() {
     this.rankings = [];
     this.hasSearched = false;
+    this.loadError = '';
     this.selectedExam = '';
     this.selectedClass = '';
     this.selectedSubject = '';
@@ -101,15 +186,19 @@ export class RankingsComponent implements OnInit {
   loadRankings() {
     this.loading = true;
     this.hasSearched = true;
+    this.loadError = '';
     let request;
 
     if (this.rankingType === 'class') {
-      if (!this.selectedExamType || !this.selectedClass) {
+      if (!this.selectedExamType || !this.selectedClass || !this.selectedTerm) {
         this.loading = false;
         return;
       }
-      // For class rankings, we need to get exams by type and class, then aggregate
-      request = this.examService.getClassRankingsByType(this.selectedExamType, this.selectedClass);
+      request = this.examService.getClassRankingsByType(
+        this.selectedExamType,
+        this.selectedClass,
+        this.selectedTerm
+      );
     } else if (this.rankingType === 'subject') {
       if (!this.selectedExamType || !this.selectedSubject || !this.selectedForm) {
         this.loading = false;
@@ -121,11 +210,15 @@ export class RankingsComponent implements OnInit {
         this.selectedForm
       );
     } else if (this.rankingType === 'overall-performance') {
-      if (!this.selectedForm || !this.selectedExamType) {
+      if (!this.selectedForm || !this.selectedExamType || !this.selectedTerm) {
         this.loading = false;
         return;
       }
-      request = this.examService.getOverallPerformanceRankings(this.selectedForm, this.selectedExamType);
+      request = this.examService.getOverallPerformanceRankings(
+        this.selectedForm,
+        this.selectedExamType,
+        this.selectedTerm
+      );
     } else {
       this.loading = false;
       return;
@@ -140,6 +233,12 @@ export class RankingsComponent implements OnInit {
         console.error(err);
         this.loading = false;
         this.rankings = [];
+        this.loadError =
+          err?.error?.message ||
+          (typeof err?.error === 'string' ? err.error : '') ||
+          (err?.status === 404
+            ? 'No rankings data for these filters. Check that marks exist for this form, term, and exam type, then restart the backend if you recently updated the app.'
+            : 'Could not load rankings. Please try again.');
       }
     });
   }
@@ -274,7 +373,7 @@ export class RankingsComponent implements OnInit {
     if (this.rankingType === 'class') {
       const cls = this.classes.find((c) => c.id === this.selectedClass);
       const name = cls?.name || 'Class';
-      return `Class: ${name}`;
+      return `Class: ${name} · Term: ${this.selectedTerm || '—'}`;
     }
     if (this.rankingType === 'subject') {
       const sub = this.subjects.find((s) => s.id === this.selectedSubject);
@@ -286,7 +385,7 @@ export class RankingsComponent implements OnInit {
       return `Form: ${this.selectedForm || '—'} · Subject: ${label}`;
     }
     if (this.rankingType === 'overall-performance') {
-      return `Form: ${this.selectedForm || '—'}`;
+      return `Form: ${this.selectedForm || '—'} · Term: ${this.selectedTerm || '—'}`;
     }
     return '';
   }

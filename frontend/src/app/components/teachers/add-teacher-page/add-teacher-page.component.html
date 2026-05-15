@@ -1,25 +1,68 @@
-<div class="tf-page">
+<div class="tf-page tf-modern">
   <div class="tf-shell">
-    <header class="tf-header">
-      <h1 class="tf-title">Teacher Registration</h1>
-      <p class="tf-sub">Add a new teacher — all fields marked with * are required.</p>
-      <div class="tf-legend" aria-hidden="true">
-        <span class="tf-leg tf-leg--req">Required *</span>
-        <span class="tf-leg tf-leg--opt">Optional</span>
+    <header class="tf-hero">
+      <div class="tf-hero-main">
+        <p class="tf-eyebrow">Staff · Registration</p>
+        <h1 class="tf-title">Teacher Registration</h1>
+        <p class="tf-sub">Create a teacher profile with login credentials, department assignment, and contact details.</p>
+        <div class="tf-legend" aria-hidden="true">
+          <span class="tf-leg tf-leg--req">Required *</span>
+          <span class="tf-leg tf-leg--opt">Optional</span>
+        </div>
+        <p class="tf-preview" *ngIf="getTeacherPreviewName()">
+          Registering: <strong>{{ getTeacherPreviewName() }}</strong>
+          <span class="tf-preview-role" *ngIf="draft.role"> · {{ draft.role }}</span>
+        </p>
+      </div>
+      <div class="tf-hero-aside">
+        <div class="tf-progress-card" aria-label="Form completion">
+          <div class="tf-progress-top">
+            <span class="tf-progress-label">Completion</span>
+            <span class="tf-progress-pct">{{ getCompletionPercent() }}%</span>
+          </div>
+          <div class="tf-progress-track">
+            <div class="tf-progress-fill" [style.width.%]="getCompletionPercent()"></div>
+          </div>
+          <p class="tf-progress-hint" *ngIf="getCompletionPercent() < 100">Complete required fields to submit</p>
+          <p class="tf-progress-hint tf-progress-hint--ok" *ngIf="getCompletionPercent() === 100">Ready to register</p>
+        </div>
       </div>
     </header>
 
-    <div class="tf-alert" *ngIf="error" role="alert">{{ error }}</div>
+    <nav class="tf-steps" aria-label="Form sections">
+      <button
+        type="button"
+        class="tf-step"
+        *ngFor="let s of sectionSteps"
+        [class.tf-step--done]="isSectionComplete(s.id)"
+        [class.tf-step--current]="isStepCurrent(s.id)"
+        (click)="scrollToSection(s.id)"
+      >
+        <span class="tf-step-icon" aria-hidden="true">{{ s.icon }}</span>
+        <span class="tf-step-num">{{ s.id }}</span>
+        <span class="tf-step-label">{{ s.label }}</span>
+        <span class="tf-step-check" *ngIf="isSectionComplete(s.id)" aria-hidden="true">✓</span>
+      </button>
+    </nav>
+
+    <div class="tf-alert" *ngIf="error" role="alert">
+      <span class="tf-alert-ico" aria-hidden="true">⚠</span>
+      {{ error }}
+    </div>
 
     <!-- Section 1 -->
-    <section class="tf-section">
+    <section class="tf-section tf-section-card" id="tf-section-1">
       <div class="tf-rowhead">
         <h2 class="tf-rowhead-title">
           <span class="tf-num">1</span>
           <span class="tf-rowhead-text">Personal information</span>
         </h2>
         <div class="tf-rowhead-line" aria-hidden="true"></div>
+        <span class="tf-section-badge" [class.tf-section-badge--done]="isSectionComplete(1)">
+          {{ isSectionComplete(1) ? 'Complete' : 'Required' }}
+        </span>
       </div>
+      <p class="tf-section-intro">Identity details used on reports, ID cards, and the teacher directory.</p>
 
       <div class="tf-grid tf-grid-3">
         <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.title">
@@ -74,14 +117,18 @@
     </section>
 
     <!-- Section 2 -->
-    <section class="tf-section">
+    <section class="tf-section tf-section-card" id="tf-section-2">
       <div class="tf-rowhead">
         <h2 class="tf-rowhead-title">
           <span class="tf-num">2</span>
           <span class="tf-rowhead-text">Employment information</span>
         </h2>
         <div class="tf-rowhead-line" aria-hidden="true"></div>
+        <span class="tf-section-badge" [class.tf-section-badge--done]="isSectionComplete(2)">
+          {{ isSectionComplete(2) ? 'Complete' : 'Required' }}
+        </span>
       </div>
+      <p class="tf-section-intro">Role, department, and employment dates for timetabling and payroll linkage.</p>
 
       <div class="tf-grid tf-grid-3">
         <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.role">
@@ -95,7 +142,7 @@
 
         <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && !draft.departmentId">
           <span class="tf-badge tf-badge--req">Department *</span>
-          <select class="tf-input" [(ngModel)]="draft.departmentId" name="tfDepartment">
+          <select class="tf-input" [(ngModel)]="draft.departmentId" name="tfDepartment" [disabled]="loadingDepartments">
             <option value="" disabled hidden>Select department</option>
             <option *ngFor="let d of departments" [value]="d.id">{{ d.name }}</option>
           </select>
@@ -139,14 +186,18 @@
     </section>
 
     <!-- Section 3 -->
-    <section class="tf-section">
+    <section class="tf-section tf-section-card" id="tf-section-3">
       <div class="tf-rowhead">
         <h2 class="tf-rowhead-title">
           <span class="tf-num">3</span>
           <span class="tf-rowhead-text">Contact information</span>
         </h2>
         <div class="tf-rowhead-line" aria-hidden="true"></div>
+        <span class="tf-section-badge" [class.tf-section-badge--done]="isSectionComplete(3)">
+          {{ isSectionComplete(3) ? 'Complete' : 'Required' }}
+        </span>
       </div>
+      <p class="tf-section-intro">Phone and email are used for login recovery and school communications.</p>
 
       <div class="tf-grid tf-grid-3">
         <div class="tf-field tf-field--req" [class.tf-field--invalid]="submitted && (!draft.phoneNumber?.trim() || !phoneRegex.test(draft.phoneNumber.trim()))">
@@ -170,15 +221,17 @@
     </section>
 
     <!-- Section 4 -->
-    <section class="tf-section">
+    <section class="tf-section tf-section-card" id="tf-section-4">
       <div class="tf-rowhead">
         <h2 class="tf-rowhead-title">
           <span class="tf-num">4</span>
           <span class="tf-rowhead-text">Qualifications</span>
         </h2>
         <div class="tf-rowhead-line" aria-hidden="true"></div>
+        <span class="tf-section-badge tf-section-badge--opt">Optional</span>
         <button type="button" class="tf-add-row" (click)="addQualification()" aria-label="Add qualification row">+ Add</button>
       </div>
+      <p class="tf-section-intro">Academic and professional qualifications shown on the teacher profile.</p>
 
       <div class="tf-qual-list">
         <div class="tf-field tf-field--opt" *ngFor="let q of draft.qualifications; let i = index; trackBy: trackByIndex">
@@ -192,11 +245,19 @@
       </div>
     </section>
 
-    <footer class="tf-foot">
-      <button type="button" class="tf-btn tf-btn-cancel" (click)="cancel()" [disabled]="saving">Cancel</button>
-      <button type="button" class="tf-btn tf-btn-submit" (click)="submit()" [disabled]="saving">
-        {{ saving ? 'Adding…' : 'Add teacher' }}
-      </button>
+    <footer class="tf-foot tf-foot--sticky">
+      <div class="tf-foot-summary" *ngIf="getTeacherPreviewName()">
+        <span class="tf-foot-summary-label">New teacher</span>
+        <strong>{{ getTeacherPreviewName() }}</strong>
+        <span class="tf-foot-pct">{{ getCompletionPercent() }}% complete</span>
+      </div>
+      <div class="tf-foot-actions">
+        <button type="button" class="tf-btn tf-btn-cancel" (click)="cancel()" [disabled]="saving">Cancel</button>
+        <button type="button" class="tf-btn tf-btn-submit" (click)="submit()" [disabled]="saving">
+          <span *ngIf="!saving">Add teacher</span>
+          <span *ngIf="saving">Adding…</span>
+        </button>
+      </div>
     </footer>
   </div>
 </div>

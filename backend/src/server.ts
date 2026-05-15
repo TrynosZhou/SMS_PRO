@@ -110,15 +110,18 @@ if (process.env.NODE_ENV === 'production') {
   );
 }
 
+const corsDebug = process.env.CORS_DEBUG === 'true';
+
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    console.log('CORS request from origin:', origin);
-
     // Allow all origins in development
     if (process.env.NODE_ENV !== 'production') {
+      if (corsDebug) {
+        console.log('[CORS] allowed (dev):', origin);
+      }
       return callback(null, true);
     }
 
@@ -132,7 +135,7 @@ const corsOptions: cors.CorsOptions = {
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('CORS blocked origin:', origin);
+      console.warn('[CORS] blocked origin:', origin);
       callback(null, false);
     }
   },

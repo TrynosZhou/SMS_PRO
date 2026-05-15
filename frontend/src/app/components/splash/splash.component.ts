@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-splash',
@@ -9,12 +10,15 @@ import { Router } from '@angular/router';
 export class SplashComponent implements OnInit, OnDestroy {
   private navigateTimeoutId?: ReturnType<typeof setTimeout>;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private authService: AuthService) {}
 
   ngOnInit(): void {
+    if (this.authService.isAuthenticated()) {
+      this.router.navigateByUrl(this.authService.getDefaultHomeRoute(), { replaceUrl: true });
+      return;
+    }
+
     this.navigateTimeoutId = setTimeout(() => {
-      // Always show the login page after the splash; LoginComponent sends
-      // already-authenticated users straight to their dashboard.
       this.router.navigate(['/login']);
     }, 3500);
   }

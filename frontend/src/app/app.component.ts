@@ -65,21 +65,16 @@ export class AppComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    // Enforce Splash -> Login -> Dashboard on every app bootstrap.
-    // Angular's initial navigation is disabled in AppRoutingModule, so we
-    // kick off navigation here and always start at the splash screen,
-    // regardless of the URL the browser landed on. The splash then routes
-    // the user to /login, and successful sign-in takes them to their
-    // role-specific dashboard.
-    this.router.navigateByUrl('/', { replaceUrl: true }).catch(() => { });
+    // Angular initialNavigation is disabled — bootstrap to the current URL when
+    // the user is still signed in (browser refresh), otherwise splash or login.
+    const bootstrapUrl = this.resolveBootstrapUrl();
+    this.router.navigateByUrl(bootstrapUrl, { replaceUrl: true }).catch(() => { });
 
     // Seed currentUrl on first load (NavigationEnd fires only after subsequent navigations).
     this.currentUrl = this.router.url || '';
 
     // React to auth state changes so role-specific settings/menu items
     // appear right after the user signs in and disappear after logout.
-    // On bootstrap currentUserSubject starts as null (AuthService clears
-    // persisted credentials), so this is the only place those calls run.
     this.authService.currentUser$.subscribe(user => {
       if (user) {
         this.settingsService.getSettings().subscribe({
@@ -218,6 +213,34 @@ export class AppComponent implements OnInit {
     this.authService.logout();
   }
 
+  /**
+   * Where to send the app on load/refresh: keep the current page when still
+   * authenticated; otherwise splash, login, or login with return URL.
+   */
+  private resolveBootstrapUrl(): string {
+    if (typeof window === 'undefined') {
+      return '/';
+    }
+
+    const path = window.location.pathname || '/';
+    const search = window.location.search || '';
+    const hash = window.location.hash || '';
+    const fullPath = `${path}${search}${hash}`;
+
+    if (this.authService.isAuthenticated()) {
+      if (path === '/' || path === '/login') {
+        return this.authService.getDefaultHomeRoute();
+      }
+      return fullPath;
+    }
+
+    if (path === '/' || path === '/login') {
+      return fullPath;
+    }
+
+    return `/login?returnUrl=${encodeURIComponent(path + search)}`;
+  }
+
   // ── Modern sidebar interactions ──────────────────────────────────────
   toggleSidebar(): void {
     this.sidebarOpen = !this.sidebarOpen;
@@ -350,7 +373,7 @@ export class AppComponent implements OnInit {
         {
           id: 'payroll', label: 'Payroll', icon: '🧮',
           children: [
-            { label: 'Overview', icon: '🗂️', route: '/payroll/manage/overview' },
+            { label: 'Overview', icon: '🗂️', route: '/payroll/overview' },
             { label: 'Employees', icon: '👥', route: '/payroll/manage/employees' },
             { label: 'Structures', icon: '🏛️', route: '/payroll/manage/structures' },
             { label: 'Assignments', icon: '🔗', route: '/payroll/manage/assignments' },
@@ -458,7 +481,7 @@ export class AppComponent implements OnInit {
         {
           id: 'payroll', label: 'Payroll', icon: '🧮',
           children: [
-            { label: 'Overview', icon: '🗂️', route: '/payroll/manage/overview' },
+            { label: 'Overview', icon: '🗂️', route: '/payroll/overview' },
             { label: 'Payslips', icon: '🧾', route: '/payroll/manage/payslips' },
             { label: 'Reports', icon: '📊', route: '/payroll/manage/reports' }
           ]
