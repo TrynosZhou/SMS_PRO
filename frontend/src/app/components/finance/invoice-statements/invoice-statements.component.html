@@ -58,18 +58,18 @@
         </div>
       </header>
       <div class="st-term-body">
-        <div class="st-term-field" [class.has-value]="!!selectedTerm">
-          <select id="stTerm" class="st-term-select"
+        <div class="st-term-field-col">
+          <label for="stTerm" class="st-term-label">Academic Term</label>
+          <select
+            id="stTerm"
+            class="st-term-select"
             [(ngModel)]="selectedTerm"
             [ngModelOptions]="{standalone: true}"
             (change)="onTermChange()"
             [disabled]="loadingTerms">
-            <option value="" disabled hidden></option>
             <option value="">All terms</option>
             <option *ngFor="let t of availableTerms" [value]="t">{{ t }}</option>
           </select>
-          <label for="stTerm" class="st-term-label">Academic Term</label>
-          <span class="st-term-caret" aria-hidden="true">▾</span>
         </div>
         <p class="st-term-hint">Select the term to view invoices</p>
       </div>
@@ -387,49 +387,13 @@
     </div>
   </div>
 
-  <!-- PDF Viewer Modal -->
-  <div *ngIf="showPdfViewer" class="pdf-viewer-overlay" (click)="closePdfViewer()" [@fadeInOut]>
-    <div class="pdf-viewer-modal" (click)="$event.stopPropagation()" [@slideInUp]>
-      <div class="pdf-viewer-header">
-        <h3>
-          <span>📄</span>
-          Invoice PDF - {{ currentInvoiceNumber }}
-        </h3>
-        <div class="pdf-viewer-actions">
-          <button 
-            type="button" 
-            class="btn btn-primary btn-sm" 
-            (click)="downloadInvoicePDF()"
-            title="Download PDF">
-            <span>💾</span> Download
-          </button>
-          <button 
-            type="button" 
-            class="btn btn-secondary btn-sm" 
-            (click)="closePdfViewer()"
-            title="Close">
-            <span>✕</span> Close
-          </button>
-        </div>
-      </div>
-      <div class="pdf-viewer-content">
-        <iframe 
-          *ngIf="safePdfUrl && !loadingPdf" 
-          [src]="safePdfUrl" 
-          class="pdf-iframe"
-          title="Invoice PDF Viewer"
-          type="application/pdf">
-        </iframe>
-        <div *ngIf="loadingPdf" class="pdf-loading">
-          <div class="spinner-large"></div>
-          <p>Loading PDF...</p>
-        </div>
-        <div *ngIf="!safePdfUrl && !loadingPdf" class="pdf-loading">
-          <p>PDF not available</p>
-        </div>
-      </div>
-    </div>
-
-  </div>
+  <app-invoice-pdf-preview
+    [open]="showInvoicePdfPreview"
+    [blob]="invoicePdfBlob"
+    [filename]="invoicePdfFilename"
+    [documentTitle]="invoicePdfDocumentTitle"
+    (closed)="closeInvoicePdfPreview()"
+  ></app-invoice-pdf-preview>
 </div>
+
 

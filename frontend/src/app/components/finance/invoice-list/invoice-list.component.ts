@@ -6,6 +6,8 @@ import { StudentService } from '../../../services/student.service';
 import { AuthService } from '../../../services/auth.service';
 import { SettingsService } from '../../../services/settings.service';
 import { CurrencyService } from '../../../services/currency.service';
+import { resolveSchoolLogoSrc } from '../../../utils/school-logo.util';
+import { SubjectUtilsService } from '../../../services/subject-utils.service';
 
 @Component({
   selector: 'app-invoice-list',
@@ -57,13 +59,13 @@ export class InvoiceListComponent implements OnInit {
   quickPaymentReceiptNeeded = false;
   lastQuickPaymentInvoiceId: string | null = null;
   
-  // PDF Viewer properties
-  showPdfViewer = false;
-  pdfUrl: string | null = null;
-  safePdfUrl: SafeResourceUrl | null = null;
+  // PDF preview (hosted viewer)
+  showInvoicePdfPreview = false;
+  invoicePdfBlob: Blob | null = null;
+  invoicePdfFilename = '';
+  invoicePdfDocumentTitle = 'Invoice statement';
   loadingPdf = false;
-  currentInvoiceFilename: string = '';
-  currentInvoiceNumber: string = '';
+  currentInvoiceNumber = '';
   
   // Receipt Viewer properties
   showReceiptViewer = false;
@@ -104,15 +106,16 @@ export class InvoiceListComponent implements OnInit {
   bulkDueDate = '';
   runningBulk = false;
 
-  showStudentSearch = false;
-  studentSearchInput = '';
-  filteredStudentsForSearch: any[] = [];
+  studentSearchQuery = '';
+  fetchedStudents: any[] = [];
+  fetchingStudents = false;
+  fetchDone = false;
   selectedStudentForBilling: any = null;
+  existingInvoiceForTerm: any = null;
+  checkingExistingInvoice = false;
 
   invoiceForDisplay: any = null;
   loadingInvoiceDisplay = false;
-  balanceBF = 0;
-  savingBF = false;
 
   selectedLevel = 'O';
   enrollPrefs = {
@@ -139,10 +142,32 @@ export class InvoiceListComponent implements OnInit {
   schoolPhone   = '+263 392 263 293 / +263 78 223 8026';
   schoolEmail   = 'info@juniorhighschool.ac.zw';
   schoolWebsite = 'www.juniorhighschool.ac.zw';
+  schoolLogo = '';
+  schoolLogoLoadFailed = false;
   bankName          = 'ZB BANK';
   bankBranch        = 'MASVINGO';
   bankAccountName   = 'JUNIOR HIGH SCHOOL';
   bankAccountNumber = '4564  00321642  405';
+
+  get schoolLogoSrc(): string {
+    const raw = String(this.schoolLogo || '').trim();
+    if (!raw || this.schoolLogoLoadFailed) return '';
+    if (raw.startsWith('data:') || /^https?:\/\//i.test(raw)) return raw;
+    if (raw.length > 100 && !raw.includes('/') && !raw.includes('\\')) {
+      return `data:image/png;base64,${raw}`;
+    }
+    return resolveSchoolLogoSrc(raw);
+  }
+
+  onSchoolLogoError(): void {
+    this.schoolLogoLoadFailed = true;
+  }
+
+  get generateInvoiceButtonLabel(): string {
+    if (this.loadingInvoiceDisplay) return 'Loading…';
+    if (this.existingInvoiceForTerm) return 'View Invoice';
+    return 'Generate Invoice';
+  }
 
   getFollowingTerm(currentTerm: string): string {
     if (!currentTerm) return '';
@@ -268,7 +293,8 @@ export class InvoiceListComponent implements OnInit {
     private router: Router,
     private settingsService: SettingsService,
     private currencyService: CurrencyService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private subjectUtils: SubjectUtilsService
   ) { }
 
   ngOnInit() {
@@ -305,6 +331,8 @@ export class InvoiceListComponent implements OnInit {
         this.schoolPhone       = row?.phone             || row?.schoolPhone || this.schoolPhone;
         this.schoolEmail       = row?.email             || row?.schoolEmail || this.schoolEmail;
         this.schoolWebsite     = row?.website           || row?.schoolWebsite || this.schoolWebsite;
+        this.schoolLogo        = String(row?.schoolLogo || row?.schoolLogo2 || '').trim();
+        this.schoolLogoLoadFailed = false;
         const bd = row?.bankingDetails || {};
         this.bankName          = row?.bankName          || bd.bankName      || this.bankName;
         this.bankBranch        = row?.bankBranch        || bd.branch        || this.bankBranch;
@@ -321,10 +349,17 @@ export class InvoiceListComponent implements OnInit {
   }
 
   loadStudents() {
-    this.studentService.getStudents().subscribe({
-      next: (data: any) => this.students = data,
+    this.studentService.getStudents({ limit: 500 }).subscribe({
+      next: (data: any) => {
+        this.students = this.parseStudentsResponse(data);
+      },
       error: (err: any) => console.error(err)
     });
+  }
+
+  private parseStudentsResponse(data: any): any[] {
+    if (Array.isArray(data)) return data;
+    return data?.data || data?.students || [];
   }
 
   loadInvoices() {
@@ -602,18 +637,37 @@ export class InvoiceListComponent implements OnInit {
   }
 
   openPaymentForm(invoice: any) {
-    this.selectedInvoice = invoice;
-    // Set default payment date to today
-    const today = new Date();
-    this.paymentForm.paymentDate = today.toISOString().split('T')[0];
-    // Set default amount to the remaining balance
-    this.paymentForm.amount = invoice.balance || 0;
-    this.paymentForm.paymentMethod = 'Cash';
-    this.paymentForm.notes = '';
-    this.paymentForm.receiptNeeded = false;
-    this.showPaymentForm = true;
-    this.error = '';
-    this.success = '';
+    if (!invoice) return;
+    if (!this.canManageFinance()) {
+      this.error = 'You do not have permission to record payments';
+      setTimeout(() => (this.error = ''), 5000);
+      return;
+    }
+
+    const student = invoice.student || this.selectedStudentForBilling;
+    const studentId =
+      student?.studentNumber ||
+      invoice.studentNumber ||
+      student?.id ||
+      '';
+    if (!studentId) {
+      this.error = 'Student number is missing for this invoice.';
+      setTimeout(() => (this.error = ''), 5000);
+      return;
+    }
+
+    const firstName = student?.firstName || '';
+    const lastName = student?.lastName || '';
+    const balance = parseFloat(String(invoice.balance ?? 0)) || 0;
+
+    this.router.navigate(['/record-payment'], {
+      queryParams: {
+        studentId,
+        firstName,
+        lastName,
+        balance: String(balance),
+      },
+    });
   }
 
   closePaymentForm() {
@@ -728,27 +782,19 @@ export class InvoiceListComponent implements OnInit {
     const invoice = this.invoices.find(inv => inv.id === invoiceId);
     this.currentInvoiceNumber = invoice?.invoiceNumber || 'Invoice';
     
-    // Show the modal immediately
-    this.showPdfViewer = true;
     this.loadingPdf = true;
     this.error = '';
-    
+
     this.financeService.getInvoicePDF(invoiceId).subscribe({
       next: (result: { blob: Blob; filename: string }) => {
-        // Clean up previous URL if exists
-        if (this.pdfUrl) {
-          window.URL.revokeObjectURL(this.pdfUrl);
-        }
-        
-        // Create blob URL for preview (not download)
-        this.pdfUrl = window.URL.createObjectURL(result.blob);
-        this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
-        this.currentInvoiceFilename = result.filename;
+        this.invoicePdfBlob = result.blob;
+        this.invoicePdfFilename = result.filename || `Invoice-${this.currentInvoiceNumber}.pdf`;
+        this.invoicePdfDocumentTitle = `Invoice #${this.currentInvoiceNumber}`;
+        this.showInvoicePdfPreview = true;
         this.loadingPdf = false;
       },
       error: (err: any) => {
         this.loadingPdf = false;
-        this.showPdfViewer = false;
         console.error('Error loading invoice PDF:', err);
         if (err.status === 401) {
           this.error = 'Authentication required. Please log in again.';
@@ -760,28 +806,10 @@ export class InvoiceListComponent implements OnInit {
     });
   }
 
-  downloadInvoicePDF() {
-    if (!this.pdfUrl || !this.currentInvoiceFilename) {
-      this.error = 'PDF not available for download';
-      return;
-    }
-
-    const link = document.createElement('a');
-    link.href = this.pdfUrl;
-    link.download = this.currentInvoiceFilename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  closePdfViewer() {
-    this.showPdfViewer = false;
-    if (this.pdfUrl) {
-      window.URL.revokeObjectURL(this.pdfUrl);
-      this.pdfUrl = null;
-    }
-    this.safePdfUrl = null;
-    this.currentInvoiceFilename = '';
+  closeInvoicePdfPreview(): void {
+    this.showInvoicePdfPreview = false;
+    this.invoicePdfBlob = null;
+    this.invoicePdfFilename = '';
     this.currentInvoiceNumber = '';
   }
 
@@ -1390,28 +1418,112 @@ export class InvoiceListComponent implements OnInit {
     });
   }
 
-  openStudentSearch() {
-    this.showStudentSearch = !this.showStudentSearch;
-    this.studentSearchInput = '';
-    this.filteredStudentsForSearch = this.students.slice(0, 10);
-  }
+  fetchStudents(): void {
+    const q = this.studentSearchQuery.trim().toLowerCase();
 
-  searchStudents() {
-    const q = this.studentSearchInput.toLowerCase();
-    this.filteredStudentsForSearch = this.students
-      .filter((s: any) => {
-        const name = `${s.firstName || ''} ${s.lastName || ''}`.toLowerCase();
-        const num  = (s.studentNumber || '').toLowerCase();
-        return name.includes(q) || num.includes(q);
-      })
-      .slice(0, 15);
-  }
+    if (!q) {
+      this.error = 'Enter a first name, last name, or student ID to search.';
+      setTimeout(() => (this.error = ''), 4000);
+      return;
+    }
 
-  selectStudentForBilling(student: any) {
-    this.selectedStudentForBilling = student;
-    this.showStudentSearch = false;
-    this.studentSearchInput = '';
+    this.error = '';
+    this.success = '';
+    this.fetchingStudents = true;
+    this.fetchDone = false;
+    this.fetchedStudents = [];
+    this.selectedStudentForBilling = null;
     this.invoiceForDisplay = null;
+    this.existingInvoiceForTerm = null;
+
+    const parts = q.split(/\s+/).filter(Boolean);
+
+    const applyFilter = (list: any[]) =>
+      list.filter((s: any) => {
+        const fn = String(s.firstName || '').toLowerCase();
+        const ln = String(s.lastName || '').toLowerCase();
+        const num = String(s.studentNumber || '').toLowerCase();
+        const id = String(s.id || '').toLowerCase();
+        const full = `${fn} ${ln}`.trim();
+
+        if (num.includes(q) || id.includes(q)) return true;
+        if (fn.includes(q) || ln.includes(q)) return true;
+        if (full.includes(q)) return true;
+
+        if (parts.length >= 2) {
+          const [a, b] = parts;
+          if ((fn.includes(a) && ln.includes(b)) || (fn.includes(b) && ln.includes(a))) return true;
+        }
+        return false;
+      });
+
+    const finish = (list: any[]) => {
+      this.fetchedStudents = list.slice(0, 50);
+      this.fetchDone = true;
+      this.fetchingStudents = false;
+      if (!this.fetchedStudents.length) {
+        this.error = 'No students found. Check the details and try again.';
+        setTimeout(() => (this.error = ''), 5000);
+      }
+    };
+
+    if (q) {
+      this.studentService.getStudents({ search: q, limit: 100 }).subscribe({
+        next: (data: any) => finish(applyFilter(this.parseStudentsResponse(data))),
+        error: () => {
+          finish(applyFilter(this.students));
+        },
+      });
+    } else {
+      finish(applyFilter(this.students));
+    }
+  }
+
+  isSelectedFetchedStudent(student: any): boolean {
+    if (!student || !this.selectedStudentForBilling) return false;
+    const a = student.id && this.selectedStudentForBilling.id;
+    if (a && student.id === this.selectedStudentForBilling.id) return true;
+    return (
+      String(student.studentNumber || '') ===
+      String(this.selectedStudentForBilling.studentNumber || '')
+    );
+  }
+
+  selectStudentFromFetch(student: any): void {
+    this.selectedStudentForBilling = student;
+    this.invoiceForDisplay = null;
+    this.existingInvoiceForTerm = null;
+    this.error = '';
+    this.refreshExistingInvoiceCheck();
+  }
+
+  onBillingTermChange(): void {
+    this.existingInvoiceForTerm = null;
+    this.invoiceForDisplay = null;
+    this.refreshExistingInvoiceCheck();
+  }
+
+  private refreshExistingInvoiceCheck(): void {
+    const student = this.selectedStudentForBilling;
+    const term = (this.selectedBillingTerm || '').trim();
+    if (!student?.id || !term) {
+      this.existingInvoiceForTerm = null;
+      return;
+    }
+
+    this.checkingExistingInvoice = true;
+    this.financeService.getInvoices(student.id, undefined).subscribe({
+      next: (data: any) => {
+        const invoices = this.parseInvoicesResponse(data);
+        this.existingInvoiceForTerm =
+          invoices.find((inv: any) => this.termsLooselyMatch(inv.term || '', term)) || null;
+        this.checkingExistingInvoice = false;
+      },
+      error: () => {
+        this.existingInvoiceForTerm = null;
+        this.checkingExistingInvoice = false;
+      },
+    });
   }
 
   /** Match invoice.term to the term selected in billing (handles minor formatting / year differences). */
@@ -1437,9 +1549,101 @@ export class InvoiceListComponent implements OnInit {
     return data?.data || [];
   }
 
+  private readonly vacationFeeRx =
+    /\bvacation\b|\bvac(?:ation)?\s*school\b|\bholiday\s*school\b|\bvac\s*fees?\b/i;
+  private readonly tuitionLineRx = /\btuition\b/i;
+
+  private isVacationFeeDescription(desc: string | null | undefined): boolean {
+    return this.vacationFeeRx.test(String(desc || ''));
+  }
+
+  getSelectedBillingTermRecord(): any | null {
+    const label = (this.selectedBillingTerm || '').trim();
+    if (!label) return null;
+    return (
+      this.terms.find((t: any) => t.label === label) ||
+      this.terms.find((t: any) => this.termsLooselyMatch(t.label, label)) ||
+      null
+    );
+  }
+
+  isRegularBillingTerm(): boolean {
+    const pt = String(this.getSelectedBillingTermRecord()?.periodType || 'regular').toLowerCase();
+    return pt !== 'vacation';
+  }
+
+  private isTuitionLine(desc: string | null | undefined): boolean {
+    return this.tuitionLineRx.test(String(desc || ''));
+  }
+
+  private getBillingTermLabel(): string {
+    return (this.invoiceForDisplay?.term || this.selectedBillingTerm || '').trim();
+  }
+
+  private getStudentClassForBand(): { form?: string | null; name?: string | null } | null {
+    const stud = this.selectedStudentForBilling;
+    const invStu = this.invoiceForDisplay?.student;
+    return (
+      stud?.classEntity ||
+      stud?.class ||
+      invStu?.classEntity ||
+      invStu?.class ||
+      null
+    );
+  }
+
+  /** e.g. Tuition (O Level fees for Term 2 2026) */
+  formatBillingLineDescription(desc: string): string {
+    if (!this.isTuitionLine(desc)) return desc;
+    const term = this.getBillingTermLabel();
+    if (!term) return desc;
+    if (desc.includes(`fees for ${term}`)) return desc;
+    const band = this.subjectUtils.inferClassLevelBand(this.getStudentClassForBand());
+    const level = band === 'A_LEVEL' ? 'A Level' : 'O Level';
+    return `Tuition (${level} fees for ${term})`;
+  }
+
+  formatTermPeriodType(pt: string): string {
+    const v = String(pt || 'regular').toLowerCase();
+    if (v === 'vacation') return 'Vacation school';
+    if (v === 'short') return 'Short term';
+    return 'Regular term';
+  }
+
+  /** Hide vacation-school fee rows on billing preview for regular (and short) terms. */
+  private stripVacationFeesFromInvoice(inv: any): any {
+    if (!inv || !this.isRegularBillingTerm()) return inv;
+    const feeLineItems = inv.feeLineItems;
+    if (!Array.isArray(feeLineItems) || feeLineItems.length === 0) return inv;
+
+    const kept: any[] = [];
+    let vacationSum = 0;
+    for (const row of feeLineItems) {
+      const desc = row.description || row.name || '';
+      if (this.isVacationFeeDescription(desc)) {
+        vacationSum += parseFloat(String(row.amount ?? 0)) || 0;
+      } else {
+        kept.push(row);
+      }
+    }
+    if (vacationSum < 0.001) return inv;
+
+    const pb = parseFloat(String(inv.previousBalance ?? 0)) || 0;
+    const amt = Math.max(0, (parseFloat(String(inv.amount ?? 0)) || 0) - vacationSum);
+    const paid = parseFloat(String(inv.paidAmount ?? 0)) || 0;
+    const totalAmount = pb + amt;
+    const balance =
+      inv.balance !== undefined && inv.balance !== null
+        ? Math.max(0, (parseFloat(String(inv.balance)) || 0) - vacationSum)
+        : totalAmount - paid;
+
+    return { ...inv, feeLineItems: kept, amount: amt, totalAmount, balance };
+  }
+
   /** Normalize API invoice for the billing preview (totals + student details from selection when missing). */
   private enrichInvoiceForDisplay(inv: any): any {
     if (!inv || !this.selectedStudentForBilling) return inv;
+    inv = this.stripVacationFeesFromInvoice(inv);
     const stud = this.selectedStudentForBilling;
     const pb = parseFloat(String(inv.previousBalance ?? 0)) || 0;
     const amt = parseFloat(String(inv.amount ?? 0)) || 0;
@@ -1495,6 +1699,7 @@ export class InvoiceListComponent implements OnInit {
         }
 
         if (found) {
+          this.existingInvoiceForTerm = found;
           this.invoiceForDisplay = this.enrichInvoiceForDisplay(found);
           this.loadingInvoiceDisplay = false;
           return;
@@ -1533,16 +1738,18 @@ export class InvoiceListComponent implements OnInit {
               next: (d2: any) => {
                 const all = this.parseInvoicesResponse(d2);
                 const again = createdId ? all.find((i: any) => i.id === createdId) : null;
-                this.invoiceForDisplay =
-                  this.enrichInvoiceForDisplay(again || response?.invoice);
+                const created = this.enrichInvoiceForDisplay(again || response?.invoice);
+                this.existingInvoiceForTerm = created;
+                this.invoiceForDisplay = created;
                 this.loadingInvoiceDisplay = false;
                 this.loadInvoices();
                 this.success = 'Invoice created successfully.';
                 setTimeout(() => this.success = '', 5000);
               },
               error: () => {
-                this.invoiceForDisplay =
-                  this.enrichInvoiceForDisplay(response?.invoice);
+                const created = this.enrichInvoiceForDisplay(response?.invoice);
+                this.existingInvoiceForTerm = created;
+                this.invoiceForDisplay = created;
                 this.loadingInvoiceDisplay = false;
                 this.loadInvoices();
                 this.success = 'Invoice created successfully.';
@@ -1565,29 +1772,16 @@ export class InvoiceListComponent implements OnInit {
     });
   }
 
-  saveInvoiceChanges() {
-    if (!this.invoiceForDisplay) {
-      this.error = 'No invoice loaded to save.';
-      setTimeout(() => this.error = '', 3000);
-      return;
-    }
-    this.success = 'Invoice saved.';
-    setTimeout(() => this.success = '', 4000);
-  }
-
-  clearBillingForm() {
+  cancelBilling(): void {
+    this.studentSearchQuery = '';
+    this.fetchedStudents = [];
+    this.fetchDone = false;
+    this.fetchingStudents = false;
     this.selectedStudentForBilling = null;
+    this.existingInvoiceForTerm = null;
     this.invoiceForDisplay = null;
-    this.selectedBillingTerm = '';
-    this.selectedBulkCurrentTerm = '';
-    this.balanceBF = 0;
-    this.showStudentSearch = false;
-    this.studentSearchInput = '';
-  }
-
-  saveInvoiceBF() {
-    this.success = 'Balance brought forward saved.';
-    setTimeout(() => this.success = '', 4000);
+    this.error = '';
+    this.success = '';
   }
 
   runBulkInvoicing() {
@@ -1621,7 +1815,12 @@ export class InvoiceListComponent implements OnInit {
     const inv = this.invoiceForDisplay;
     const direct = inv.items || inv.feeItems || [];
     if (Array.isArray(direct) && direct.length > 0) {
-      return direct;
+      return direct.map((row: any) => ({
+        ...row,
+        description: this.formatBillingLineDescription(
+          row.description || row.name || row.itemName || 'Fee'
+        ),
+      }));
     }
     const managed = inv.feeLineItems;
     if (Array.isArray(managed) && managed.length > 0) {
@@ -1631,9 +1830,11 @@ export class InvoiceListComponent implements OnInit {
         out.push({ description: 'Previous balance (outstanding)', amount: pb });
       }
       managed.forEach((row: any) => {
+        const raw = row.description || row.name || 'Fee';
+        if (this.isRegularBillingTerm() && this.isVacationFeeDescription(raw)) return;
         out.push({
-          description: row.description || row.name || 'Fee',
-          amount: row.amount
+          description: this.formatBillingLineDescription(raw),
+          amount: row.amount,
         });
       });
       return out;
@@ -1645,9 +1846,15 @@ export class InvoiceListComponent implements OnInit {
       lines.push({ description: 'Previous balance (outstanding)', amount: pb });
     }
     if (amt > 0.01) {
+      const term = this.getBillingTermLabel();
+      const band = this.subjectUtils.inferClassLevelBand(this.getStudentClassForBand());
+      const level = band === 'A_LEVEL' ? 'A Level' : 'O Level';
+      const fallbackDesc = term
+        ? `Tuition (${level} fees for ${term})`
+        : inv.description || 'Fees for term';
       lines.push({
-        description: inv.description || 'Fees for term',
-        amount: amt
+        description: fallbackDesc,
+        amount: amt,
       });
     }
     return lines;

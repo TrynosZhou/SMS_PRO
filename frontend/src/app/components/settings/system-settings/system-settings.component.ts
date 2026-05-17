@@ -35,6 +35,12 @@ export class SystemSettingsComponent implements OnInit {
     schoolEmail:   '',
     schoolWebsite: '',
     schoolLogo:    '',
+    banking: {
+      accountName: '',
+      bank: '',
+      branch: '',
+      accountNumber: '',
+    },
   };
 
   // ── Email Settings ───────────────────────────────
@@ -111,14 +117,14 @@ export class SystemSettingsComponent implements OnInit {
   };
   loadingPromotionRules = false;
 
-  readonly tabs: { id: TabId; label: string; icon: string }[] = [
-    { id: 'school-info',     label: 'School Information', icon: '🏫' },
-    { id: 'general',         label: 'General',            icon: '⚙️' },
-    { id: 'school-settings', label: 'School Settings',    icon: '⬆️' },
-    { id: 'student-id',      label: 'Student ID Prefix',  icon: '🆔' },
-    { id: 'email',           label: 'Email Settings',      icon: '✉️' },
-    { id: 'notifications',   label: 'Notifications',       icon: '🔔' },
-    { id: 'security',        label: 'Security',           icon: '🔒' },
+  readonly tabs: { id: TabId; label: string }[] = [
+    { id: 'school-info',     label: 'School Information' },
+    { id: 'general',         label: 'General' },
+    { id: 'school-settings', label: 'School Settings' },
+    { id: 'student-id',      label: 'Student ID Prefix' },
+    { id: 'email',           label: 'Email Settings' },
+    { id: 'notifications',   label: 'Notifications' },
+    { id: 'security',        label: 'Security' },
   ];
 
   readonly timezones = [
@@ -171,6 +177,14 @@ export class SystemSettingsComponent implements OnInit {
         this.schoolInfo.schoolEmail   = data.schoolEmail   || '';
         this.schoolInfo.schoolWebsite = data.schoolWebsite || '';
         this.schoolInfo.schoolLogo    = data.schoolLogo    || '';
+        if (data.bankingDetails) {
+          this.schoolInfo.banking = {
+            accountName: data.bankingDetails.accountName || '',
+            bank: data.bankingDetails.bank || '',
+            branch: data.bankingDetails.branch || '',
+            accountNumber: data.bankingDetails.accountNumber || '',
+          };
+        }
 
         // Email Settings (stored in settings.emailSettings)
         if (data.emailSettings) {
@@ -235,12 +249,24 @@ export class SystemSettingsComponent implements OnInit {
 
     let payload: any = {};
     switch (this.activeTab) {
-      case 'school-info':
+      case 'school-info': {
         if (!this.schoolInfo.schoolName.trim()) {
           this.errorMsg = 'School name is required.'; this.saving = false; return;
         }
-        payload = { ...this.schoolInfo };
+        const { banking, ...schoolFields } = this.schoolInfo as typeof this.schoolInfo & {
+          banking: { accountName: string; bank: string; branch: string; accountNumber: string };
+        };
+        payload = {
+          ...schoolFields,
+          bankingDetails: {
+            accountName: banking?.accountName?.trim() || '',
+            bank: banking?.bank?.trim() || '',
+            branch: banking?.branch?.trim() || '',
+            accountNumber: banking?.accountNumber?.trim() || '',
+          },
+        };
         break;
+      }
       case 'email':
         payload = { emailSettings: { ...this.emailSettings } };
         break;
@@ -253,11 +279,15 @@ export class SystemSettingsComponent implements OnInit {
         }
         payload = { securitySettings: { ...this.security } };
         break;
-      case 'general':
+      case 'general': {
         const cur = this.currencies.find(c => c.code === this.general.currency);
         if (cur) this.general.currencySymbol = cur.symbol;
-        payload = { generalSettings: { ...this.general }, currencySymbol: this.general.currencySymbol };
+        payload = {
+          generalSettings: { ...this.general },
+          currencySymbol: this.general.currencySymbol,
+        };
         break;
+      }
       case 'school-settings':
         this.saving = false;
         return;

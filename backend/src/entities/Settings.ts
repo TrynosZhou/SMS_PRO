@@ -120,6 +120,15 @@ export class Settings {
   @Column({ type: 'varchar', default: '$' })
   currencySymbol: string; // e.g., "$", "KES", "€", "£"
 
+  /** School bank account for fee deposits (shown on invoice PDFs). */
+  @Column({ type: 'json', nullable: true })
+  bankingDetails: {
+    accountName?: string;
+    bank?: string;
+    branch?: string;
+    accountNumber?: string;
+  } | null;
+
   // Module Access Control (JSON)
   @Column({ type: 'json', nullable: true })
   moduleAccess: {

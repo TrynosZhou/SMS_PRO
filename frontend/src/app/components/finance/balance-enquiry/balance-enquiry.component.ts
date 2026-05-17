@@ -20,6 +20,12 @@ export class BalanceEnquiryComponent implements OnInit, OnDestroy {
   error = '';
   copyFeedback = '';
 
+  invoicePdfLoading = false;
+  invoicePdfError = '';
+  showInvoicePdfPreview = false;
+  invoicePdfBlob: Blob | null = null;
+  invoicePdfFilename = 'invoice.pdf';
+
   // Pulled from System Settings → General tab via the shared CurrencyService.
   currencySymbol: string = CurrencyService.DEFAULT_SYMBOL;
   showInvoiceBreakdown = false;
@@ -80,6 +86,7 @@ export class BalanceEnquiryComponent implements OnInit, OnDestroy {
     this.nameSearchSelectedStudentKey = '';
     this.showInvoiceBreakdown = false;
     this.copyFeedback = '';
+    this.resetInvoicePdfState();
   }
 
   @HostListener('document:keyup', ['$event'])
@@ -110,6 +117,7 @@ export class BalanceEnquiryComponent implements OnInit, OnDestroy {
     this.nameSearchSelectedStudentKey = '';
     this.showInvoiceBreakdown = false;
     this.copyFeedback = '';
+    this.resetInvoicePdfState();
 
     this.loading = true;
     this.financeService.getStudentBalance(query).subscribe({
@@ -172,6 +180,7 @@ export class BalanceEnquiryComponent implements OnInit, OnDestroy {
     this.studentData = null;
     this.showStudentPicker = false;
     this.showInvoiceBreakdown = false;
+    this.resetInvoicePdfState();
 
     this.financeService.getStudentBalance(lookupId).subscribe({
       next: (data: any) => {
@@ -240,5 +249,78 @@ export class BalanceEnquiryComponent implements OnInit, OnDestroy {
       this.copyFeedback = '';
       this.copyFeedbackTimer = null;
     }, 2200);
+  }
+
+  hasLatestInvoice(): boolean {
+    return !!this.studentData?.lastInvoiceId;
+  }
+
+  viewInvoice(): void {
+    const invoiceId = this.getLatestInvoiceId();
+    if (!invoiceId) {
+      this.invoicePdfError = 'No invoice is on file for this student.';
+      return;
+    }
+
+    this.invoicePdfLoading = true;
+    this.invoicePdfError = '';
+    this.financeService.getInvoicePDF(invoiceId).subscribe({
+      next: (result) => {
+        this.invoicePdfBlob = result.blob;
+        this.invoicePdfFilename =
+          result.filename ||
+          `Invoice-${this.studentData?.lastInvoiceNumber || invoiceId}.pdf`;
+        this.showInvoicePdfPreview = true;
+        this.invoicePdfLoading = false;
+      },
+      error: (err: any) => {
+        this.invoicePdfLoading = false;
+        this.invoicePdfError =
+          err?.error?.message || err?.message || 'Failed to load invoice preview.';
+      }
+    });
+  }
+
+  downloadInvoice(): void {
+    const invoiceId = this.getLatestInvoiceId();
+    if (!invoiceId) {
+      this.invoicePdfError = 'No invoice is on file for this student.';
+      return;
+    }
+
+    this.invoicePdfLoading = true;
+    this.invoicePdfError = '';
+    this.financeService.getInvoicePDF(invoiceId).subscribe({
+      next: (result) => {
+        this.financeService.downloadInvoicePdfFile(
+          result.blob,
+          result.filename ||
+            `Invoice-${this.studentData?.lastInvoiceNumber || invoiceId}.pdf`
+        );
+        this.invoicePdfLoading = false;
+        this.flashCopyFeedback('Invoice downloaded');
+      },
+      error: (err: any) => {
+        this.invoicePdfLoading = false;
+        this.invoicePdfError =
+          err?.error?.message || err?.message || 'Failed to download invoice PDF.';
+      }
+    });
+  }
+
+  closeInvoicePdfPreview(): void {
+    this.showInvoicePdfPreview = false;
+    this.invoicePdfBlob = null;
+  }
+
+  private getLatestInvoiceId(): string | null {
+    const id = this.studentData?.lastInvoiceId;
+    return id ? String(id) : null;
+  }
+
+  private resetInvoicePdfState(): void {
+    this.invoicePdfLoading = false;
+    this.invoicePdfError = '';
+    this.closeInvoicePdfPreview();
   }
 }

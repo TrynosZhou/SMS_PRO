@@ -6,17 +6,81 @@
   aria-modal="true"
   aria-labelledby="inv-preview-title"
 >
-  <div class="inv-preview-dialog" (click)="$event.stopPropagation()">
-    <header class="inv-preview-header">
-      <h2 id="inv-preview-title">Invoice statement</h2>
-      <p class="inv-preview-hint">Preview only. Use Download if you want a copy on your device.</p>
-      <div class="inv-preview-actions">
-        <button type="button" class="btn btn-secondary inv-preview-btn" (click)="download()">Download PDF</button>
-        <button type="button" class="btn btn-outline inv-preview-btn" (click)="requestClose()">Close</button>
+  <div class="inv-preview-shell" (click)="$event.stopPropagation()">
+    <header class="inv-preview-titlebar">
+      <div class="inv-preview-titleblock">
+        <h2 id="inv-preview-title">{{ documentTitle }}</h2>
+        <p class="inv-preview-subtitle">Document preview</p>
       </div>
+      <button type="button" class="inv-preview-close" (click)="requestClose()" title="Close" aria-label="Close">
+        &times;
+      </button>
     </header>
-    <div class="inv-preview-frame-wrap">
-      <iframe *ngIf="safeUrl" class="inv-preview-frame" [src]="safeUrl" title="Invoice PDF preview"></iframe>
+
+    <div class="inv-preview-viewer">
+      <div class="inv-preview-toolbar" role="toolbar" aria-label="PDF viewer controls">
+        <div class="inv-preview-toolbar-group">
+          <button type="button" class="inv-tb-btn" (click)="zoomOut()" title="Zoom out" aria-label="Zoom out">-</button>
+          <label class="inv-tb-zoom-label">
+            <span class="sr-only">Zoom level</span>
+            <select
+              class="inv-tb-zoom-select"
+              [value]="zoomSelectValue"
+              (change)="onZoomSelect($any($event.target).value)"
+            >
+              <option value="auto">Automatic Zoom</option>
+              <option value="page-actual">Page Actual Size</option>
+              <option value="50">50%</option>
+              <option value="75">75%</option>
+              <option value="100">100%</option>
+              <option value="125">125%</option>
+              <option value="150">150%</option>
+            </select>
+          </label>
+          <button type="button" class="inv-tb-btn" (click)="zoomIn()" title="Zoom in" aria-label="Zoom in">+</button>
+        </div>
+
+        <div class="inv-preview-toolbar-group inv-preview-toolbar-center">
+          <button
+            type="button"
+            class="inv-tb-btn"
+            (click)="prevPage()"
+            [disabled]="pageNum <= 1"
+            title="Previous page"
+            aria-label="Previous page"
+          >
+            &#8249;
+          </button>
+          <span class="inv-tb-page">{{ pageLabel }}</span>
+          <button
+            type="button"
+            class="inv-tb-btn"
+            (click)="nextPage()"
+            [disabled]="pageNum >= numPages"
+            title="Next page"
+            aria-label="Next page"
+          >
+            &#8250;
+          </button>
+        </div>
+
+        <div class="inv-preview-toolbar-group inv-preview-toolbar-right">
+          <button type="button" class="inv-tb-btn" (click)="rotate()" title="Rotate" aria-label="Rotate">Rotate</button>
+          <button type="button" class="inv-tb-btn" (click)="print()" title="Print" aria-label="Print">Print</button>
+          <button type="button" class="inv-tb-btn inv-tb-btn-accent" (click)="download()" title="Download" aria-label="Download">
+            Download
+          </button>
+        </div>
+      </div>
+
+      <div class="inv-preview-canvas-wrap" #canvasWrap>
+        <div class="inv-preview-loading" *ngIf="loading">
+          <div class="inv-preview-spinner" aria-hidden="true"></div>
+          <p>Loading document...</p>
+        </div>
+        <div class="inv-preview-error" *ngIf="loadError && !loading">{{ loadError }}</div>
+        <div class="inv-preview-page-host" #pageHost *ngIf="!loading && !loadError"></div>
+      </div>
     </div>
   </div>
 </div>

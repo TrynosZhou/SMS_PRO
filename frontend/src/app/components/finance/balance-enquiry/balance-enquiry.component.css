@@ -252,6 +252,17 @@
   transform: translateY(1px);
 }
 
+.be-btn-secondary {
+  background: #fff;
+  color: var(--be-primary);
+  border: 2px solid var(--be-primary);
+  box-shadow: none;
+}
+
+.be-btn-secondary:hover:not(:disabled) {
+  background: #f5f3ff;
+}
+
 .be-btn-ghost {
   background: #fff;
   color: var(--be-muted);
@@ -673,6 +684,42 @@
   margin-top: 0.25rem;
 }
 
+.be-invoice-footer {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: #fff;
+  border: 1px solid var(--be-border);
+  border-radius: var(--be-radius);
+  box-shadow: 0 8px 24px -12px rgba(15, 23, 42, 0.12);
+}
+
+.be-invoice-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.be-btn-invoice {
+  min-width: 160px;
+  justify-content: center;
+}
+
+.be-invoice-footer-note {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--be-text-muted);
+}
+
+.be-invoice-footer-error {
+  margin: 0.75rem 0 0;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
 @media (max-width: 640px) {
   .be-balance-value {
     font-size: 1.6rem;
@@ -680,5 +727,14 @@
 
   .be-kv-grid {
     grid-template-columns: 1fr;
+  }
+
+  .be-invoice-footer-actions {
+    flex-direction: column;
+  }
+
+  .be-btn-invoice {
+    width: 100%;
+    min-width: 0;
   }
 }

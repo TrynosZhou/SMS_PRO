@@ -434,43 +434,12 @@
     </div>
   </form>
 
-  <!-- PDF Viewer Modal -->
-  <div *ngIf="showPdfViewer" class="pdf-viewer-overlay" (click)="closePdfViewer()">
-    <div class="pdf-viewer-modal" (click)="$event.stopPropagation()">
-      <div class="pdf-viewer-header">
-        <h3>
-          <span>📄</span>
-          Invoice PDF - {{ createdInvoiceNumber || 'Invoice' }}
-        </h3>
-        <div class="pdf-viewer-actions">
-          <button 
-            type="button" 
-            class="btn btn-primary btn-sm" 
-            (click)="downloadInvoicePDF()"
-            title="Download PDF">
-            <span>💾</span> Download
-          </button>
-          <button 
-            type="button" 
-            class="btn btn-secondary btn-sm" 
-            (click)="closePdfViewer()"
-            title="Close">
-            <span>✕</span> Close
-          </button>
-        </div>
-      </div>
-      <div class="pdf-viewer-content">
-        <iframe 
-          *ngIf="safePdfUrl" 
-          [src]="safePdfUrl" 
-          class="pdf-iframe"
-          title="Invoice PDF Viewer">
-        </iframe>
-        <div *ngIf="loadingPdf" class="pdf-loading">
-          <div class="spinner-large"></div>
-          <p>Loading PDF...</p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <app-invoice-pdf-preview
+    [open]="showInvoicePdfPreview"
+    [blob]="invoicePdfBlob"
+    [filename]="invoicePdfFilename"
+    [documentTitle]="invoicePdfDocumentTitle"
+    (closed)="closeInvoicePdfPreview()"
+  ></app-invoice-pdf-preview>
 </div>
+

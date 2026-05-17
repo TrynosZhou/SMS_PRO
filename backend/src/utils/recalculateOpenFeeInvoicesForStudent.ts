@@ -10,6 +10,7 @@ import {
   applyExemptionForStudent,
 } from './managedFeesBilling';
 import { getUniformTotalForInvoice } from './invoiceBalanceResolve';
+import { resolveTermPeriodType } from './termPeriodType';
 
 function invoiceIsOpen(inv: Invoice): boolean {
   const s = String(inv.status || '').toLowerCase();
@@ -67,8 +68,12 @@ export async function recalculateOpenFeeInvoicesForStudent(
       let newTermTotal: number;
       let newLines: Array<{ description: string; amount: number }> | null;
 
+      const termPeriodType = await resolveTermPeriodType(ds, inv.term || '');
+
       const managed = await computeManagedFeesForStudent(ds, student as any, {
         hasPreviousInvoice: hasPrior,
+        termPeriodType,
+        termLabel: inv.term || '',
       });
 
       if (managed.hadCatalogLines) {
@@ -86,6 +91,8 @@ export async function recalculateOpenFeeInvoicesForStudent(
         }
         const rawLines = buildSettingsFallbackFeeLines(student as any, fees, {
           hasPreviousInvoice: hasPrior,
+          termPeriodType,
+          termLabel: inv.term || '',
         });
         const rawTotal = roundMoney(rawLines.reduce((s, l) => s + l.amount, 0));
         const applied = await applyExemptionForStudent(ds, student.id, rawLines, rawTotal);

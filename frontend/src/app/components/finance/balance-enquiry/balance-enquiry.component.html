@@ -227,4 +227,36 @@
       </div>
     </div>
   </section>
+
+  <footer class="be-invoice-footer" *ngIf="studentData && !loading">
+    <p class="be-invoice-footer-note" *ngIf="!hasLatestInvoice()">
+      No invoice on file for this student — invoice actions are unavailable.
+    </p>
+    <div class="be-invoice-footer-actions" *ngIf="hasLatestInvoice()">
+      <button
+        type="button"
+        class="be-btn be-btn-primary be-btn-invoice"
+        (click)="viewInvoice()"
+        [disabled]="invoicePdfLoading">
+        <span class="be-spinner be-spinner-inline" *ngIf="invoicePdfLoading" aria-hidden="true"></span>
+        View Invoice
+      </button>
+      <button
+        type="button"
+        class="be-btn be-btn-primary be-btn-invoice"
+        (click)="downloadInvoice()"
+        [disabled]="invoicePdfLoading">
+        <span class="be-spinner be-spinner-inline" *ngIf="invoicePdfLoading" aria-hidden="true"></span>
+        Download Invoice
+      </button>
+    </div>
+    <p class="be-invoice-footer-error" *ngIf="invoicePdfError" role="alert">{{ invoicePdfError }}</p>
+  </footer>
 </div>
+
+<app-invoice-pdf-preview
+  [open]="showInvoicePdfPreview"
+  [blob]="invoicePdfBlob"
+  [filename]="invoicePdfFilename"
+  (closed)="closeInvoicePdfPreview()"
+></app-invoice-pdf-preview>

@@ -34,9 +34,10 @@ export class InvoiceFormComponent implements OnInit {
   minDate = '';
   createdInvoiceId: string | null = null;
   createdInvoiceNumber: string | null = null;
-  showPdfViewer = false;
-  pdfUrl: string | null = null;
-  safePdfUrl: SafeResourceUrl | null = null;
+  showInvoicePdfPreview = false;
+  invoicePdfBlob: Blob | null = null;
+  invoicePdfFilename = '';
+  invoicePdfDocumentTitle = 'Invoice statement';
   loadingPdf = false;
   uniformItemsCatalog: any[] = [];
   selectedUniformItems: {
@@ -448,13 +449,10 @@ export class InvoiceFormComponent implements OnInit {
     
     this.financeService.getInvoicePDF(this.createdInvoiceId).subscribe({
       next: (result: { blob: Blob; filename: string }) => {
-        // Create object URL for viewing
-        if (this.pdfUrl) {
-          window.URL.revokeObjectURL(this.pdfUrl);
-        }
-        this.pdfUrl = window.URL.createObjectURL(result.blob);
-        this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
-        this.showPdfViewer = true;
+        this.invoicePdfBlob = result.blob;
+        this.invoicePdfFilename = result.filename || `Invoice-${this.createdInvoiceNumber || 'invoice'}.pdf`;
+        this.invoicePdfDocumentTitle = `Invoice - ${this.createdInvoiceNumber || 'Invoice'}`;
+        this.showInvoicePdfPreview = true;
         this.loadingPdf = false;
       },
       error: (err: any) => {
@@ -490,18 +488,14 @@ export class InvoiceFormComponent implements OnInit {
     });
   }
 
-  closePdfViewer() {
-    this.showPdfViewer = false;
-    if (this.pdfUrl) {
-      window.URL.revokeObjectURL(this.pdfUrl);
-      this.pdfUrl = null;
-      this.safePdfUrl = null;
-    }
+  closeInvoicePdfPreview(): void {
+    this.showInvoicePdfPreview = false;
+    this.invoicePdfBlob = null;
+    this.invoicePdfFilename = '';
   }
 
   createNewInvoice() {
-    // Close PDF viewer if open
-    this.closePdfViewer();
+    this.closeInvoicePdfPreview();
     
     // Reset form for creating another invoice
     this.createdInvoiceId = null;

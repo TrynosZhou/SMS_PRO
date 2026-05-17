@@ -186,8 +186,11 @@
   font-size: 0.8rem;
 }
 
+.at-th:last-child,
 .at-td-actions {
-  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  min-width: 8.5rem;
 }
 
 tbody tr:hover {
@@ -219,18 +222,36 @@ tbody tr:hover {
 }
 
 /* Action buttons */
-.at-action-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0.25rem 0.4rem;
-  border-radius: 6px;
-  transition: background 0.15s;
+.at-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
 }
 
-.at-action-btn:hover {
+.at-action-btn {
+  flex-shrink: 0;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  transition: background 0.15s, border-color 0.15s;
+  color: #334155;
+}
+
+.at-action-edit:hover {
+  background: #e8f1fc;
+  border-color: #1a78e6;
+  color: #1a6ed8;
+}
+
+.at-action-delete:hover {
   background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
 }
 
 /* Empty state */

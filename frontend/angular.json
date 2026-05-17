@@ -22,7 +22,15 @@
             "main": "src/main.ts",
             "polyfills": ["src/polyfills.ts"],
             "tsConfig": "tsconfig.app.json",
-            "assets": ["src/favicon.ico", "src/assets"],
+            "assets": [
+              "src/favicon.ico",
+              "src/assets",
+              {
+                "glob": "pdf.worker.min.mjs",
+                "input": "node_modules/pdfjs-dist/build",
+                "output": "assets/pdfjs"
+              }
+            ],
             "styles": ["src/styles.css"],
             "scripts": [],
             "allowedCommonJsDependencies": [
@@ -31,7 +39,8 @@
               "jszip",
               "rgbcolor",
               "raf",
-              "svg-pathdata"
+              "svg-pathdata",
+              "pdfjs-dist"
             ]
           },
           "configurations": {

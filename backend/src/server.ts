@@ -30,6 +30,7 @@ import { ensureTimetableSlotNoUniqueCollision } from './utils/ensureTimetableSlo
 import { ensureFurnitureCurrentTeacherColumn } from './utils/ensureFurnitureCurrentTeacherColumn';
 import { ensureInvoiceFeeLineItemsColumn } from './utils/ensureInvoiceFeeLineItemsColumn';
 import { ensureGradeBandsColumn } from './utils/ensureGradeBandsColumn';
+import { ensureBankingDetailsColumn } from './utils/ensureBankingDetailsColumn';
 import { repairUserActivityLogUserIdsBeforeSync } from './utils/repairUserActivityLogUserIdsBeforeSync';
 
 import * as path from 'path';
@@ -317,6 +318,12 @@ async function bootstrap() {
       await ensureGradeBandsColumn(AppDataSource);
     } catch (gbErr: any) {
       console.warn('[Server] ensureGradeBandsColumn:', gbErr?.message || gbErr);
+    }
+
+    try {
+      await ensureBankingDetailsColumn(AppDataSource);
+    } catch (bankErr: any) {
+      console.warn('[Server] ensureBankingDetailsColumn:', bankErr?.message || bankErr);
     }
 
     // Ensure existing students use the student ID prefix from settings (one-time alignment per boot)

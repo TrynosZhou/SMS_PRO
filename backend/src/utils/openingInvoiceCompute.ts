@@ -82,6 +82,7 @@ export async function computeOpeningInvoiceBundle(
     try {
       const managed = await computeManagedFeesForStudent(ds, student as any, {
         hasPreviousInvoice: false,
+        termPeriodType: 'regular',
       });
       if (managed.total > 0.005 && managed.lines.length > 0) {
         total = managed.total;

@@ -28,14 +28,28 @@
 .sfm-alert-success { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
 .sfm-alert-error   { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
 
-/* ── Two-column body ────────────────────────────────────────────────────── */
+/* ── Grid: left stack + invoice preview (right) ─────────────────────────── */
 .sfm-body {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(300px, 38%) 1fr;
   gap: 18px;
-  align-items: flex-start;
+  align-items: start;
 }
-.sfm-left  { flex: 0 0 42%; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-.sfm-right { flex: 1; min-width: 0; }
+.sfm-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sfm-card-bulk {
+  margin-top: 1.5rem;
+}
+.sfm-right {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
 
 /* ── Cards ──────────────────────────────────────────────────────────────── */
 .sfm-card {
@@ -65,6 +79,58 @@
   position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
   pointer-events: none; color: #888; font-size: 11px;
 }
+
+/* ── Student fetch search ───────────────────────────────────────────────── */
+.sfm-term-row--top { margin-bottom: 4px; }
+.sfm-term-hint { margin-bottom: 12px; }
+.sfm-student-fetch-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  margin-bottom: 8px;
+}
+.sfm-inp {
+  width: 100%;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 6px;
+  padding: 8px 11px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+.sfm-inp:focus { border-color: #1a78e6; }
+.sfm-inp-search { flex: 1; min-width: 0; }
+.sfm-btn-fetch { flex-shrink: 0; white-space: nowrap; padding-left: 18px; padding-right: 18px; }
+.sfm-fetch-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+.sfm-student-pick {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  border: 1.5px solid #d8e6f8;
+  border-radius: 6px;
+  background: #f8fbff;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.sfm-student-pick:hover { background: #e8f1fc; border-color: #1a78e6; }
+.sfm-student-pick--selected {
+  background: #dbeafe;
+  border-color: #1a78e6;
+  box-shadow: 0 0 0 1px #1a78e6;
+}
+.sfm-student-pick-name { font-weight: 600; color: #1a3a5c; }
+.sfm-student-pick-id { color: #666; font-size: 12px; }
+.sfm-term-row { margin-top: 4px; }
 
 /* ── Student selection row ──────────────────────────────────────────────── */
 .sfm-sel-row {
@@ -200,34 +266,12 @@
 
 /* Card header */
 .sfm-inv-card-hdr {
-  display: flex; align-items: center; gap: 8px;
-  padding: 14px 20px 10px; border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid #eee;
 }
-.sfm-inv-card-ico  { font-size: 18px; }
-.sfm-inv-card-title { font-size: 17px; font-weight: 700; color: #222; }
-
-/* Panel divider (blue bottom border under B/F) */
-.sfm-panel-divider {
-  border: none; border-top: 2px solid #1a78e6; margin: 0 0 0;
-}
-
-/* B/F + invoice # topbar */
-.sfm-inv-topbar {
-  display: flex; flex-wrap: wrap; gap: 16px;
-  padding: 16px 20px; border-bottom: 1px solid #eee; background: #fafafa;
-}
-.sfm-inv-num-wrap { display: flex; flex-direction: column; gap: 2px; }
-.sfm-inv-num-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .05em; }
-.sfm-inv-num-val   { font-size: 18px; font-weight: 700; color: #222; }
-
-.sfm-bf-wrap { flex: 1; min-width: 200px; }
-.sfm-bf-fieldset { border: 1px solid #d0d0d0; border-radius: 6px; padding: 6px 10px; margin: 0 0 6px; }
-.sfm-bf-legend   { font-size: 11px; color: #888; padding: 0 4px; }
-.sfm-bf-inp {
-  border: none; outline: none; font-size: 20px; font-weight: 700;
-  width: 100%; background: transparent; color: #222;
-}
-.sfm-bf-hint { font-size: 11px; color: #888; margin: 0 0 6px; line-height: 1.4; }
+.sfm-inv-card-title { font-size: 15px; font-weight: 700; color: #1a6ed8; }
 
 /* Loading / placeholder */
 .sfm-inv-loading, .sfm-inv-placeholder {
@@ -242,24 +286,66 @@
 @keyframes sfm-spin { to { transform: rotate(360deg); } }
 
 /* ── Invoice Document ───────────────────────────────────────────────────── */
-.sfm-inv-doc { padding: 20px 24px; }
+.sfm-inv-doc { padding: 12px 20px 20px; }
 
 /* Letterhead */
 .sfm-letterhead {
-  display: flex; align-items: center; gap: 18px;
-  padding-bottom: 14px; margin-bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 14px;
+  margin-bottom: 0;
+}
+.sfm-letterhead-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  max-width: 100%;
+  /* Nudge block left so text + logo read visually centered on the page */
+  transform: translateX(-28px);
 }
 .sfm-school-logo-wrap {
   flex-shrink: 0;
-  width: 90px; height: 90px;
-  border: 2px solid #e0e0e0; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
+  width: 84px;
+  height: 84px;
+  margin-top: 2px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: #f8f8f8;
+  overflow: hidden;
 }
-.sfm-school-logo-placeholder { font-size: 44px; }
-.sfm-school-info { text-align: right; flex: 1; }
-.sfm-school-name { font-size: 20px; font-weight: 800; color: #1a78e6; margin: 0 0 6px; font-style: italic; }
-.sfm-school-detail { font-size: 13px; color: #555; margin: 3px 0; display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+.sfm-school-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+.sfm-school-logo-placeholder { font-size: 40px; line-height: 1; }
+.sfm-school-info {
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+}
+.sfm-school-name {
+  font-size: 20px;
+  font-weight: 700;
+  font-style: normal;
+  color: #1a78e6;
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+.sfm-school-detail {
+  font-size: 13px;
+  color: #555;
+  margin: 3px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
 .sfm-lh-ico { font-size: 14px; }
 .sfm-ico-loc  { color: #e74c3c; }
 .sfm-ico-ph   { color: #27ae60; }
@@ -383,8 +469,14 @@
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .sfm-body { flex-direction: column; }
-  .sfm-left { flex: none; width: 100%; }
+  .sfm-body {
+    grid-template-columns: 1fr;
+  }
+  .sfm-left-column,
+  .sfm-right {
+    grid-column: 1;
+    grid-row: auto;
+  }
   .sfm-right { width: 100%; }
   .sfm-bulk-grid { grid-template-columns: 1fr; }
   .sfm-bulk-grid .sfm-btn-full { grid-column: span 1; }

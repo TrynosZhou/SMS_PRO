@@ -317,6 +317,7 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
       termStartDate,
       termEndDate,
       currencySymbol,
+      bankingDetails,
       moduleAccess,
       gradePoints,
       gradeBands
@@ -465,6 +466,19 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
     }
     if (currencySymbol !== undefined) {
       settings.currencySymbol = String(currencySymbol).trim() || '$';
+    }
+    if (bankingDetails !== undefined) {
+      if (bankingDetails === null) {
+        settings.bankingDetails = null;
+      } else if (typeof bankingDetails === 'object') {
+        settings.bankingDetails = {
+          accountName: bankingDetails.accountName != null ? String(bankingDetails.accountName).trim() : '',
+          bank: bankingDetails.bank != null ? String(bankingDetails.bank).trim() : '',
+          branch: bankingDetails.branch != null ? String(bankingDetails.branch).trim() : '',
+          accountNumber:
+            bankingDetails.accountNumber != null ? String(bankingDetails.accountNumber).trim() : '',
+        };
+      }
     }
     if (moduleAccess !== undefined) {
       settings.moduleAccess = ensureModuleAccessDefaults(moduleAccess);

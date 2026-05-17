@@ -14,6 +14,7 @@ import { isDemoUser } from '../utils/demoDataFilter';
 import { parseAmount, roundMoney, generateInvoiceNumber } from '../utils/numberUtils';
 import { resolveTuitionFees, isBoarderStudent, normalizeFeesSettingsObject } from '../utils/feesSettingsResolve';
 import { computeManagedFeesForStudent, buildSettingsFallbackFeeLines, applyExemptionForStudent } from '../utils/managedFeesBilling';
+import { resolveTermPeriodType } from '../utils/termPeriodType';
 import { buildPaginationResponse, parsePaginationParams } from '../utils/pagination';
 import { logPaymentAuditEvent } from '../utils/paymentAuditLogger';
 import { PaymentAuditEventType } from '../entities/PaymentAuditLog';
@@ -98,6 +99,10 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
     let feesWereCalculated = false;
     let feeLineItemsToSave: Array<{ description: string; amount: number }> | null = null;
 
+    const termPeriodType = termNormalized
+      ? await resolveTermPeriodType(AppDataSource, termNormalized)
+      : 'regular';
+
     // If term is provided: prefer Finance → Manage → Fees catalog; otherwise Settings fees.
     if (term) {
       const hasUniformItemsInPayload = Array.isArray(uniformItems) && uniformItems.length > 0;
@@ -105,7 +110,9 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
 
       if (!isUniformOnlyInvoice) {
         const managed = await computeManagedFeesForStudent(AppDataSource, student as any, {
-          hasPreviousInvoice: Boolean(lastInvoice)
+          hasPreviousInvoice: Boolean(lastInvoice),
+          termPeriodType,
+          termLabel: termNormalized,
         });
 
         if (managed.hadCatalogLines) {
@@ -129,7 +136,9 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
           if (settings && fees) {
             feesWereCalculated = true;
             const rawLines = buildSettingsFallbackFeeLines(student as any, fees, {
-              hasPreviousInvoice: Boolean(lastInvoice)
+              hasPreviousInvoice: Boolean(lastInvoice),
+              termPeriodType,
+              termLabel: termNormalized,
             });
             const rawTotal = roundMoney(rawLines.reduce((s, l) => s + l.amount, 0));
             const applied = await applyExemptionForStudent(
@@ -264,7 +273,8 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
         const invoicePDF = await createInvoicePDF({
           invoice: (invoiceWithRelations || savedInvoice),
           student: studentWithClass,
-          settings
+          settings,
+          termPeriodType,
         });
 
         res.status(201).json({ 
@@ -541,6 +551,7 @@ export const createBulkInvoices = async (req: AuthRequest, res: Response) => {
     }
 
     const nextTerm = getNextTerm(schoolCurrentTerm);
+    const nextTermPeriodType = await resolveTermPeriodType(AppDataSource, nextTerm);
 
     const managedCatalogCount = await feeCategoryRepository.count();
     if (managedCatalogCount === 0 && !settings?.feesSettings) {
@@ -602,7 +613,9 @@ export const createBulkInvoices = async (req: AuthRequest, res: Response) => {
         const previousPrepaid = parseAmount(lastInvoice?.prepaidAmount);
 
         const managed = await computeManagedFeesForStudent(AppDataSource, student as any, {
-          hasPreviousInvoice: Boolean(lastInvoice)
+          hasPreviousInvoice: Boolean(lastInvoice),
+          termPeriodType: nextTermPeriodType,
+          termLabel: nextTerm,
         });
 
         let termFees = 0;
@@ -644,7 +657,9 @@ export const createBulkInvoices = async (req: AuthRequest, res: Response) => {
           }
 
           const rawLines = buildSettingsFallbackFeeLines(student as any, fees, {
-            hasPreviousInvoice: Boolean(lastInvoice)
+            hasPreviousInvoice: Boolean(lastInvoice),
+            termPeriodType: nextTermPeriodType,
+            termLabel: nextTerm,
           });
           const rawTotal = roundMoney(rawLines.reduce((s, l) => s + l.amount, 0));
           const applied = await applyExemptionForStudent(
@@ -753,10 +768,15 @@ export const generateInvoicePDF = async (req: AuthRequest, res: Response) => {
     });
     const settings = settingsList.length > 0 ? settingsList[0] : null;
 
+    const termPeriodType = await resolveTermPeriodType(
+      AppDataSource,
+      invoice.term || ''
+    );
     const pdfBuffer = await createInvoicePDF({
       invoice,
       student,
-      settings
+      settings,
+      termPeriodType,
     });
 
     // Create filename with student's full name

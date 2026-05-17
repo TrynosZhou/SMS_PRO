@@ -71,7 +71,10 @@
           </span>
         </td>
         <td class="at-td at-td-actions">
-          <button class="at-action-btn at-action-delete" (click)="deleteTerm(t.id)" title="Delete">🗑️</button>
+          <div class="at-action-group">
+            <button type="button" class="at-action-btn at-action-edit" (click)="openEditTerm(t)" title="Edit">Edit</button>
+            <button type="button" class="at-action-btn at-action-delete" (click)="deleteTerm(t.id)" title="Delete">Delete</button>
+          </div>
         </td>
       </tr>
     </tbody>
@@ -99,10 +102,12 @@
 
   <!-- Modal Header -->
   <div class="at-modal-header">
-    <span class="at-modal-header-ico">+</span>
+    <span class="at-modal-header-ico">{{ isEditMode ? '✎' : '+' }}</span>
     <div>
-      <h2 id="modal-title" class="at-modal-title">Add New Term</h2>
-      <p class="at-modal-subtitle">Enter term details to create a new academic term</p>
+      <h2 id="modal-title" class="at-modal-title">{{ isEditMode ? 'Edit Term' : 'Add New Term' }}</h2>
+      <p class="at-modal-subtitle">
+        {{ isEditMode ? 'Update the academic term details below' : 'Enter term details to create a new academic term' }}
+      </p>
     </div>
   </div>
 
@@ -153,13 +158,24 @@
         <div class="at-input-group">
           <select class="at-input at-input-select" [(ngModel)]="newTerm.year">
             <option value="" disabled></option>
-            <option *ngFor="let y of academicYearOptions" [value]="y">{{ y }}</option>
+            <option *ngFor="let y of modalYearOptions" [value]="y">{{ y }}</option>
           </select>
           <span class="at-input-icon-right">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           </span>
         </div>
         <span class="at-field-hint">Select the academic year</span>
+      </div>
+
+      <!-- Status -->
+      <div class="at-field-wrap">
+        <label class="at-floating-label at-floating-up">Status</label>
+        <div class="at-input-group">
+          <select class="at-input at-input-select" [(ngModel)]="newTerm.status">
+            <option *ngFor="let s of statusOptions" [value]="s">{{ s | titlecase }}</option>
+          </select>
+        </div>
+        <span class="at-field-hint">Active, inactive, or upcoming</span>
       </div>
     </div>
 
@@ -208,7 +224,7 @@
       <span class="at-btn-ico">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       </span>
-      {{ submitting ? 'Adding…' : 'Add Term' }}
+      {{ submitting ? (isEditMode ? 'Saving…' : 'Adding…') : (isEditMode ? 'Save Changes' : 'Add Term') }}
     </button>
   </div>
 </div>

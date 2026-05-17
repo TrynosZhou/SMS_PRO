@@ -10,6 +10,13 @@ import {
   applyActiveFeeExemptionToManagedLines,
   type FeeLine,
 } from './applyFeeExemption';
+import {
+  shouldIncludeFeeForTermPeriod,
+  type TermPeriodType,
+} from './termPeriodType';
+import { formatTuitionLineDescription } from './tuitionLineDescription';
+
+const TUITION_RX = /\btuition\b/i;
 
 export type ManagedFeeLine = FeeLine;
 
@@ -168,7 +175,11 @@ export async function applyExemptionForStudent(
 export function buildSettingsFallbackFeeLines(
   student: Student & { classEntity?: Class | null },
   fees: Record<string, any>,
-  options: { hasPreviousInvoice: boolean }
+  options: {
+    hasPreviousInvoice: boolean;
+    termPeriodType?: TermPeriodType;
+    termLabel?: string;
+  }
 ): ManagedFeeLine[] {
   const lines: ManagedFeeLine[] = [];
   const shouldChargeDeskFee = !options.hasPreviousInvoice;
@@ -186,7 +197,11 @@ export function buildSettingsFallbackFeeLines(
       ? boarderTuitionFee
       : dayScholarTuitionFee;
     if (tuitionFee > 0.001) {
-      lines.push({ description: 'Tuition', amount: roundMoney(tuitionFee) });
+      const band = inferStudentFeeLevelBand(student.classEntity ?? undefined);
+      lines.push({
+        description: formatTuitionLineDescription(band, options.termLabel || ''),
+        amount: roundMoney(tuitionFee),
+      });
     }
   }
 
@@ -206,6 +221,7 @@ export function buildSettingsFallbackFeeLines(
       if (amt > 0.001) {
         const name =
           String((fee as any)?.name || (fee as any)?.label || 'Fee').trim() || 'Fee';
+        if (!shouldIncludeFeeForTermPeriod(name, options.termPeriodType)) continue;
         lines.push({ description: `${name} (Other fee)`, amount: roundMoney(amt) });
       }
     }
@@ -241,7 +257,11 @@ export function buildSettingsFallbackFeeLines(
 export async function computeManagedFeesForStudent(
   ds: DataSource,
   student: Student & { classEntity?: Class | null },
-  options: { hasPreviousInvoice: boolean }
+  options: {
+    hasPreviousInvoice: boolean;
+    termPeriodType?: TermPeriodType;
+    termLabel?: string;
+  }
 ): Promise<{ lines: ManagedFeeLine[]; total: number; hadCatalogLines: boolean }> {
   const catRepo = ds.getRepository(FeeCategory);
   const itemRepo = ds.getRepository(FeeItem);
@@ -275,6 +295,8 @@ export async function computeManagedFeesForStudent(
 
       const labelBits = `${item.itemName} ${cat.name}`;
 
+      if (!shouldIncludeFeeForTermPeriod(labelBits, options.termPeriodType)) continue;
+
       if (student.isStaffChild) {
         if (DINING_RX.test(labelBits) && student.usesDiningHall) {
           amount = roundMoney(amount * 0.5);
@@ -291,9 +313,14 @@ export async function computeManagedFeesForStudent(
         if (boarder || !student.usesTransport) continue;
       }
 
+      const description =
+        TUITION_RX.test(labelBits) && (options.termLabel || '').trim()
+          ? formatTuitionLineDescription(levelBand, options.termLabel || '')
+          : `${item.itemName} (${cat.name})`;
+
       lines.push({
-        description: `${item.itemName} (${cat.name})`,
-        amount: roundMoney(amount)
+        description,
+        amount: roundMoney(amount),
       });
     }
   }

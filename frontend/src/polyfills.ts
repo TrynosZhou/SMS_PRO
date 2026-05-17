@@ -7,6 +7,27 @@
  * BROWSER POLYFILLS
  */
 
+/** Required by pdfjs-dist 4.x (invoice PDF preview). */
+const promiseWithResolvers = (Promise as any).withResolvers;
+if (typeof promiseWithResolvers !== 'function') {
+  (Promise as any).withResolvers = function <T = unknown>() {
+    const out: {
+      promise: Promise<T>;
+      resolve: (value: T | PromiseLike<T>) => void;
+      reject: (reason?: unknown) => void;
+    } = {} as {
+      promise: Promise<T>;
+      resolve: (value: T | PromiseLike<T>) => void;
+      reject: (reason?: unknown) => void;
+    };
+    out.promise = new Promise<T>((resolve, reject) => {
+      out.resolve = resolve;
+      out.reject = reject;
+    });
+    return out;
+  };
+}
+
 /** IE10 and IE11 requires the following for NgClass support on SVG elements */
 // import 'classlist.js';  // Run `npm install --save classlist.js`.
 

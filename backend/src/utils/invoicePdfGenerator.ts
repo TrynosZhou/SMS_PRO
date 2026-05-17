@@ -5,505 +5,587 @@ import { Settings } from '../entities/Settings';
 import { parseAmount } from './numberUtils';
 import { resolveInvoiceRemainingBalance } from './invoiceBalanceResolve';
 import { resolveTuitionFees, isBoarderStudent } from './feesSettingsResolve';
+import { drawSchoolLogoInBox, loadPrimarySchoolLogoBuffer } from './schoolLogoPdf';
+import { CompactLayout, invoiceLayout, PDF_PAGE, s } from './pdfPageFit';
+import {
+  shouldIncludeFeeForTermPeriod,
+  type TermPeriodType,
+} from './termPeriodType';
+import {
+  formatTuitionLineDescription,
+  isTuitionFeeLabel,
+} from './tuitionLineDescription';
+import { inferStudentFeeLevelBand } from './managedFeesBilling';
 
 interface InvoicePDFData {
   invoice: Invoice;
   student: Student;
   settings: Settings | null;
+  termPeriodType?: TermPeriodType;
 }
 
-export function createInvoicePDF(
-  data: InvoicePDFData
-): Promise<Buffer> {
+interface InvoiceTableRow {
+  label: string;
+  amount: number;
+  fill?: string;
+  textColor?: string;
+}
+
+function hasBankingDetails(settings: Settings | null): boolean {
+  const b = settings?.bankingDetails;
+  if (!b || typeof b !== 'object') return false;
+  return !!(
+    String(b.accountName || '').trim() ||
+    String(b.bank || '').trim() ||
+    String(b.branch || '').trim() ||
+    String(b.accountNumber || '').trim()
+  );
+}
+
+function collectInvoiceTableRows(
+  invoice: Invoice,
+  student: Student,
+  settings: Settings | null,
+  termPeriodType?: TermPeriodType
+): {
+  rows: InvoiceTableRow[];
+  previousBalance: number;
+  displayedFeesTotal: number;
+  uniformTotal: number;
+  finalTotal: number;
+} {
+  const rows: InvoiceTableRow[] = [];
+  const invoiceAmount = parseAmount(invoice.amount);
+  const previousBalance = parseAmount(invoice.previousBalance);
+  const prepaidAmount = parseAmount(invoice.prepaidAmount);
+  const uniformTotal = parseAmount((invoice as any).uniformTotal);
+  const baseAmount = parseFloat((invoiceAmount - uniformTotal).toFixed(2));
+
+  if (previousBalance > 0) {
+    rows.push({ label: 'Previous Balance (Outstanding Fees)', amount: previousBalance });
+  }
+
+  let displayedFeesTotal = 0;
+  const storedFeeLines = (invoice as any).feeLineItems;
+  if (Array.isArray(storedFeeLines) && storedFeeLines.length > 0) {
+    const termLabel = String(invoice.term || '').trim();
+    const levelBand = inferStudentFeeLevelBand(
+      (student as any).classEntity ?? undefined
+    );
+
+    for (const row of storedFeeLines) {
+      const amt = parseAmount((row as any).amount);
+      let desc = String((row as any).description || 'Fee').trim() || 'Fee';
+      if (isTuitionFeeLabel(desc) && termLabel) {
+        desc = formatTuitionLineDescription(levelBand, termLabel);
+      }
+      if (!shouldIncludeFeeForTermPeriod(desc, termPeriodType)) continue;
+      if (amt > 0.001) {
+        rows.push({ label: desc, amount: amt, fill: '#F8F9FA' });
+        displayedFeesTotal += amt;
+      }
+    }
+  } else {
+    const feesSettings = settings?.feesSettings || {};
+    const { dayScholar: dayScholarTuitionFee, boarder: boarderTuitionFee } =
+      resolveTuitionFees(feesSettings);
+    const registrationFee = parseAmount(feesSettings.registrationFee);
+    const deskFee = parseAmount(feesSettings.deskFee);
+    const transportCost = parseAmount(feesSettings.transportCost);
+    const diningHallCost = parseAmount(feesSettings.diningHallCost);
+    const libraryFee = parseAmount(feesSettings.libraryFee);
+    const sportsFee = parseAmount(feesSettings.sportsFee);
+    const otherFees = feesSettings.otherFees || [];
+    const otherFeesTotal = otherFees.reduce(
+      (sum: number, fee: any) => sum + parseAmount(fee?.amount),
+      0
+    );
+
+    let tuitionFee = 0;
+    if (!student.isStaffChild) {
+      tuitionFee = isBoarderStudent(student.studentType)
+        ? boarderTuitionFee
+        : dayScholarTuitionFee;
+    }
+
+    let transportFee = 0;
+    if (!isBoarderStudent(student.studentType) && student.usesTransport && !student.isStaffChild) {
+      transportFee = transportCost;
+    }
+
+    let diningHallFee = 0;
+    if (student.usesDiningHall) {
+      diningHallFee = student.isStaffChild ? diningHallCost * 0.5 : diningHallCost;
+    }
+
+    if (registrationFee > 0 && !student.isStaffChild) {
+      const feesWithoutReg =
+        tuitionFee +
+        transportFee +
+        diningHallFee +
+        deskFee +
+        (student.isStaffChild ? 0 : libraryFee + sportsFee + otherFeesTotal);
+      const expectedWithReg = feesWithoutReg + registrationFee;
+      if (Math.abs(baseAmount - expectedWithReg) <= Math.abs(baseAmount - feesWithoutReg) + 1) {
+        rows.push({ label: 'Registration Fee', amount: registrationFee, fill: '#F8F9FA' });
+        displayedFeesTotal += registrationFee;
+      }
+    }
+
+    if (!student.isStaffChild) {
+      const tuitionLabel = isBoarderStudent(student.studentType)
+        ? 'Tuition Fee (Boarder)'
+        : 'Tuition Fee (Day Scholar)';
+      const tuitionToDisplay =
+        tuitionFee > 0
+          ? tuitionFee
+          : isBoarderStudent(student.studentType)
+            ? boarderTuitionFee
+            : dayScholarTuitionFee;
+      if (tuitionToDisplay > 0) {
+        rows.push({ label: tuitionLabel, amount: tuitionToDisplay, fill: '#F8F9FA' });
+        displayedFeesTotal += tuitionToDisplay;
+      }
+    }
+
+    if (deskFee > 0 && !student.isStaffChild) {
+      const feesWithoutDesk =
+        tuitionFee +
+        transportFee +
+        diningHallFee +
+        (student.isStaffChild ? 0 : libraryFee + sportsFee + otherFeesTotal);
+      const expectedWithDesk = feesWithoutDesk + deskFee;
+      if (Math.abs(baseAmount - expectedWithDesk) <= Math.abs(baseAmount - feesWithoutDesk) + 1) {
+        rows.push({ label: 'Desk Fee', amount: deskFee, fill: '#F8F9FA' });
+        displayedFeesTotal += deskFee;
+      }
+    }
+
+    if (!isBoarderStudent(student.studentType) && student.usesTransport && !student.isStaffChild) {
+      const transportToDisplay = transportFee > 0 ? transportFee : transportCost;
+      if (transportToDisplay > 0) {
+        rows.push({ label: 'Transport Fee', amount: transportToDisplay, fill: '#F8F9FA' });
+        displayedFeesTotal += transportToDisplay;
+      }
+    }
+
+    if (student.usesDiningHall) {
+      const dhToDisplay =
+        diningHallFee > 0
+          ? diningHallFee
+          : student.isStaffChild
+            ? diningHallCost * 0.5
+            : diningHallCost;
+      if (dhToDisplay > 0) {
+        const dhLabel = student.isStaffChild
+          ? 'Dining Hall (DH) Fee (50% - Staff Child)'
+          : 'Dining Hall (DH) Fee';
+        rows.push({ label: dhLabel, amount: dhToDisplay, fill: '#F8F9FA' });
+        displayedFeesTotal += dhToDisplay;
+      }
+    }
+
+    if (!student.isStaffChild) {
+      if (libraryFee > 0) {
+        rows.push({ label: 'Library Fee', amount: libraryFee, fill: '#F8F9FA' });
+        displayedFeesTotal += libraryFee;
+      }
+      if (sportsFee > 0) {
+        rows.push({ label: 'Sports Fee', amount: sportsFee, fill: '#F8F9FA' });
+        displayedFeesTotal += sportsFee;
+      }
+      if (otherFeesTotal > 0) {
+        otherFees.forEach((fee: any) => {
+          const feeAmount = parseAmount(fee.amount);
+          if (feeAmount > 0) {
+            rows.push({ label: fee.name || 'Other Fee', amount: feeAmount, fill: '#F8F9FA' });
+            displayedFeesTotal += feeAmount;
+          }
+        });
+      }
+    }
+  }
+
+  if (displayedFeesTotal < 0.01 && baseAmount > 0.01) {
+    rows.push({
+      label: (invoice.description && String(invoice.description).trim()) || 'Fees for term',
+      amount: baseAmount,
+      fill: '#F8F9FA',
+    });
+    displayedFeesTotal += baseAmount;
+  }
+
+  const remainingAmount = baseAmount - displayedFeesTotal;
+  if (remainingAmount > 0.01) {
+    rows.push({ label: 'Additional Fees', amount: remainingAmount, fill: '#F8F9FA' });
+    displayedFeesTotal += remainingAmount;
+  }
+
+  const uniformItemsList = Array.isArray((invoice as any).uniformItems)
+    ? (invoice as any).uniformItems
+    : [];
+  if (uniformItemsList.length > 0) {
+    for (const ui of uniformItemsList) {
+      const qty = Number(ui.quantity) || 1;
+      rows.push({
+        label: `${ui.itemName || 'Uniform item'} (×${qty})`,
+        amount: parseAmount(ui.lineTotal),
+        fill: '#FFF7ED',
+        textColor: '#9A3412',
+      });
+    }
+    rows.push({
+      label: 'School Uniform Subtotal',
+      amount: uniformTotal,
+      fill: '#FFE8CC',
+      textColor: '#C05621',
+    });
+  } else if (uniformTotal > 0) {
+    rows.push({
+      label: 'School Uniform Subtotal',
+      amount: uniformTotal,
+      fill: '#FFE8CC',
+      textColor: '#C05621',
+    });
+  }
+
+  const totalInvoiceAmount = previousBalance + displayedFeesTotal + uniformTotal;
+  const appliedPrepaidAmount = Math.min(prepaidAmount, totalInvoiceAmount);
+  const finalTotal = totalInvoiceAmount - appliedPrepaidAmount;
+
+  return { rows, previousBalance, displayedFeesTotal, uniformTotal, finalTotal };
+}
+
+function drawBankingDetailsSection(
+  doc: InstanceType<typeof PDFDocument>,
+  settings: Settings | null,
+  topY: number,
+  layout: CompactLayout
+): number {
+  const b = settings?.bankingDetails;
+  if (!b || !hasBankingDetails(settings)) {
+    return topY;
+  }
+
+  const labelX = layout.margin + 10;
+  const valueX = layout.margin + 140;
+  const lineGap = s(11, layout.scale);
+  const hintText =
+    'Please use the student name and invoice number as your payment reference where possible.';
+
+  const rows: Array<[string, string]> = [
+    ['Account Name:', String(b.accountName || '').trim() || '—'],
+    ['Bank:', String(b.bank || '').trim() || '—'],
+    ['Branch:', String(b.branch || '').trim() || '—'],
+    ['Account Number:', String(b.accountNumber || '').trim() || '—'],
+  ];
+
+  doc.fontSize(s(7, layout.scale)).font('Helvetica');
+  const hintHeight = doc.heightOfString(hintText, { width: PDF_PAGE.width - layout.margin * 2 - 20 });
+  const boxWidth = PDF_PAGE.width - layout.margin * 2;
+  const boxHeight = s(24, layout.scale) + rows.length * lineGap + hintHeight + s(10, layout.scale);
+
+  const yPos = topY;
+
+  doc.rect(layout.margin, yPos, boxWidth, boxHeight)
+    .fillColor('#F8FAFC')
+    .fill()
+    .strokeColor('#4A90E2')
+    .lineWidth(1)
+    .stroke();
+
+  doc.fontSize(s(9, layout.scale)).font('Helvetica-Bold').fillColor('#003366');
+  doc.text('Banking Details — Fee Deposits', labelX, yPos + s(6, layout.scale));
+
+  doc.strokeColor('#DEE2E6').lineWidth(0.5);
+  doc.moveTo(labelX, yPos + s(18, layout.scale)).lineTo(layout.margin + boxWidth - 10, yPos + s(18, layout.scale)).stroke();
+
+  let lineY = yPos + s(24, layout.scale);
+  doc.fontSize(s(7.5, layout.scale)).font('Helvetica-Bold').fillColor('#2C3E50');
+  for (const [label, value] of rows) {
+    doc.text(label, labelX, lineY);
+    doc.font('Helvetica').fillColor('#000000');
+    doc.text(value, valueX, lineY, { width: boxWidth - 160 });
+    doc.font('Helvetica-Bold').fillColor('#2C3E50');
+    lineY += lineGap;
+  }
+
+  doc.fontSize(s(7, layout.scale)).font('Helvetica').fillColor('#666666');
+  doc.text(hintText, labelX, lineY + s(4, layout.scale), { width: boxWidth - 20 });
+
+  return yPos + boxHeight;
+}
+
+export function createInvoicePDF(data: InvoicePDFData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 50, size: 'A4' });
-      const buffers: Buffer[] = [];
+      const { invoice, student, settings, termPeriodType } = data;
+      const paidAmount = parseAmount(invoice.paidAmount);
+      const prepaidAmount = parseAmount(invoice.prepaidAmount);
+      const balance = resolveInvoiceRemainingBalance(invoice);
+      const hasPaymentBox = paidAmount > 0 || prepaidAmount > 0;
+      const hasBanking = hasBankingDetails(settings);
 
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => {
-        resolve(Buffer.concat(buffers));
+      const { rows, finalTotal } = collectInvoiceTableRows(
+        invoice,
+        student,
+        settings,
+        termPeriodType
+      );
+      const layout = invoiceLayout(rows.length, { hasPaymentBox, hasBanking });
+
+      const doc = new PDFDocument({
+        margin: layout.margin,
+        size: 'A4',
+        autoFirstPage: true,
       });
+      const buffers: Buffer[] = [];
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', reject);
 
-      const { invoice, student, settings } = data;
       const currencySymbol = settings?.currencySymbol || '$';
-
-      // School Header
       const schoolName = settings?.schoolName || 'School Management System';
       const schoolAddress = settings?.schoolAddress ? String(settings.schoolAddress).trim() : '';
       const schoolPhone = settings?.schoolPhone || '';
       const schoolEmail = settings?.schoolEmail || '';
 
-      // Header Section
-      let yPos = 50;
+      const contentRight = PDF_PAGE.width - layout.margin;
+      const contentWidth = contentRight - layout.margin;
 
-      // School Logo (if available)
-      if (settings?.schoolLogo) {
-        try {
-          if (settings.schoolLogo.startsWith('data:image')) {
-            const base64Data = settings.schoolLogo.split(',')[1];
-            if (base64Data) {
-              const imageBuffer = Buffer.from(base64Data, 'base64');
-              doc.image(imageBuffer, 50, yPos, { width: 80, height: 80 });
-            }
-          }
-        } catch (error) {
-          console.error('Could not add school logo to invoice:', error);
-        }
-      }
+      let yPos = layout.margin;
 
-      // School Information
-      const textStartX = settings?.schoolLogo ? 150 : 50;
-      doc.fontSize(18).font('Helvetica-Bold').text(schoolName, textStartX, yPos);
-      yPos += 25;
+      const logoBoxX = layout.margin;
+      const logoBoxY = yPos;
+      const logoBuffer = loadPrimarySchoolLogoBuffer(settings);
+      const logoDrawn = logoBuffer
+        ? drawSchoolLogoInBox(doc, logoBuffer, logoBoxX, logoBoxY, layout.logoSize, layout.logoSize)
+        : false;
 
+      const textStartX = logoDrawn ? layout.margin + layout.logoSize + 12 : layout.margin;
+      doc.fontSize(s(14, layout.scale)).font('Helvetica-Bold').text(schoolName, textStartX, yPos);
+      yPos += s(16, layout.scale);
+
+      doc.fontSize(layout.bodySize).font('Helvetica');
       if (schoolAddress) {
-        doc.fontSize(10).font('Helvetica').text(schoolAddress, textStartX, yPos);
-        yPos += 15;
+        doc.text(schoolAddress, textStartX, yPos, { width: contentWidth - (textStartX - layout.margin) });
+        yPos += s(11, layout.scale);
       }
-
       if (schoolPhone) {
-        doc.fontSize(10).font('Helvetica').text(`Phone: ${schoolPhone}`, textStartX, yPos);
-        yPos += 15;
+        doc.text(`Phone: ${schoolPhone}`, textStartX, yPos);
+        yPos += s(11, layout.scale);
       }
-
       if (schoolEmail) {
-        doc.fontSize(10).font('Helvetica').text(`Email: ${schoolEmail}`, textStartX, yPos);
-        yPos += 15;
+        doc.text(`Email: ${schoolEmail}`, textStartX, yPos);
+        yPos += s(11, layout.scale);
+      }
+      if (logoDrawn) {
+        yPos = Math.max(yPos, logoBoxY + layout.logoSize + 4);
       }
 
-      yPos += 20;
+      yPos += layout.gap;
+      doc.strokeColor('#CCCCCC').lineWidth(0.75);
+      doc.moveTo(layout.margin, yPos).lineTo(contentRight, yPos).stroke();
+      yPos += layout.gap;
 
-      // Horizontal divider line after header
-      doc.strokeColor('#CCCCCC').lineWidth(1);
-      doc.moveTo(50, yPos).lineTo(545, yPos).stroke();
-      yPos += 15;
+      doc.fontSize(layout.titleSize).font('Helvetica-Bold').fillColor('#003366');
+      doc.text('INVOICE STATEMENT', layout.margin, yPos, { align: 'center', width: contentWidth });
+      yPos += s(20, layout.scale);
 
-      // Invoice Title
-      doc.fontSize(20).font('Helvetica-Bold').fillColor('#003366');
-      doc.text('INVOICE STATEMENT', 50, yPos, { align: 'center', width: 500 });
-      yPos += 30;
-
-      // Invoice Details Box with improved styling
-      const detailsBoxY = yPos;
-      const detailsBoxHeight = 110;
-      doc.rect(50, detailsBoxY, 500, detailsBoxHeight)
+      const detailsBoxHeight = s(88, layout.scale);
+      doc.rect(layout.margin, yPos, contentWidth, detailsBoxHeight)
         .fillColor('#F8F9FA')
         .fill()
         .strokeColor('#4A90E2')
-        .lineWidth(2)
+        .lineWidth(1.5)
         .stroke();
 
-      // Vertical divider line in details box
-      const dividerX = 300;
+      const dividerX = layout.margin + contentWidth * 0.5;
       doc.strokeColor('#DEE2E6').lineWidth(0.5);
-      doc.moveTo(dividerX, detailsBoxY + 5).lineTo(dividerX, detailsBoxY + detailsBoxHeight - 5).stroke();
+      doc
+        .moveTo(dividerX, yPos + 4)
+        .lineTo(dividerX, yPos + detailsBoxHeight - 4)
+        .stroke();
 
-      // Left Column - Invoice Info
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#2C3E50');
-      doc.text('Invoice Number:', 60, detailsBoxY + 10);
-      doc.fontSize(10).font('Helvetica').fillColor('#000000');
-      doc.text(invoice.invoiceNumber, 60, detailsBoxY + 25);
+      const col1 = layout.margin + 10;
+      const col2 = dividerX + 10;
+      const lineStep = s(13, layout.scale);
+      let dy = yPos + s(8, layout.scale);
 
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#2C3E50');
-      doc.text('Invoice Date:', 60, detailsBoxY + 45);
-      doc.fontSize(10).font('Helvetica').fillColor('#000000');
-      doc.text(new Date(invoice.createdAt).toLocaleDateString(), 60, detailsBoxY + 60);
+      doc.fontSize(layout.bodySize).font('Helvetica-Bold').fillColor('#2C3E50');
+      doc.text('Invoice Number:', col1, dy);
+      doc.font('Helvetica').fillColor('#000000');
+      doc.text(invoice.invoiceNumber, col1, dy + lineStep);
+      dy += lineStep * 2;
 
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#2C3E50');
-      doc.text('Due Date:', 60, detailsBoxY + 80);
-      doc.fontSize(10).font('Helvetica').fillColor('#000000');
-      doc.text(new Date(invoice.dueDate).toLocaleDateString(), 60, detailsBoxY + 95);
+      doc.font('Helvetica-Bold').fillColor('#2C3E50');
+      doc.text('Invoice Date:', col1, dy);
+      doc.font('Helvetica').fillColor('#000000');
+      doc.text(new Date(invoice.createdAt).toLocaleDateString(), col1, dy + lineStep);
+      dy += lineStep * 2;
 
-      // Right Column - Student Info
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#2C3E50');
-      doc.text('Bill To:', 320, detailsBoxY + 10);
-      doc.fontSize(10).font('Helvetica').fillColor('#000000');
-      doc.text(`${student.firstName} ${student.lastName}`, 320, detailsBoxY + 25);
-      doc.text(`Student Number: ${student.studentNumber}`, 320, detailsBoxY + 40);
+      doc.font('Helvetica-Bold').fillColor('#2C3E50');
+      doc.text('Due Date:', col1, dy);
+      doc.font('Helvetica').fillColor('#000000');
+      doc.text(new Date(invoice.dueDate).toLocaleDateString(), col1, dy + lineStep);
+
+      dy = yPos + s(8, layout.scale);
+      doc.font('Helvetica-Bold').fillColor('#2C3E50');
+      doc.text('Bill To:', col2, dy);
+      doc.font('Helvetica').fillColor('#000000');
+      doc.text(`${student.firstName} ${student.lastName}`, col2, dy + lineStep);
+      doc.text(`Student Number: ${student.studentNumber}`, col2, dy + lineStep * 2);
+      let studentLine = 3;
       if (student.classEntity) {
-        doc.text(`Class: ${student.classEntity.name}`, 320, detailsBoxY + 55);
+        doc.text(`Class: ${student.classEntity.name}`, col2, dy + lineStep * studentLine);
+        studentLine++;
       }
-      doc.text(`Term: ${invoice.term}`, 320, detailsBoxY + 70);
+      doc.text(`Term: ${invoice.term}`, col2, dy + lineStep * studentLine);
 
-      yPos = detailsBoxY + detailsBoxHeight + 15;
+      yPos += detailsBoxHeight + layout.gap;
+      doc.strokeColor('#CCCCCC').lineWidth(0.75);
+      doc.moveTo(layout.margin, yPos).lineTo(contentRight, yPos).stroke();
+      yPos += layout.gap;
 
-      // Horizontal divider line before items table
-      doc.strokeColor('#CCCCCC').lineWidth(1);
-      doc.moveTo(50, yPos).lineTo(545, yPos).stroke();
-      yPos += 15;
+      doc.fontSize(layout.sectionTitleSize).font('Helvetica-Bold').fillColor('#2C3E50');
+      doc.text('Invoice Details', layout.margin, yPos);
+      yPos += s(16, layout.scale);
 
-      // Items Table Section Header
-      doc.fontSize(14).font('Helvetica-Bold').fillColor('#2C3E50');
-      doc.text('Invoice Details', 50, yPos);
-      yPos += 25;
+      const tableStartX = layout.margin;
+      const tableEndX = contentRight;
+      const tableWidth = contentWidth;
+      const amountColumnWidth = s(95, layout.scale);
+      const amountColumnStartX = tableEndX - amountColumnWidth;
+      const rowHeight = layout.rowHeight;
 
-      // Table Header with improved styling
-      // A4 page width is 595pt, with 50pt margins = 495pt usable width
-      const tableStartX = 50;
-      const tableEndX = 545; // Keep within page margins (50pt left + 495pt content + 50pt right = 595pt)
-      const tableWidth = tableEndX - tableStartX; // 495pt
-      const amountColumnWidth = 120; // Width for amount column
-      const amountColumnStartX = tableEndX - amountColumnWidth; // Start position for amount column
-      const rowHeight = 28;
-
-      // Table header with border
       doc.rect(tableStartX, yPos, tableWidth, rowHeight)
         .fillColor('#4A90E2')
         .fill()
         .strokeColor('#003366')
-        .lineWidth(2)
+        .lineWidth(1)
         .stroke();
-
-      // Vertical divider in header
       doc.strokeColor('#FFFFFF').lineWidth(0.5);
-      doc.moveTo(amountColumnStartX, yPos + 2).lineTo(amountColumnStartX, yPos + rowHeight - 2).stroke();
-
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#FFFFFF');
-      doc.text('Description', tableStartX + 10, yPos + 9);
-      doc.text('Amount', amountColumnStartX, yPos + 9, { align: 'right', width: amountColumnWidth - 10 });
-
+      doc.moveTo(amountColumnStartX, yPos + 1).lineTo(amountColumnStartX, yPos + rowHeight - 1).stroke();
+      doc.fontSize(layout.tableHeaderSize).font('Helvetica-Bold').fillColor('#FFFFFF');
+      const headerTextY = yPos + (rowHeight - layout.tableHeaderSize) / 2 - 1;
+      doc.text('Description', tableStartX + 6, headerTextY);
+      doc.text('Amount', amountColumnStartX, headerTextY, {
+        align: 'right',
+        width: amountColumnWidth - 6,
+      });
       yPos += rowHeight;
 
-      // Ensure all numeric values are properly converted to numbers
-      const invoiceAmount = parseAmount(invoice.amount);
-      const previousBalance = parseAmount(invoice.previousBalance);
-      const paidAmount = parseAmount(invoice.paidAmount);
-      const balance = resolveInvoiceRemainingBalance(invoice);
-      const prepaidAmount = parseAmount(invoice.prepaidAmount);
-      const uniformTotal = parseAmount((invoice as any).uniformTotal);
-      const baseAmount = parseFloat((invoiceAmount - uniformTotal).toFixed(2));
-      // Note: uniformItems array is NOT used for display - only uniformTotal subtotal is shown
-      // Individual uniform items should NOT appear on the invoice
-
-      const renderTableRow = (label: string, amountValue: number, options: { fill?: string; textColor?: string } = {}) => {
+      const renderTableRow = (row: InvoiceTableRow) => {
         doc.rect(tableStartX, yPos, tableWidth, rowHeight)
-          .fillColor(options.fill || '#FFFFFF')
+          .fillColor(row.fill || '#FFFFFF')
           .fill()
           .strokeColor('#CCCCCC')
           .lineWidth(0.5)
           .stroke();
-
         doc.strokeColor('#E0E0E0').lineWidth(0.5);
-        doc.moveTo(amountColumnStartX, yPos + 2).lineTo(amountColumnStartX, yPos + rowHeight - 2).stroke();
-
-        doc.fontSize(10).font('Helvetica').fillColor(options.textColor || '#000000');
-        const maxDescriptionWidth = amountColumnStartX - tableStartX - 20;
-        doc.text(label, tableStartX + 10, yPos + 9, { width: maxDescriptionWidth, ellipsis: true });
-        doc.text(`${currencySymbol} ${amountValue.toFixed(2)}`, amountColumnStartX, yPos + 9, { align: 'right', width: amountColumnWidth - 10 });
+        doc.moveTo(amountColumnStartX, yPos + 1).lineTo(amountColumnStartX, yPos + rowHeight - 1).stroke();
+        doc.fontSize(layout.tableRowSize).font('Helvetica').fillColor(row.textColor || '#000000');
+        const textY = yPos + (rowHeight - layout.tableRowSize) / 2 - 1;
+        const maxDescriptionWidth = amountColumnStartX - tableStartX - 12;
+        doc.text(row.label, tableStartX + 6, textY, { width: maxDescriptionWidth, ellipsis: true });
+        doc.text(`${currencySymbol} ${row.amount.toFixed(2)}`, amountColumnStartX, textY, {
+          align: 'right',
+          width: amountColumnWidth - 6,
+        });
         yPos += rowHeight;
       };
 
-      if (previousBalance > 0) {
-        renderTableRow('Previous Balance (Outstanding Fees)', previousBalance);
+      for (const row of rows) {
+        renderTableRow(row);
       }
 
-      // Prefer line items saved from Finance → Manage → Fees when present
-      let displayedFeesTotal = 0;
-      const storedFeeLines = (invoice as any).feeLineItems;
-      if (Array.isArray(storedFeeLines) && storedFeeLines.length > 0) {
-        for (const row of storedFeeLines) {
-          const amt = parseAmount((row as any).amount);
-          const desc = String((row as any).description || 'Fee').trim() || 'Fee';
-          if (amt > 0.001) {
-            renderTableRow(desc, amt, { fill: '#F8F9FA' });
-            displayedFeesTotal += amt;
-          }
-        }
-      } else {
-      // Calculate fee breakdown from student data and settings
-      const feesSettings = settings?.feesSettings || {};
-      const { dayScholar: dayScholarTuitionFee, boarder: boarderTuitionFee } =
-        resolveTuitionFees(feesSettings);
-      const registrationFee = parseAmount(feesSettings.registrationFee);
-      const deskFee = parseAmount(feesSettings.deskFee);
-      const transportCost = parseAmount(feesSettings.transportCost);
-      const diningHallCost = parseAmount(feesSettings.diningHallCost);
-      const libraryFee = parseAmount(feesSettings.libraryFee);
-      const sportsFee = parseAmount(feesSettings.sportsFee);
-      const otherFees = feesSettings.otherFees || [];
-      const otherFeesTotal = otherFees.reduce((sum: number, fee: any) => sum + parseAmount(fee?.amount), 0);
-
-      // Calculate individual fees based on student status
-      let tuitionFee = 0;
-      if (!student.isStaffChild) {
-        tuitionFee = isBoarderStudent(student.studentType)
-          ? boarderTuitionFee
-          : dayScholarTuitionFee;
-      }
-
-      let transportFee = 0;
-      if (!isBoarderStudent(student.studentType) && student.usesTransport && !student.isStaffChild) {
-        transportFee = transportCost;
-      }
-
-      let diningHallFee = 0;
-      if (student.usesDiningHall) {
-        if (student.isStaffChild) {
-          diningHallFee = diningHallCost * 0.5; // 50% for staff children
-        } else {
-          diningHallFee = diningHallCost; // Full price for regular students
-        }
-      }
-
-      // Calculate other fees (desk, library, sports, other fees - only for non-staff children)
-      const otherFeesAmount = (student.isStaffChild ? 0 : (deskFee + libraryFee + sportsFee + otherFeesTotal));
-
-      // Track all displayed fees to calculate correct total
-
-      // Always display fees as separate line items based on student data
-      // These fees should be charged for every term (except desk fee and registration fee which are only once)
-      // Display registration fee: only on first invoice (registration) and only for non-staff children
-      // Check if this is likely the first invoice by checking if baseAmount includes registration fee
-      if (registrationFee > 0 && !student.isStaffChild) {
-        // Calculate expected fees without registration fee (but with desk fee since both are charged at registration)
-        const feesWithoutReg = tuitionFee + transportFee + diningHallFee + deskFee +
-          (student.isStaffChild ? 0 : (libraryFee + sportsFee + otherFeesTotal));
-        const expectedWithReg = feesWithoutReg + registrationFee;
-        
-        // Show registration fee if baseAmount is close to expectedWithReg (within 1 unit tolerance)
-        // This indicates registration fee is likely included in the invoice
-        if (Math.abs(baseAmount - expectedWithReg) <= Math.abs(baseAmount - feesWithoutReg) + 1) {
-          renderTableRow('Registration Fee', registrationFee, { fill: '#F8F9FA' });
-          displayedFeesTotal += registrationFee;
-        }
-      }
-
-      // Display tuition fee - always show if student is not a staff child
-      if (!student.isStaffChild) {
-        const tuitionLabel = isBoarderStudent(student.studentType)
-          ? 'Tuition Fee (Boarder)'
-          : 'Tuition Fee (Day Scholar)';
-        const tuitionToDisplay =
-          tuitionFee > 0
-            ? tuitionFee
-            : isBoarderStudent(student.studentType)
-              ? boarderTuitionFee
-              : dayScholarTuitionFee;
-        if (tuitionToDisplay > 0) {
-          renderTableRow(tuitionLabel, tuitionToDisplay, { fill: '#F8F9FA' });
-          displayedFeesTotal += tuitionToDisplay;
-        }
-      }
-
-      // Desk fee: only for non-staff children and only on first invoice (registration)
-      // Check if this is likely the first invoice by checking if baseAmount includes desk fee
-      // We'll show desk fee if the invoice amount suggests it's included
-      if (deskFee > 0 && !student.isStaffChild) {
-        // Calculate expected fees without desk fee
-        const feesWithoutDesk = tuitionFee + transportFee + diningHallFee + 
-          (student.isStaffChild ? 0 : (libraryFee + sportsFee + otherFeesTotal));
-        const expectedWithDesk = feesWithoutDesk + deskFee;
-        
-        // Show desk fee if baseAmount is close to expectedWithDesk (within 1 unit tolerance)
-        // This indicates desk fee is likely included in the invoice
-        if (Math.abs(baseAmount - expectedWithDesk) <= Math.abs(baseAmount - feesWithoutDesk) + 1) {
-          renderTableRow('Desk Fee', deskFee, { fill: '#F8F9FA' });
-          displayedFeesTotal += deskFee;
-        }
-      }
-
-      // Always show transport fee if student uses transport (for Day Scholars)
-      if (!isBoarderStudent(student.studentType) && student.usesTransport && !student.isStaffChild) {
-        const transportToDisplay = transportFee > 0 ? transportFee : transportCost;
-        if (transportToDisplay > 0) {
-          renderTableRow('Transport Fee', transportToDisplay, { fill: '#F8F9FA' });
-          displayedFeesTotal += transportToDisplay;
-        }
-      }
-
-      // Always show dining hall fee if student uses dining hall
-      if (student.usesDiningHall) {
-        const dhToDisplay = diningHallFee > 0 ? diningHallFee : (student.isStaffChild ? diningHallCost * 0.5 : diningHallCost);
-        if (dhToDisplay > 0) {
-          const dhLabel = student.isStaffChild ? 'Dining Hall (DH) Fee (50% - Staff Child)' : 'Dining Hall (DH) Fee';
-          renderTableRow(dhLabel, dhToDisplay, { fill: '#F8F9FA' });
-          displayedFeesTotal += dhToDisplay;
-        }
-      }
-
-      // Always show other fees for non-staff children (library, sports, other fees)
-      // These are charged every term
-      if (!student.isStaffChild) {
-        // Library fee - always show if configured
-        if (libraryFee > 0) {
-          renderTableRow('Library Fee', libraryFee, { fill: '#F8F9FA' });
-          displayedFeesTotal += libraryFee;
-        }
-        
-        // Sports fee - always show if configured (charged every term)
-        if (sportsFee > 0) {
-          renderTableRow('Sports Fee', sportsFee, { fill: '#F8F9FA' });
-          displayedFeesTotal += sportsFee;
-        }
-        
-        // Other fees - show each configured fee
-        if (otherFeesTotal > 0) {
-          otherFees.forEach((fee: any) => {
-            const feeAmount = parseAmount(fee.amount);
-            if (feeAmount > 0) {
-              renderTableRow(fee.name || 'Other Fee', feeAmount, { fill: '#F8F9FA' });
-              displayedFeesTotal += feeAmount;
-            }
-          });
-        }
-      }
-      }
-
-      // Invoice amount is set but nothing was rendered (e.g. legacy data or threshold mismatch) — show one line so PDF matches stored amount
-      if (displayedFeesTotal < 0.01 && baseAmount > 0.01) {
-        renderTableRow(
-          (invoice.description && String(invoice.description).trim()) || 'Fees for term',
-          baseAmount,
-          { fill: '#F8F9FA' }
-        );
-        displayedFeesTotal += baseAmount;
-      }
-
-      // Calculate what the total should be based on displayed fees
-      // If there's a discrepancy with baseAmount, it might be due to discounts or adjustments
-      const displayedFeesSum = displayedFeesTotal;
-      const remainingAmount = baseAmount - displayedFeesSum;
-      
-      // If there's a significant difference, show it as an adjustment
-      // But prioritize showing all applicable fees first
-      if (Math.abs(remainingAmount) > 0.01) {
-        if (remainingAmount > 0.01) {
-          // Additional amount not accounted for in standard fees
-          renderTableRow('Additional Fees', remainingAmount, { fill: '#F8F9FA' });
-          displayedFeesTotal += remainingAmount;
-        } else if (remainingAmount < -0.01) {
-          // Negative amount indicates a discount or adjustment
-          // We'll show it, but the displayed fees are what should be charged
-          // The final total will be correct
-        }
-      }
-
-      // Show each uniform line separately, then subtotal (distinct from tuition fees)
-      const uniformItemsList = Array.isArray((invoice as any).uniformItems) ? (invoice as any).uniformItems : [];
-      if (uniformItemsList.length > 0) {
-        for (const ui of uniformItemsList) {
-          const qty = Number(ui.quantity) || 1;
-          const label = `${ui.itemName || 'Uniform item'} (×${qty})`;
-          renderTableRow(label, parseAmount(ui.lineTotal), { fill: '#FFF7ED', textColor: '#9A3412' });
-        }
-        renderTableRow('School Uniform Subtotal', uniformTotal, { fill: '#FFE8CC', textColor: '#C05621' });
-      } else if (uniformTotal > 0) {
-        renderTableRow('School Uniform Subtotal', uniformTotal, { fill: '#FFE8CC', textColor: '#C05621' });
-      }
-
-      // Horizontal divider before total
-      yPos += 10;
-      doc.strokeColor('#4A90E2').lineWidth(1.5);
+      yPos += s(4, layout.scale);
+      doc.strokeColor('#4A90E2').lineWidth(1);
       doc.moveTo(tableStartX, yPos).lineTo(tableEndX, yPos).stroke();
-      yPos += 5;
+      yPos += s(3, layout.scale);
 
-      // Total Row with enhanced styling
-      doc.rect(tableStartX, yPos, tableWidth, rowHeight + 5)
+      const totalRowH = rowHeight + s(2, layout.scale);
+      doc.rect(tableStartX, yPos, tableWidth, totalRowH)
         .fillColor('#E8F4F8')
         .fill()
         .strokeColor('#4A90E2')
-        .lineWidth(2.5)
+        .lineWidth(1.5)
         .stroke();
+      doc.strokeColor('#4A90E2').lineWidth(0.75);
+      doc.moveTo(amountColumnStartX, yPos + 1).lineTo(amountColumnStartX, yPos + totalRowH - 1).stroke();
+      doc.fontSize(s(10, layout.scale)).font('Helvetica-Bold').fillColor('#003366');
+      const totalTextY = yPos + (totalRowH - s(10, layout.scale)) / 2 - 1;
+      doc.text('Total Amount Due', tableStartX + 6, totalTextY);
+      doc.text(`${currencySymbol} ${finalTotal.toFixed(2)}`, amountColumnStartX, totalTextY, {
+        align: 'right',
+        width: amountColumnWidth - 6,
+      });
+      yPos += totalRowH + layout.gap;
 
-      // Vertical divider in total row
-      doc.strokeColor('#4A90E2').lineWidth(1);
-      doc.moveTo(amountColumnStartX, yPos + 2).lineTo(amountColumnStartX, yPos + rowHeight + 3).stroke();
-
-      // Calculate total from displayed items: previousBalance + displayed fees + uniform - appliedPrepaidAmount
-      // displayedFeesTotal already includes all fees (tuition, desk, sports, etc.) but NOT uniform items
-      // Uniform items are displayed separately and their subtotal is shown
-      // So total = previousBalance + displayedFeesTotal + uniformTotal
-      const totalInvoiceAmount = previousBalance + displayedFeesTotal + uniformTotal;
-      const appliedPrepaidAmount = Math.min(prepaidAmount, totalInvoiceAmount);
-      const calculatedTotal = totalInvoiceAmount - appliedPrepaidAmount;
-      
-      // Always use the calculated total from displayed items as the source of truth
-      // This ensures the total matches what's actually displayed on the invoice
-      // The invoice.balance might be incorrect if fees weren't calculated properly during creation
-      // We calculate: previousBalance + displayedFeesTotal + uniformTotal - prepaidAmount
-      const finalTotal = calculatedTotal;
-      
-      doc.fontSize(13).font('Helvetica-Bold').fillColor('#003366');
-      doc.text('Total Amount Due', tableStartX + 10, yPos + 10);
-      doc.text(`${currencySymbol} ${finalTotal.toFixed(2)}`, amountColumnStartX, yPos + 10, { align: 'right', width: amountColumnWidth - 10 });
-      yPos += rowHeight + 15;
-
-      // Horizontal divider after total
-      doc.strokeColor('#CCCCCC').lineWidth(1);
-      doc.moveTo(tableStartX, yPos).lineTo(tableEndX, yPos).stroke();
-      yPos += 20;
-
-      // Payment Information Box
-      if (paidAmount > 0 || prepaidAmount > 0) {
-        const paymentBoxY = yPos;
-        const paymentBoxHeight = 60 + (prepaidAmount > 0 ? 15 : 0);
-        
-        doc.rect(50, paymentBoxY, 500, paymentBoxHeight)
+      if (hasPaymentBox) {
+        const paymentBoxHeight = s(48, layout.scale) + (prepaidAmount > 0 ? s(11, layout.scale) : 0);
+        doc.rect(layout.margin, yPos, contentWidth, paymentBoxHeight)
           .fillColor('#F0F8FF')
           .fill()
           .strokeColor('#4A90E2')
-          .lineWidth(1.5)
+          .lineWidth(1)
           .stroke();
-
-        doc.fontSize(12).font('Helvetica-Bold').fillColor('#2C3E50');
-        doc.text('Payment Information', 60, paymentBoxY + 10);
-        
-        // Horizontal divider in payment box
+        doc.fontSize(s(9, layout.scale)).font('Helvetica-Bold').fillColor('#2C3E50');
+        doc.text('Payment Information', layout.margin + 10, yPos + s(6, layout.scale));
         doc.strokeColor('#D0E0F0').lineWidth(0.5);
-        doc.moveTo(60, paymentBoxY + 25).lineTo(540, paymentBoxY + 25).stroke();
-
-        doc.fontSize(10).font('Helvetica').fillColor('#000000');
-        let infoY = paymentBoxY + 35;
-        
+        doc
+          .moveTo(layout.margin + 10, yPos + s(18, layout.scale))
+          .lineTo(contentRight - 10, yPos + s(18, layout.scale))
+          .stroke();
+        let infoY = yPos + s(24, layout.scale);
+        doc.fontSize(layout.bodySize).font('Helvetica').fillColor('#000000');
         if (paidAmount > 0) {
-          doc.text(`Amount Paid: ${currencySymbol} ${paidAmount.toFixed(2)}`, 60, infoY);
-          infoY += 15;
+          doc.text(`Amount Paid: ${currencySymbol} ${paidAmount.toFixed(2)}`, layout.margin + 10, infoY);
+          infoY += s(11, layout.scale);
         }
-        
         if (prepaidAmount > 0) {
-          doc.fontSize(10).font('Helvetica-Bold').fillColor('#1976D2');
-          doc.text(`Prepaid Amount (for future terms): ${currencySymbol} ${prepaidAmount.toFixed(2)}`, 60, infoY);
-          infoY += 15;
+          doc.font('Helvetica-Bold').fillColor('#1976D2');
+          doc.text(
+            `Prepaid Amount (for future terms): ${currencySymbol} ${prepaidAmount.toFixed(2)}`,
+            layout.margin + 10,
+            infoY
+          );
+          infoY += s(11, layout.scale);
         }
-        
-        doc.fontSize(10).font('Helvetica').fillColor('#000000');
-        doc.text(`Remaining Balance: ${currencySymbol} ${balance.toFixed(2)}`, 60, infoY);
-        yPos = paymentBoxY + paymentBoxHeight + 20;
+        doc.font('Helvetica').fillColor('#000000');
+        doc.text(`Remaining Balance: ${currencySymbol} ${balance.toFixed(2)}`, layout.margin + 10, infoY);
+        yPos += paymentBoxHeight + layout.gap;
       }
 
-      // Status Box
-      const statusBoxY = yPos;
-      doc.rect(50, statusBoxY, 500, 30)
+      const statusBoxH = s(22, layout.scale);
+      doc.rect(layout.margin, yPos, contentWidth, statusBoxH)
         .fillColor('#FFFFFF')
         .fill()
         .strokeColor('#DEE2E6')
-        .lineWidth(1)
+        .lineWidth(0.75)
         .stroke();
-
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#2C3E50');
-      doc.text('Status:', 60, statusBoxY + 10);
-      doc.fontSize(10).font('Helvetica').fillColor('#000000');
+      doc.fontSize(s(9, layout.scale)).font('Helvetica-Bold').fillColor('#2C3E50');
+      const statusTextY = yPos + (statusBoxH - s(9, layout.scale)) / 2 - 1;
+      doc.text('Status:', layout.margin + 10, statusTextY);
+      doc.font('Helvetica').fillColor('#000000');
       const statusText = invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1);
-      doc.text(statusText, 120, statusBoxY + 10);
-      yPos = statusBoxY + 50;
+      doc.text(statusText, layout.margin + 55, statusTextY);
+      yPos += statusBoxH;
 
-      // Footer with divider line
-      const pageHeight = doc.page.height;
-      const footerY = pageHeight - 50;
-      
-      // Horizontal divider line before footer
+      const footerY = PDF_PAGE.height - layout.margin - s(12, layout.scale);
+      if (hasBanking) {
+        const estimatedBanking = s(98, layout.scale);
+        const bankingTop = footerY - estimatedBanking - layout.gap;
+        drawBankingDetailsSection(doc, settings, bankingTop, layout);
+      }
+
       doc.strokeColor('#CCCCCC').lineWidth(0.5);
-      doc.moveTo(50, footerY).lineTo(545, footerY).stroke();
-      
-      doc.fontSize(8).font('Helvetica').fillColor('#666666');
-      doc.text(
-        `Generated on: ${new Date().toLocaleString()}`,
-        50,
-        footerY + 10,
-        { align: 'center', width: 500 }
-      );
+      doc.moveTo(layout.margin, footerY).lineTo(contentRight, footerY).stroke();
+      doc.fontSize(s(7, layout.scale)).font('Helvetica').fillColor('#666666');
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, layout.margin, footerY + s(4, layout.scale), {
+        align: 'center',
+        width: contentWidth,
+      });
 
       doc.end();
     } catch (error) {
@@ -511,4 +593,3 @@ export function createInvoicePDF(
     }
   });
 }
-

@@ -57,13 +57,13 @@ export class InvoiceStatementsComponent implements OnInit {
   fieldErrors: any = {};
   touchedFields: Set<string> = new Set();
 
-  // PDF Viewer properties
-  showPdfViewer = false;
-  pdfUrl: string | null = null;
-  safePdfUrl: SafeResourceUrl | null = null;
+  // PDF preview (hosted viewer)
+  showInvoicePdfPreview = false;
+  invoicePdfBlob: Blob | null = null;
+  invoicePdfFilename = '';
+  invoicePdfDocumentTitle = 'Invoice statement';
   loadingPdf = false;
-  currentInvoiceFilename: string = '';
-  currentInvoiceNumber: string = '';
+  currentInvoiceNumber = '';
 
   constructor(
     public financeService: FinanceService,
@@ -353,39 +353,22 @@ export class InvoiceStatementsComponent implements OnInit {
       event.stopPropagation();
     }
     
-    console.log('viewInvoicePDF called for invoice:', invoiceId);
-    
-    // Find the invoice to get its number
     const invoice = this.invoices.find(inv => inv.id === invoiceId);
     this.currentInvoiceNumber = invoice?.invoiceNumber || 'Invoice';
-    
-    // Show the modal immediately - this is critical
-    this.showPdfViewer = true;
+
     this.loadingPdf = true;
     this.error = '';
-    
-    console.log('Modal should be visible now. showPdfViewer:', this.showPdfViewer);
-    
+
     this.financeService.getInvoicePDF(invoiceId).subscribe({
       next: (result: { blob: Blob; filename: string }) => {
-        console.log('PDF received, creating preview URL');
-        
-        // Clean up previous URL if exists
-        if (this.pdfUrl) {
-          window.URL.revokeObjectURL(this.pdfUrl);
-        }
-        
-        // Create blob URL for preview (not download)
-        this.pdfUrl = window.URL.createObjectURL(result.blob);
-        this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
-        this.currentInvoiceFilename = result.filename;
+        this.invoicePdfBlob = result.blob;
+        this.invoicePdfFilename = result.filename || `Invoice-${this.currentInvoiceNumber}.pdf`;
+        this.invoicePdfDocumentTitle = `Invoice - ${this.currentInvoiceNumber}`;
+        this.showInvoicePdfPreview = true;
         this.loadingPdf = false;
-        
-        console.log('PDF preview ready. URL created:', this.pdfUrl);
       },
       error: (err: any) => {
         this.loadingPdf = false;
-        this.showPdfViewer = false;
         console.error('Error loading invoice PDF:', err);
         if (err.status === 401) {
           this.error = 'Authentication required. Please log in again.';
@@ -397,28 +380,10 @@ export class InvoiceStatementsComponent implements OnInit {
     });
   }
 
-  downloadInvoicePDF() {
-    if (!this.pdfUrl || !this.currentInvoiceFilename) {
-      this.error = 'PDF not available for download';
-      return;
-    }
-
-    const link = document.createElement('a');
-    link.href = this.pdfUrl;
-    link.download = this.currentInvoiceFilename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  closePdfViewer() {
-    this.showPdfViewer = false;
-    if (this.pdfUrl) {
-      window.URL.revokeObjectURL(this.pdfUrl);
-      this.pdfUrl = null;
-    }
-    this.safePdfUrl = null;
-    this.currentInvoiceFilename = '';
+  closeInvoicePdfPreview(): void {
+    this.showInvoicePdfPreview = false;
+    this.invoicePdfBlob = null;
+    this.invoicePdfFilename = '';
     this.currentInvoiceNumber = '';
   }
 
