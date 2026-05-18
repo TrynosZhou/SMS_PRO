@@ -1,4 +1,5 @@
 import { Component, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../services/finance.service';
 import { StudentService } from '../../../services/student.service';
@@ -43,7 +44,8 @@ export class BalanceEnquiryComponent implements OnInit, OnDestroy {
     private financeService: FinanceService,
     private studentService: StudentService,
     private currencyService: CurrencyService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) {
     this.currencySymbol = this.currencyService.current;
   }
@@ -74,6 +76,54 @@ export class BalanceEnquiryComponent implements OnInit, OnDestroy {
     if (!Number.isFinite(bal)) return 'due';
     if (bal <= 0.01) return 'clear';
     return 'due';
+  }
+
+  balanceStatusLabel(): string {
+    const tone = this.balanceTone();
+    if (tone === 'clear') return 'Paid up';
+    if (tone === 'due') return 'Balance due';
+    return '—';
+  }
+
+  lastInvoicePaid(): number {
+    return this.num(this.studentData?.lastInvoicePaidAmount);
+  }
+
+  lastInvoiceAmount(): number {
+    return this.num(this.studentData?.lastInvoiceAmount);
+  }
+
+  broughtForward(): number {
+    return this.num(this.studentData?.lastInvoicePreviousBalance);
+  }
+
+  goToRecordPayment(): void {
+    const id =
+      this.studentData?.studentNumber ||
+      this.studentData?.studentId ||
+      this.searchValue.trim();
+    if (!id) return;
+    void this.router.navigate(['/record-payment'], {
+      queryParams: { studentId: id },
+    });
+  }
+
+  goToBilling(): void {
+    void this.router.navigate(['/billing']);
+  }
+
+  async copyBalanceSummary(): Promise<void> {
+    if (!this.studentData) return;
+    const lines = [
+      `Student: ${this.studentData.fullName || '—'}`,
+      `Number: ${this.studentData.studentNumber || '—'}`,
+      `Balance: ${this.currencySymbol} ${this.formatCurrency(this.num(this.studentData.balance))}`,
+    ];
+    if (this.studentData.lastInvoiceNumber) {
+      lines.push(`Invoice: ${this.studentData.lastInvoiceNumber}`);
+      lines.push(`Term: ${this.studentData.lastInvoiceTerm || '—'}`);
+    }
+    await this.copyText('Summary', lines.join('\n'));
   }
 
   clear(): void {

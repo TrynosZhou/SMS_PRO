@@ -219,7 +219,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Build the left sidebar menu based on the current user's role. */
   private buildNavMenu() {
     const items: NavItem[] = [
-      { id: 'dashboard', label: 'Dashboard', icon: '📊', route: '/dashboard' }
+      { id: 'dashboard', label: 'Dashboard', icon: '🏠', route: '/dashboard' }
     ];
 
     if (this.isAdmin()) {
@@ -316,13 +316,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         {
           id: 'timetable', label: 'Timetable', icon: '📅',
           children: [
-            { label: 'Configure', icon: '⚙️', route: '/timetable/manage/config' },
+            { label: 'Configure', icon: '⚙️', route: '/timetable/config' },
             { label: 'Subject Periods', icon: '⏱️', route: '/subject-periods' },
-            { label: 'Assign Subjects to Classes', icon: '📚', route: '/assign-subject' },
-            { label: 'Assign Subjects to Teachers', icon: '👨‍🏫', route: '/teacher_subject' },
-            { label: 'Assign Teachers to Classes', icon: '🔗', route: '/assign-teachers' },
-            { label: 'Assign Classes to Teachers', icon: '🎯', route: '/assign-classes' },
-            { label: 'Allocate Class Teachers', icon: '🧑‍🏫', route: '/allocate_class' },
+            { label: 'Subjects per Class', icon: '📚', route: '/assign-subject' },
+            { label: 'Teaching Load (by Teacher)', icon: '👨‍🏫', route: '/teacher_subject' },
+            { label: 'Teaching Load (by Class)', icon: '🔗', route: '/assign-teachers' },
             { label: 'Class Teachers', icon: '📋', route: '/class-teachers' },
             { label: 'Generate Timetable', icon: '🗓️', route: '/view' },
             { label: 'View Timetable', icon: '👁️', route: '/view_timetable' },
@@ -1435,7 +1433,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         { label: 'Mark Register', icon: '✅', route: '/mark-register', group: 'Actions', keywords: 'attendance' },
         { label: 'Attendance Reports', icon: '📋', route: '/attendance-reports', group: 'Reports' },
         { label: 'Reports Hub', icon: '📊', route: '/reports/manage', group: 'Reports' },
-        { label: 'Timetable', icon: '📅', route: '/timetable/manage', group: 'Modules' },
+        { label: 'Timetable', icon: '📅', route: '/timetable/config', group: 'Modules' },
         { label: 'Messages', icon: '💬', route: '/communication_manage', group: 'Modules' },
         { label: 'Settings', icon: '⚙️', route: '/settings', group: 'Modules' },
         { label: 'Academic Settings', icon: '🎓', route: '/academic-settings', group: 'Modules' },

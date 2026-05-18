@@ -170,29 +170,36 @@
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
 }
 
-.ms-add-btn {
-  background: linear-gradient(120deg, #7a5cff, #5b3edb);
+.ms-add-fab {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #7a5cff, #5b3edb);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 12px 22px;
-  font-size: 0.95rem;
-  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  letter-spacing: 0.2px;
-  box-shadow: 0 6px 16px rgba(91, 62, 219, 0.35);
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(91, 62, 219, 0.4);
   transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
-.ms-add-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 22px rgba(91, 62, 219, 0.45);
+.ms-add-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(91, 62, 219, 0.5);
+  color: #fff;
 }
-.ms-add-ico {
-  font-size: 1.15rem;
-  line-height: 1;
+.ms-add-fab:focus-visible {
+  outline: 2px solid #7a5cff;
+  outline-offset: 3px;
+}
+.ms-add-fab-ico {
+  width: 26px;
+  height: 26px;
+  display: block;
+  flex-shrink: 0;
 }
 
 /* ── Table card ─────────────────────────────────────────────────── */
@@ -394,8 +401,8 @@
   .ms-field-select {
     flex: 1 1 auto;
   }
-  .ms-add-btn {
-    justify-content: center;
+  .ms-add-fab {
+    align-self: flex-end;
   }
   .ms-table thead {
     display: none;

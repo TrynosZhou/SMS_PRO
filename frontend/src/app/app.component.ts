@@ -290,7 +290,7 @@ export class AppComponent implements OnInit {
       return;
     }
 
-    items.push({ id: 'dashboard', label: 'Dashboard', icon: '📊', route: '/dashboard' });
+    items.push({ id: 'dashboard', label: 'Dashboard', icon: '🏠', route: '/dashboard' });
 
     if (this.isAdmin()) {
       items.push(
@@ -386,13 +386,11 @@ export class AppComponent implements OnInit {
         {
           id: 'timetable', label: 'Timetable', icon: '📅',
           children: [
-            { label: 'Configure', icon: '⚙️', route: '/timetable/manage/config' },
+            { label: 'Configure', icon: '⚙️', route: '/timetable/config' },
             { label: 'Subject Periods', icon: '⏱️', route: '/subject-periods' },
-            { label: 'Assign Subjects to Classes', icon: '📚', route: '/assign-subject' },
-            { label: 'Assign Subjects to Teachers', icon: '👨‍🏫', route: '/teacher_subject' },
-            { label: 'Assign Teachers to Classes', icon: '🔗', route: '/assign-teachers' },
-            { label: 'Assign Classes to Teachers', icon: '🎯', route: '/assign-classes' },
-            { label: 'Allocate Class Teachers', icon: '🧑‍🏫', route: '/allocate_class' },
+            { label: 'Subjects per Class', icon: '📚', route: '/assign-subject' },
+            { label: 'Teaching Load (by Teacher)', icon: '👨‍🏫', route: '/teacher_subject' },
+            { label: 'Teaching Load (by Class)', icon: '🔗', route: '/assign-teachers' },
             { label: 'Class Teachers', icon: '📋', route: '/class-teachers' },
             { label: 'Generate Timetable', icon: '🗓️', route: '/view' },
             { label: 'View Timetable', icon: '👁️', route: '/view_timetable' },

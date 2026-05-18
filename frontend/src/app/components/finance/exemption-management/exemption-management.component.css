@@ -1,7 +1,15 @@
 .ex-wrap {
-  max-width: 720px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 0.25rem 0 1.5rem;
+  padding: 1rem 1rem 1.5rem;
+}
+
+.ex-shell {
+  border: 6.75px solid #1565c0;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 1.15rem 1.25rem 1.35rem;
+  box-shadow: 0 8px 32px rgba(21, 101, 192, 0.1);
 }
 
 .ex-hero {

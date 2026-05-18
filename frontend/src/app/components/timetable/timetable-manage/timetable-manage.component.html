@@ -1,43 +1,22 @@
 <div class="tm-wrap">
-  <header class="tm-header">
-    <h1 class="tm-title">Timetable Manager</h1>
-    <p class="tm-sub">View schedules and configure timetable settings</p>
-  </header>
-
-  <nav class="tm-tabs" aria-label="Timetable manager sections">
-    <a routerLink="/timetable/manage/config" routerLinkActive="active" class="tm-tab">
-      <span class="tm-tab-ico" aria-hidden="true">⚙️</span>
-      Configuration
-    </a>
-    <a routerLink="/view" routerLinkActive="active" class="tm-tab">
-      <span class="tm-tab-ico" aria-hidden="true">🗓️</span>
-      Generate TimeTable
-    </a>
-    <a routerLink="/manual" routerLinkActive="active" class="tm-tab">
-      <span class="tm-tab-ico" aria-hidden="true">↔️</span>
-      Manual Adjustments
-    </a>
-    <a routerLink="/view_timetable" routerLinkActive="active" class="tm-tab">
-      <span class="tm-tab-ico" aria-hidden="true">👁️</span>
-      View Timetable
-    </a>
-    <button
-      type="button"
-      class="tm-tab tm-tab--reset"
-      (click)="openResetDialog()"
-      [disabled]="resetInProgress"
-      title="Permanently delete all teaching loads and class–teacher assignments"
-    >
-      <span class="tm-tab-ico" aria-hidden="true">🗑️</span>
-      Clear Timetable Data
-    </button>
-  </nav>
-
   <div class="tm-alert tm-alert--ok" *ngIf="resetSuccess" role="status">{{ resetSuccess }}</div>
 
   <div class="tm-outlet">
     <router-outlet></router-outlet>
   </div>
+
+  <footer class="tm-footer">
+    <button
+      type="button"
+      class="tm-clear-btn"
+      (click)="openResetDialog()"
+      [disabled]="resetInProgress"
+      title="Permanently delete all teaching loads and class–teacher assignments"
+    >
+      <span class="tm-clear-ico" aria-hidden="true">🗑️</span>
+      Clear Timetable Data
+    </button>
+  </footer>
 
   <!-- ── Clear Timetable Data modal ──────────────────────────────────── -->
   <div class="tm-reset-overlay" *ngIf="showResetDialog" (click)="closeResetDialog()" role="presentation">

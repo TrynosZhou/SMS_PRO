@@ -14,7 +14,7 @@ export function teachersManageNav(router: Router) {
     /** Full-page add teacher: `/teachers/add-new`. */
     addNew: '/teachers/add-new',
     assignClasses: '/assign-classes',
-    allocateClass: '/allocate_class',
+    allocateClass: '/assign-classes',
     recordBook: m ? '/teachers/manage/record-book' : '/admin/teacher-record-book',
     teacherSubjectAssignment: '/teacher_subject',
     teacherSubjectContact: (id: string) => `/teachers/manage/teacher_subject/contact/${id}`,

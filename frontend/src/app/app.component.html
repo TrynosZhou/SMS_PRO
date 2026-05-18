@@ -66,7 +66,7 @@
         >
           <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
           <span class="db-nav-label">{{ item.label }}</span>
-          <span class="db-nav-chev" aria-hidden="true">›</span>
+          <span class="db-nav-chev" aria-hidden="true">▼</span>
         </button>
         <ul class="db-nav-sub" *ngIf="isSubmenuOpen(item.id)">
           <li *ngFor="let child of item.children">

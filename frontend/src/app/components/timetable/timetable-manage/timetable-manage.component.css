@@ -1,4 +1,6 @@
 .tm-wrap {
+  display: flex;
+  flex-direction: column;
   min-height: calc(100vh - 48px);
   padding: 1rem 1.25rem 2rem;
   max-width: 1600px;
@@ -66,32 +68,48 @@
 }
 
 .tm-outlet {
-  background: #fafafa;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  padding: 0.75rem;
-  min-height: 280px;
+  flex: 1;
+  min-height: 0;
 }
 
-/* Danger/reset tab — appears after the nav links, push to the right end */
-.tm-tab--reset {
-  margin-left: auto;
-  background: transparent;
-  color: #c62828;
-  border-color: #ef9a9a;
-  cursor: pointer;
+.tm-footer {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tm-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
   font-family: inherit;
+  color: #c62828;
+  background: #fff;
+  border: 1px solid #ef9a9a;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.tm-tab--reset:hover:not(:disabled) {
+.tm-clear-btn:hover:not(:disabled) {
   background: #ffebee;
   border-color: #c62828;
   color: #b71c1c;
 }
 
-.tm-tab--reset:disabled {
+.tm-clear-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.tm-clear-ico {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 /* Success banner */

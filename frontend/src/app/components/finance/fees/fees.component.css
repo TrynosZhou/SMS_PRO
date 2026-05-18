@@ -84,7 +84,8 @@
 
 .fs-mgmt-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-.fs-btn-add {
+.fs-btn-add,
+.fs-btn-cat {
   background: #1a78e6;
   color: #fff;
   border: none;
@@ -93,22 +94,13 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .2s;
+  transition: background 0.2s;
 }
-.fs-btn-add:hover { background: #1460c0; }
 
-.fs-btn-cat {
-  background: #fff;
-  color: #1a78e6;
-  border: 1.5px solid #1a78e6;
-  border-radius: 6px;
-  padding: 7px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .2s;
+.fs-btn-add:hover,
+.fs-btn-cat:hover {
+  background: #1460c0;
 }
-.fs-btn-cat:hover { background: #e8f1fc; }
 
 /* ── Loading / empty ─────────────────────────────────────────────────────── */
 .fs-loading, .fs-empty {

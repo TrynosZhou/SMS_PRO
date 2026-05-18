@@ -40,31 +40,37 @@
       </header>
 
       <div class="tr-grid">
-        <div class="tr-field" [class.has-value]="!!selectedTerm">
-          <select id="trTerm" class="tr-input" [(ngModel)]="selectedTerm" name="term">
-            <option value="" disabled hidden></option>
-            <option *ngFor="let t of availableTerms" [value]="t">{{ t }}</option>
-          </select>
+        <div class="tr-field-group">
           <label for="trTerm" class="tr-label">Choose Term<span class="tr-req">*</span></label>
-          <span class="tr-caret" aria-hidden="true">▾</span>
+          <div class="tr-field">
+            <select id="trTerm" class="tr-input" [(ngModel)]="selectedTerm" name="term">
+              <option value="" disabled>Select term</option>
+              <option *ngFor="let t of availableTerms" [value]="t">{{ t }}</option>
+            </select>
+            <span class="tr-caret" aria-hidden="true">▾</span>
+          </div>
         </div>
 
-        <div class="tr-field" [class.has-value]="!!selectedClass">
-          <select id="trClass" class="tr-input" [(ngModel)]="selectedClass" name="class">
-            <option value="" disabled hidden></option>
-            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
-          </select>
+        <div class="tr-field-group">
           <label for="trClass" class="tr-label">Choose Class<span class="tr-req">*</span></label>
-          <span class="tr-caret" aria-hidden="true">▾</span>
+          <div class="tr-field">
+            <select id="trClass" class="tr-input" [(ngModel)]="selectedClass" name="class">
+              <option value="" disabled>Select class</option>
+              <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+            </select>
+            <span class="tr-caret" aria-hidden="true">▾</span>
+          </div>
         </div>
 
-        <div class="tr-field" [class.has-value]="!!selectedExamType">
-          <select id="trExamType" class="tr-input" [(ngModel)]="selectedExamType" name="examType">
-            <option value="" disabled hidden></option>
-            <option *ngFor="let e of examTypes" [value]="e.value">{{ e.label }}</option>
-          </select>
+        <div class="tr-field-group">
           <label for="trExamType" class="tr-label">Exam Type<span class="tr-req">*</span></label>
-          <span class="tr-caret" aria-hidden="true">▾</span>
+          <div class="tr-field">
+            <select id="trExamType" class="tr-input" [(ngModel)]="selectedExamType" name="examType">
+              <option value="" disabled>Select exam type</option>
+              <option *ngFor="let e of examTypes" [value]="e.value">{{ e.label }}</option>
+            </select>
+            <span class="tr-caret" aria-hidden="true">▾</span>
+          </div>
         </div>
       </div>
 
@@ -237,13 +243,15 @@
       </header>
 
       <div class="tr-subject-row">
-        <div class="tr-field" [class.has-value]="!!selectedSubjectId">
-          <select id="trSubject" class="tr-input" [(ngModel)]="selectedSubjectId" name="subjectId">
-            <option value="" disabled hidden></option>
-            <option *ngFor="let s of subjects" [value]="s.id">{{ s.name }}</option>
-          </select>
+        <div class="tr-field-group tr-field-group--inline">
           <label for="trSubject" class="tr-label">Select Subject</label>
-          <span class="tr-caret" aria-hidden="true">▾</span>
+          <div class="tr-field">
+            <select id="trSubject" class="tr-input" [(ngModel)]="selectedSubjectId" name="subjectId">
+              <option value="" disabled>Select subject</option>
+              <option *ngFor="let s of subjects" [value]="s.id">{{ s.name }}</option>
+            </select>
+            <span class="tr-caret" aria-hidden="true">▾</span>
+          </div>
         </div>
         <button type="button" class="tr-btn tr-btn-primary" (click)="fetchSubjectAnalysis()" [disabled]="subjectLoading || !selectedSubjectId">
           {{ subjectLoading ? 'Loading...' : 'Analyze Subject' }}

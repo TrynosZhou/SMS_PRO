@@ -12,8 +12,10 @@
     </button>
   </div>
 
+  <div class="be-shell">
   <header class="be-hero">
     <div class="be-hero-copy">
+      <span class="be-eyebrow">Finance</span>
       <h1 class="be-title">Balance enquiry</h1>
       <p class="be-lead">
         Look up a student’s latest fee balance from billing. Search by
@@ -22,11 +24,51 @@
         >.
       </p>
     </div>
-    <div class="be-hero-badge" *ngIf="currencySymbol">
-      <span class="be-badge-label">Currency</span>
-      <span class="be-badge-value">{{ currencySymbol }}</span>
+    <div class="be-hero-aside">
+      <div class="be-hero-badge" *ngIf="currencySymbol">
+        <span class="be-badge-label">Currency</span>
+        <span class="be-badge-value">{{ currencySymbol }}</span>
+      </div>
+      <span
+        class="be-status-pill"
+        *ngIf="studentData && !loading"
+        [class.be-status-pill--clear]="balanceTone() === 'clear'"
+        [class.be-status-pill--due]="balanceTone() === 'due'">
+        {{ balanceStatusLabel() }}
+      </span>
     </div>
   </header>
+
+  <div class="be-features" aria-label="Quick tips">
+    <div class="be-feature-card">
+      <span class="be-feature-ico" aria-hidden="true">⌨️</span>
+      <div>
+        <strong>Press Enter</strong>
+        <span>to search from the box below</span>
+      </div>
+    </div>
+    <div class="be-feature-card">
+      <span class="be-feature-ico" aria-hidden="true">📋</span>
+      <div>
+        <strong>Copy details</strong>
+        <span>number, ID, or full summary</span>
+      </div>
+    </div>
+    <div class="be-feature-card" *ngIf="canSearchByName()">
+      <span class="be-feature-ico" aria-hidden="true">👥</span>
+      <div>
+        <strong>Name search</strong>
+        <span>choose the right student when several match</span>
+      </div>
+    </div>
+    <div class="be-feature-card" *ngIf="!canSearchByName()">
+      <span class="be-feature-ico" aria-hidden="true">🧾</span>
+      <div>
+        <strong>Invoice PDF</strong>
+        <span>preview or download when on file</span>
+      </div>
+    </div>
+  </div>
 
   <section class="be-card be-search-card" aria-label="Search">
     <div class="be-search-wrap">
@@ -147,6 +189,33 @@
       <p class="be-balance-tag be-balance-tag-warn" *ngIf="balanceTone() === 'due'">Amount still due on the latest invoice.</p>
     </div>
 
+    <div class="be-stats" *ngIf="studentData.lastInvoiceNumber">
+      <div class="be-stat-card">
+        <span class="be-stat-label">Brought forward</span>
+        <span class="be-stat-value">{{ currencySymbol }} {{ formatCurrency(broughtForward()) }}</span>
+      </div>
+      <div class="be-stat-card">
+        <span class="be-stat-label">This invoice</span>
+        <span class="be-stat-value">{{ currencySymbol }} {{ formatCurrency(lastInvoiceAmount()) }}</span>
+      </div>
+      <div class="be-stat-card be-stat-card--accent">
+        <span class="be-stat-label">Paid on invoice</span>
+        <span class="be-stat-value">{{ currencySymbol }} {{ formatCurrency(lastInvoicePaid()) }}</span>
+      </div>
+    </div>
+
+    <div class="be-quick-actions">
+      <button type="button" class="be-btn be-btn-secondary" (click)="copyBalanceSummary()">
+        Copy summary
+      </button>
+      <button type="button" class="be-btn be-btn-secondary" (click)="goToRecordPayment()">
+        Record payment
+      </button>
+      <button type="button" class="be-btn be-btn-ghost" (click)="goToBilling()">
+        Open billing
+      </button>
+    </div>
+
     <div class="be-card be-detail-card">
       <h2 class="be-section-title">Student</h2>
       <div class="be-kv-grid">
@@ -252,6 +321,7 @@
     </div>
     <p class="be-invoice-footer-error" *ngIf="invoicePdfError" role="alert">{{ invoicePdfError }}</p>
   </footer>
+  </div>
 </div>
 
 <app-invoice-pdf-preview

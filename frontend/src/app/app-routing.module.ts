@@ -10,7 +10,6 @@ import { TeacherFormComponent } from './components/teachers/teacher-form/teacher
 import { TeachersManageComponent } from './components/teachers/teachers-manage/teachers-manage.component';
 import { AddTeacherPageComponent } from './components/teachers/add-teacher-page/add-teacher-page.component';
 import { AssignClassesComponent } from './components/teachers/assign-classes/assign-classes.component';
-import { AllocateClassComponent } from './components/teachers/allocate-class/allocate-class.component';
 import { TeacherSubjectAssignmentComponent } from './components/teachers/teacher-subject-assignment/teacher-subject-assignment.component';
 import { TeacherSubjectContactComponent } from './components/teachers/teacher-subject-contact/teacher-subject-contact.component';
 import { ExamListComponent } from './components/exams/exam-list/exam-list.component';
@@ -237,7 +236,8 @@ const routes: Routes = [
   { path: 'teachers/allocate_class', pathMatch: 'full', redirectTo: '/allocate_class' },
   { path: 'assign-classes', component: AssignClassesComponent, canActivate: [AuthGuard] },
   { path: 'teacher_subject', component: TeacherSubjectAssignmentComponent, canActivate: [AuthGuard] },
-  { path: 'allocate_class', component: AllocateClassComponent, canActivate: [AuthGuard] },
+  /** Legacy URL — same screen as assign-classes (preserves ?teacherId= deep links). */
+  { path: 'allocate_class', component: AssignClassesComponent, canActivate: [AuthGuard] },
   { path: 'parents', component: ParentManagementComponent, canActivate: [AuthGuard] },
   { path: 'departments', component: DepartmentsComponent, canActivate: [AuthGuard] },
   {
@@ -534,19 +534,16 @@ const routes: Routes = [
   { path: 'reports/transport-services', component: TransportServicesReportComponent, canActivate: [AuthGuard] },
   { path: 'reports/student-id-cards', component: StudentIdCardsComponent, canActivate: [AuthGuard] },
   {
-    path: 'timetable/manage',
+    path: 'timetable/config',
     component: TimetableManageComponent,
     canActivate: [AuthGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: '/view' },
-      { path: 'config', component: TimetableConfigComponent, canActivate: [AuthGuard] },
-      { path: 'manual', pathMatch: 'full', redirectTo: '/manual' },
-      { path: 'view_timetable', pathMatch: 'full', redirectTo: '/view_timetable' },
-      { path: 'view', pathMatch: 'full', redirectTo: '/view' },
+      { path: '', component: TimetableConfigComponent, canActivate: [AuthGuard] },
     ],
   },
-  { path: 'timetable_manage', redirectTo: 'timetable/manage', pathMatch: 'full' },
-  { path: 'timetable/config', component: TimetableConfigComponent, canActivate: [AuthGuard] },
+  { path: 'timetable/manage/config', redirectTo: '/timetable/config', pathMatch: 'full' },
+  { path: 'timetable/manage', redirectTo: '/timetable/config', pathMatch: 'full' },
+  { path: 'timetable_manage', redirectTo: '/timetable/config', pathMatch: 'full' },
   { path: 'timetable', component: TimetableViewComponent, canActivate: [AuthGuard] },
   { path: 'manual', component: TimetableManualAdjustmentsComponent, canActivate: [AuthGuard] },
   { path: 'view_timetable', component: TimetableViewTimetableComponent, canActivate: [AuthGuard] },

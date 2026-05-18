@@ -92,7 +92,7 @@
                     <span class="db-nav-ico" aria-hidden="true">{{ item.icon }}</span>
                     <span class="db-nav-label">{{ item.label }}</span>
                     <span class="db-nav-badge" *ngIf="item.children.length > 0">{{ item.children.length }}</span>
-                    <span class="db-nav-chev" aria-hidden="true">&gt;</span>
+                    <span class="db-nav-chev" aria-hidden="true">▼</span>
                   </button>
                   <ul class="db-nav-sub" *ngIf="isSubmenuOpen(item.id)">
                     <li *ngFor="let child of visibleChildren(item)">
@@ -464,8 +464,8 @@
             <button class="db-mod-fav" type="button" (click)="toggleFavorite('/inventory/manage', $event)" [class.db-mod-fav--on]="isFavorite('/inventory/manage')" aria-label="Pin">★</button>
             <span class="db-mod-ico">📦</span><span class="db-mod-lbl">Inventory Manager</span>
           </a>
-          <a routerLink="/timetable/manage" class="db-mod-tile" style="--mc:#06b6d4" [class.db-mod-tile--fav]="isFavorite('/timetable/manage')">
-            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/timetable/manage', $event)" [class.db-mod-fav--on]="isFavorite('/timetable/manage')" aria-label="Pin">★</button>
+          <a routerLink="/timetable/config" class="db-mod-tile" style="--mc:#06b6d4" [class.db-mod-tile--fav]="isFavorite('/timetable/config')">
+            <button class="db-mod-fav" type="button" (click)="toggleFavorite('/timetable/config', $event)" [class.db-mod-fav--on]="isFavorite('/timetable/config')" aria-label="Pin">★</button>
             <span class="db-mod-ico">📅</span><span class="db-mod-lbl">Timetable</span>
           </a>
           <a routerLink="/communication_manage" class="db-mod-tile" style="--mc:#ec4899" [class.db-mod-tile--fav]="isFavorite('/communication_manage')">

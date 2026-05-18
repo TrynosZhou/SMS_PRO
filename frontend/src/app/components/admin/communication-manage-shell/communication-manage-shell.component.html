@@ -4,7 +4,7 @@
     <p class="cm-sub">Send messages and documents to parents, and read messages parents send to the school.</p>
   </header>
 
-  <nav class="cm-tabs" aria-label="Communications sections">
+  <nav class="cm-tabs" *ngIf="showSectionTabs" aria-label="Communications sections">
     <a
       routerLink="/communication_manage/send"
       routerLinkActive="active"

@@ -5,7 +5,7 @@ const MIN_LPW = 1;
 const MAX_LPW = 50;
 
 /**
- * Merge one subject's lessons-per-week into the active timetable config (same store as /timetable/manage/config).
+ * Merge one subject's lessons-per-week into the active timetable config (same store as /timetable/config).
  */
 export async function mergeSubjectLessonsPerWeekForActiveConfig(
   subjectId: string,

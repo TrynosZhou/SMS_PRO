@@ -141,24 +141,33 @@
 }
 
 .mt-add-btn {
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
   border-radius: 50%;
-  background: linear-gradient(120deg, #7a5cff, #5b3edb);
+  background: linear-gradient(145deg, #7a5cff, #5b3edb);
   color: #fff;
   border: none;
   cursor: pointer;
-  font-size: 1.5rem;
-  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 16px rgba(91, 62, 219, 0.35);
+  box-shadow: 0 6px 18px rgba(91, 62, 219, 0.4);
   transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 .mt-add-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 22px rgba(91, 62, 219, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(91, 62, 219, 0.5);
+}
+.mt-add-btn:focus-visible {
+  outline: 2px solid #7a5cff;
+  outline-offset: 3px;
+}
+.mt-add-btn-ico {
+  width: 26px;
+  height: 26px;
+  display: block;
+  flex-shrink: 0;
 }
 
 /* Table */
