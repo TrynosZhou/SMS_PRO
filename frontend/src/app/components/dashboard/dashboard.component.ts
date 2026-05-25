@@ -10,6 +10,7 @@ import { FinanceService } from '../../services/finance.service';
 import { SubjectService } from '../../services/subject.service';
 import { ModuleAccessService } from '../../services/module-access.service';
 import { AddTeacherModalService } from '../../services/add-teacher-modal.service';
+import { LogoutConfirmService } from '../../services/logout-confirm.service';
 import { resolveSchoolLogoSrc } from '../../utils/school-logo.util';
 
 interface CommandItem {
@@ -184,7 +185,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private financeService: FinanceService,
     private subjectService: SubjectService,
     private moduleAccessService: ModuleAccessService,
-    private addTeacherModal: AddTeacherModalService
+    private addTeacherModal: AddTeacherModalService,
+    private logoutConfirm: LogoutConfirmService
   ) { }
 
   ngOnInit() {
@@ -947,8 +949,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    this.logoutConfirm.open();
   }
 
   getCurrentDateTime(): string {

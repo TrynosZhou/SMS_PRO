@@ -187,6 +187,33 @@
   </svg>
 </button>
 
+<!-- Logout confirmation (global — all roles / shells) -->
+<div
+  class="logout-confirm-overlay"
+  *ngIf="logoutConfirmVisible"
+  (click)="confirmLogoutNo()"
+  role="presentation"
+>
+  <div
+    class="logout-confirm-dialog"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="logout-confirm-title"
+    (click)="$event.stopPropagation()"
+  >
+    <h2 id="logout-confirm-title" class="logout-confirm-title">Sign out?</h2>
+    <p class="logout-confirm-message">Are you sure you want to log out of the system?</p>
+    <div class="logout-confirm-actions">
+      <button type="button" class="logout-confirm-btn logout-confirm-btn--no" (click)="confirmLogoutNo()">
+        No
+      </button>
+      <button type="button" class="logout-confirm-btn logout-confirm-btn--yes" (click)="confirmLogoutYes()">
+        Yes
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Main Content -->
 <main
   class="main-content"

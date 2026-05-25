@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ParentService } from '../../../services/parent.service';
 import { AuthService } from '../../../services/auth.service';
+import { LogoutConfirmService } from '../../../services/logout-confirm.service';
 
 @Component({
   selector: 'app-link-students',
@@ -23,6 +24,7 @@ export class LinkStudentsComponent implements OnInit {
   constructor(
     private parentService: ParentService,
     private authService: AuthService,
+    private logoutConfirm: LogoutConfirmService,
     private router: Router
   ) {
     const user = this.authService.getCurrentUser();
@@ -150,6 +152,6 @@ export class LinkStudentsComponent implements OnInit {
   }
 
   logout() {
-    this.authService.logout();
+    this.logoutConfirm.open();
   }
 }

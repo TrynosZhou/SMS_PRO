@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MessageService } from '../../../services/message.service';
 import { AuthService } from '../../../services/auth.service';
+import { LogoutConfirmService } from '../../../services/logout-confirm.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -39,7 +40,8 @@ export class ParentInboxComponent implements OnInit, OnDestroy {
     private messageService: MessageService,
     private authService: AuthService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private logoutConfirm: LogoutConfirmService
   ) {
     const user = this.authService.getCurrentUser();
     if (user?.parent) {
@@ -341,7 +343,7 @@ export class ParentInboxComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    this.authService.logout();
+    this.logoutConfirm.open();
   }
 
   attachmentHref(url: string | null | undefined): string {

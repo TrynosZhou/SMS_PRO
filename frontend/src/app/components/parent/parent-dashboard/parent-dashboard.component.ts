@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ParentService } from '../../../services/parent.service';
 import { AuthService } from '../../../services/auth.service';
+import { LogoutConfirmService } from '../../../services/logout-confirm.service';
 import { MessageService } from '../../../services/message.service';
 import { CurrencyService } from '../../../services/currency.service';
 import { FinanceService } from '../../../services/finance.service';
@@ -36,7 +37,8 @@ export class ParentDashboardComponent implements OnInit {
     private messageService: MessageService,
     private currencyService: CurrencyService,
     private financeService: FinanceService,
-    private router: Router
+    private router: Router,
+    private logoutConfirm: LogoutConfirmService
   ) {}
 
   ngOnInit() {
@@ -161,7 +163,7 @@ export class ParentDashboardComponent implements OnInit {
   }
 
   logout() {
-    this.authService.logout();
+    this.logoutConfirm.open();
   }
 
   manageAccount() {

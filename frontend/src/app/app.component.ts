@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { AuthService } from './services/auth.service';
+import { LogoutConfirmService } from './services/logout-confirm.service';
 import { SettingsService } from './services/settings.service';
 import { ModuleAccessService } from './services/module-access.service';
 import { Router, NavigationEnd, IsActiveMatchOptions } from '@angular/router';
@@ -28,7 +29,7 @@ interface NavItem {
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   /**
    * Subset match for nested admin routes. Must set queryParams/matrixParams/fragment:
    * partial `{ paths: 'subset' }` is treated as full IsActiveMatchOptions and breaks Router.isActive.
@@ -55,13 +56,17 @@ export class AppComponent implements OnInit {
   openSubmenu: string | null = null;
   /** Top-level navigation items shown in the left sidebar. */
   navItems: NavItem[] = [];
+  logoutConfirmVisible = false;
+  private logoutConfirmSub?: { unsubscribe(): void };
+
   constructor(
     public authService: AuthService,
     private settingsService: SettingsService,
     public moduleAccessService: ModuleAccessService,
     public router: Router,
     private userActivityService: UserActivityService,
-    private addTeacherModal: AddTeacherModalService
+    private addTeacherModal: AddTeacherModalService,
+    private logoutConfirm: LogoutConfirmService
   ) { }
 
   ngOnInit(): void {
@@ -72,6 +77,10 @@ export class AppComponent implements OnInit {
 
     // Seed currentUrl on first load (NavigationEnd fires only after subsequent navigations).
     this.currentUrl = this.router.url || '';
+
+    this.logoutConfirmSub = this.logoutConfirm.visible$.subscribe((visible) => {
+      this.logoutConfirmVisible = visible;
+    });
 
     // React to auth state changes so role-specific settings/menu items
     // appear right after the user signs in and disappear after logout.
@@ -207,10 +216,23 @@ export class AppComponent implements OnInit {
     document.body.style.overflow = '';
   }
 
+  ngOnDestroy(): void {
+    this.logoutConfirmSub?.unsubscribe();
+  }
+
   logout(): void {
+    this.logoutConfirm.open();
+  }
+
+  confirmLogoutYes(): void {
     this.closeMobileMenu();
     this.closeSidebar();
+    this.logoutConfirm.close();
     this.authService.logout();
+  }
+
+  confirmLogoutNo(): void {
+    this.logoutConfirm.close();
   }
 
   /**
